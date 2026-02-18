@@ -16,14 +16,16 @@ type CopyBundle = {
 
 function LoadingBlock({ label }: { label: string }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-      <p className="text-xs font-semibold text-neutral-500">{label}</p>
-      <div className="mt-2 h-3 animate-pulse rounded bg-neutral-200" />
-      <div className="mt-2 h-3 animate-pulse rounded bg-neutral-200/80" />
-      <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-neutral-200/60" />
+    <div className="rounded-xl border border-white/10 bg-[#163C33] p-4">
+      <p className="text-xs font-semibold text-[#9CA3AF]">{label}</p>
+      <div className="mt-2 h-3 animate-pulse rounded bg-white/10" />
+      <div className="mt-2 h-3 animate-pulse rounded bg-white/10" />
+      <div className="mt-2 h-3 w-2/3 animate-pulse rounded bg-white/10" />
     </div>
   );
 }
+
+const aiBadgeClass = "inline-flex items-center px-3 py-1 rounded-full bg-[#00C2A8]/10 text-[#00C2A8] text-xs font-medium";
 
 export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; initialTheme?: string }) {
   const [theme, setTheme] = useState<ShopTheme>(normalizeTheme(initialTheme));
@@ -46,9 +48,9 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
   const [posterError, setPosterError] = useState<string | null>(null);
 
   const heroTone = useMemo(() => {
-    if (theme === "minimal") return "from-slate-100 via-white to-slate-50";
-    if (theme === "cute") return "from-rose-50 via-pink-50 to-amber-50";
-    return "from-emerald-950 via-emerald-900 to-emerald-800";
+    if (theme === "minimal") return "from-[#112E27] via-[#163C33] to-[#17362f]";
+    if (theme === "cute") return "from-[#112E27] via-[#1d3f37] to-[#1d4b41]";
+    return "from-[#112E27] via-[#163C33] to-[#0E3B2E]";
   }, [theme]);
 
   async function generateCopy() {
@@ -78,8 +80,8 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
     setProductImage("");
 
     const tick = window.setInterval(() => {
-      setImageProgress((p) => (p < 85 ? p + 7 : p));
-    }, 280);
+      setImageProgress((p) => (p < 86 ? p + 6 : p));
+    }, 260);
 
     try {
       const res = await fetch("/api/ai/product-image", {
@@ -108,7 +110,7 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
 
     const tick = window.setInterval(() => {
       setPosterProgress((p) => (p < 88 ? p + 6 : p));
-    }, 260);
+    }, 240);
 
     try {
       const res = await fetch("/api/ai/poster", {
@@ -131,21 +133,20 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
 
   return (
     <div className="space-y-6">
-      <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${heroTone} p-6 text-white`}>
-        <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-white/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 -right-10 h-56 w-56 rounded-full bg-amber-300/20 blur-3xl" />
+      <section className={`relative overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-br ${heroTone} p-6`}>
+        <div className="pointer-events-none absolute -left-14 -top-14 h-52 w-52 rounded-full bg-[#00C2A8]/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-14 -right-8 h-52 w-52 rounded-full bg-[#C9A227]/20 blur-3xl" />
 
         <div className="relative">
-          <p className="font-mono text-xs uppercase tracking-wider text-white/70">AI Marketing Bundle</p>
-          <h2 className="mt-2 text-2xl font-bold">Product Photo + Poster + Copy</h2>
-          <p className="mt-2 max-w-2xl text-sm text-white/80">Background is AI-generated. Typography is system-rendered to avoid broken text output.</p>
-
+          <span className={aiBadgeClass}>AI Marketing Bundle</span>
+          <h2 className="mt-3 text-2xl font-bold text-[#F3F4F6]">Product Photo + Poster + Copy</h2>
+          <p className="mt-2 max-w-2xl text-sm text-[#9CA3AF]">AI generates background/content. Typography is system-rendered to avoid broken text.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {(["gold", "minimal", "cute"] as ShopTheme[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTheme(t)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${theme === t ? "border-white bg-white text-neutral-900" : "border-white/40 bg-white/10 text-white"}`}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${theme === t ? "border-[#C9A227] bg-[#163C33] text-[#F3F4F6]" : "border-white/20 bg-[#112E27] text-[#9CA3AF]"}`}
               >
                 {t}
               </button>
@@ -155,40 +156,42 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="mb-3 flex items-center gap-2 text-neutral-900">
-            <Sticker size={18} className="text-amber-600" />
+        <div className="rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
+          <div className="mb-3 flex items-center gap-2 text-[#F3F4F6]">
+            <Sticker size={18} className="text-[#C9A227]" />
             <h3 className="text-lg font-semibold">A) Product Photo Beautifier</h3>
           </div>
           <div className="grid gap-2">
             <Input placeholder="Product name" value={imageForm.productName} onChange={(e) => setImageForm((s) => ({ ...s, productName: e.target.value }))} />
             <Textarea rows={3} placeholder="Short description (optional)" value={imageForm.description} onChange={(e) => setImageForm((s) => ({ ...s, description: e.target.value }))} />
-            <Button onClick={generateProductImage} disabled={imageLoading || !imageForm.productName}>
+            <Button variant="ai" onClick={generateProductImage} disabled={imageLoading || !imageForm.productName} className="animate-pulse">
               {imageLoading ? "Generating..." : "Generate Background (1 image credit)"}
             </Button>
           </div>
+
           {imageLoading && (
             <div className="mt-3">
-              <div className="h-2 rounded-full bg-neutral-100">
-                <div className="h-2 rounded-full bg-amber-500 transition-all" style={{ width: `${imageProgress}%` }} />
+              <div className="h-2 rounded-full bg-white/10">
+                <div className="h-2 rounded-full bg-[#00C2A8] transition-all" style={{ width: `${imageProgress}%` }} />
               </div>
-              <p className="mt-1 text-xs text-neutral-500">Preparing image... {imageProgress}%</p>
+              <p className="mt-1 text-xs text-[#9CA3AF]">Preparing image... {imageProgress}%</p>
               <div className="mt-3">
                 <LoadingBlock label="Generating clean background" />
               </div>
             </div>
           )}
+
           {productImage && (
-            <div className="mt-4 overflow-hidden rounded-xl border border-neutral-200">
+            <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
               <Image src={`data:image/png;base64,${productImage}`} alt="AI product background" width={640} height={960} className="h-auto w-full" unoptimized />
             </div>
           )}
-          {imageError && <p className="mt-3 text-sm text-rose-600">{imageError}</p>}
+          {imageError && <p className="mt-3 text-sm text-rose-400">{imageError}</p>}
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <div className="mb-3 flex items-center gap-2 text-neutral-900">
-            <Wand2 size={18} className="text-amber-600" />
+        <div className="rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
+          <div className="mb-3 flex items-center gap-2 text-[#F3F4F6]">
+            <Wand2 size={18} className="text-[#C9A227]" />
             <h3 className="text-lg font-semibold">B) Poster Generator</h3>
           </div>
           <div className="grid gap-2">
@@ -199,22 +202,22 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
             <select
               value={posterForm.aspect}
               onChange={(e) => setPosterForm((s) => ({ ...s, aspect: e.target.value as "16:9" | "9:16" }))}
-              className="h-10 rounded-xl border border-neutral-300 px-3 text-sm"
+              className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
             >
               <option value="16:9">16:9</option>
               <option value="9:16">9:16</option>
             </select>
-            <Button onClick={generatePoster} disabled={posterLoading || !posterForm.productName}>
+            <Button variant="ai" onClick={generatePoster} disabled={posterLoading || !posterForm.productName} className="animate-pulse">
               {posterLoading ? "Rendering..." : "Generate Poster (1 poster credit)"}
             </Button>
           </div>
 
           {posterLoading && (
             <div className="mt-3">
-              <div className="h-2 rounded-full bg-neutral-100">
-                <div className="h-2 rounded-full bg-emerald-500 transition-all" style={{ width: `${posterProgress}%` }} />
+              <div className="h-2 rounded-full bg-white/10">
+                <div className="h-2 rounded-full bg-[#00C2A8] transition-all" style={{ width: `${posterProgress}%` }} />
               </div>
-              <p className="mt-1 text-xs text-neutral-500">Composing text-safe poster... {posterProgress}%</p>
+              <p className="mt-1 text-xs text-[#9CA3AF]">Composing text-safe poster... {posterProgress}%</p>
               <div className="mt-3">
                 <LoadingBlock label="AI background + system typography" />
               </div>
@@ -222,18 +225,19 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
           )}
 
           {posterImage && (
-            <div className="mt-4 overflow-hidden rounded-xl border border-neutral-200">
+            <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
               <Image src={`data:image/png;base64,${posterImage}`} alt="AI poster" width={1080} height={1920} className="h-auto w-full" unoptimized />
             </div>
           )}
-          {posterError && <p className="mt-3 text-sm text-rose-600">{posterError}</p>}
+          {posterError && <p className="mt-3 text-sm text-rose-400">{posterError}</p>}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-neutral-200 bg-white p-4">
-        <div className="mb-3 flex items-center gap-2 text-neutral-900">
-          <Sparkles size={18} className="text-amber-600" />
+      <section className="rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
+        <div className="mb-3 flex items-center gap-2 text-[#F3F4F6]">
+          <Sparkles size={18} className="text-[#C9A227]" />
           <h3 className="text-lg font-semibold">C) Copy Generator</h3>
+          <span className={aiBadgeClass}>1 copy credit</span>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -249,7 +253,7 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
           <select
             value={copyForm.platform}
             onChange={(e) => setCopyForm((s) => ({ ...s, platform: e.target.value as "FB" | "IG" | "TikTok" | "WhatsApp" }))}
-            className="h-10 rounded-xl border border-neutral-300 px-3 text-sm md:col-span-2"
+            className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6] md:col-span-2"
           >
             <option>FB</option>
             <option>IG</option>
@@ -258,8 +262,8 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
           </select>
         </div>
 
-        <Button className="mt-3" onClick={generateCopy} disabled={copyLoading || !copyForm.productName || !copyForm.keySellingPoints}>
-          {copyLoading ? "Generating..." : "Generate Copy Bundle (1 copy credit)"}
+        <Button variant="ai" className="mt-3 animate-pulse" onClick={generateCopy} disabled={copyLoading || !copyForm.productName || !copyForm.keySellingPoints}>
+          {copyLoading ? "Generating..." : "Generate Copy Bundle"}
         </Button>
 
         {copyLoading && (
@@ -271,29 +275,29 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
 
         {copyBundle && (
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div className="rounded-xl border border-neutral-200 p-3">
-              <p className="text-xs font-semibold uppercase text-neutral-500">FB Captions</p>
-              <ul className="mt-2 space-y-2 text-sm text-neutral-700">
+            <div className="rounded-xl border border-white/10 bg-[#163C33] p-3">
+              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">FB Captions</p>
+              <ul className="mt-2 space-y-2 text-sm text-[#F3F4F6]">
                 {copyBundle.fbCaptions.map((c) => (
                   <li key={`${c.tone}-${c.text.slice(0, 12)}`}>
-                    <span className="font-semibold uppercase text-neutral-900">[{c.tone}]</span> {c.text}
+                    <span className="font-semibold uppercase text-[#C9A227]">[{c.tone}]</span> {c.text}
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="rounded-xl border border-neutral-200 p-3">
-              <p className="text-xs font-semibold uppercase text-neutral-500">WhatsApp Broadcasts</p>
-              <ul className="mt-2 space-y-2 text-sm text-neutral-700">
+            <div className="rounded-xl border border-white/10 bg-[#163C33] p-3">
+              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">WhatsApp</p>
+              <ul className="mt-2 space-y-2 text-sm text-[#F3F4F6]">
                 {copyBundle.whatsappBroadcasts.map((s, i) => (
                   <li key={`${i}-${s.slice(0, 10)}`}>{s}</li>
                 ))}
               </ul>
             </div>
-            <div className="rounded-xl border border-neutral-200 p-3">
-              <p className="text-xs font-semibold uppercase text-neutral-500">Hooks</p>
+            <div className="rounded-xl border border-white/10 bg-[#163C33] p-3">
+              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">Hooks</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {copyBundle.hooks.map((h, i) => (
-                  <span key={`${i}-${h.slice(0, 10)}`} className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                  <span key={`${i}-${h.slice(0, 10)}`} className="rounded-full bg-[#00C2A8]/10 px-3 py-1 text-xs font-medium text-[#00C2A8]">
                     {h}
                   </span>
                 ))}
@@ -302,7 +306,7 @@ export function AITools({ shopId, initialTheme = "gold" }: { shopId?: string; in
           </div>
         )}
 
-        {copyError && <p className="mt-3 text-sm text-rose-600">{copyError}</p>}
+        {copyError && <p className="mt-3 text-sm text-rose-400">{copyError}</p>}
       </section>
     </div>
   );

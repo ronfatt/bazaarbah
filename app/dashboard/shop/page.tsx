@@ -13,8 +13,8 @@ export default async function ShopPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <h1 className="text-2xl font-bold">Shop Profile</h1>
-        <p className="mt-2 text-sm text-neutral-600">Manage slug, theme, WhatsApp, and branding.</p>
+        <h1 className="text-2xl font-bold text-[#F3F4F6]">Shop Profile</h1>
+        <p className="mt-2 text-sm text-[#9CA3AF]">Manage name, slug, theme, WhatsApp and branding.</p>
         <div className="mt-6">
           <ShopForm initialShop={shop} />
         </div>

@@ -14,18 +14,17 @@ export function KpiCard({
   const positive = trend >= 0;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white/90 p-4 shadow-sm">
-      <div className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-amber-200/50 blur-2xl" />
+    <div className="rounded-2xl border border-white/5 bg-gradient-to-br from-[#112E27] to-[#163C33] p-6 shadow-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#00C2A8]/40">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-neutral-900">{value}</p>
+          <p className="text-sm text-[#9CA3AF]">{title}</p>
+          <p className="mt-2 text-3xl font-bold text-[#F3F4F6]">{value}</p>
         </div>
-        <div className="rounded-xl bg-neutral-100 p-2">
-          <Icon size={18} className="text-neutral-700" />
+        <div className="rounded-lg border border-white/10 bg-[#0E3B2E] p-2">
+          <Icon size={17} className="text-[#C9A227]" />
         </div>
       </div>
-      <p className={`mt-4 inline-flex items-center gap-1 text-xs font-semibold ${positive ? "text-emerald-700" : "text-rose-700"}`}>
+      <p className={`mt-4 inline-flex items-center gap-1 text-xs font-semibold ${positive ? "text-emerald-400" : "text-rose-400"}`}>
         {positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} {Math.abs(trend)}% vs yesterday
       </p>
     </div>

@@ -35,10 +35,10 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seller@email.com" />
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading} className="w-full">
         {loading ? "Sending..." : "Send Magic Link"}
       </Button>
-      {status && <p className="text-sm text-neutral-600">{status}</p>}
+      {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
     </form>
   );
 }

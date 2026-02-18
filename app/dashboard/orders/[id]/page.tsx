@@ -14,6 +14,12 @@ type ItemJoin = {
   products: { name: string } | { name: string }[];
 };
 
+function statusClass(status: string) {
+  if (status === "paid") return "bg-green-500/10 text-green-400";
+  if (status === "cancelled") return "bg-red-500/10 text-red-400";
+  return "bg-yellow-500/10 text-yellow-400";
+}
+
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { user } = await requireSeller();
@@ -29,9 +35,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     .in("shop_id", shopIds)
     .maybeSingle();
 
-  if (!order) {
-    notFound();
-  }
+  if (!order) notFound();
 
   const { data: items } = await admin
     .from("order_items")
@@ -51,15 +55,15 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       <Card>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">{order.order_code}</h1>
-            <p className="mt-1 text-sm text-neutral-600">Status: {order.status}</p>
+            <h1 className="text-2xl font-bold text-[#F3F4F6]">{order.order_code}</h1>
+            <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClass(order.status)}`}>{order.status}</span>
           </div>
-          <Link href="/dashboard/orders" className="text-sm font-semibold text-amber-700">
+          <Link href="/dashboard/orders" className="text-sm font-semibold text-[#C9A227]">
             Back
           </Link>
         </div>
 
-        <div className="mt-4 grid gap-2 text-sm text-neutral-700 md:grid-cols-2">
+        <div className="mt-4 grid gap-2 text-sm text-[#9CA3AF] md:grid-cols-2">
           <p>Buyer: {order.buyer_name ?? "Guest"}</p>
           <p>Phone: {order.buyer_phone ?? "-"}</p>
           <p>Total: {currencyFromCents(order.subtotal_cents)}</p>
@@ -70,17 +74,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <OrderActions orderId={order.id} canMarkPaid={order.status !== "paid"} />
         </div>
 
-        {receipt && <p className="mt-4 text-sm text-emerald-700">Receipt: {receipt.receipt_no}</p>}
+        {receipt && <p className="mt-4 text-sm text-emerald-400">Receipt: {receipt.receipt_no}</p>}
       </Card>
 
       <Card>
-        <h2 className="text-lg font-semibold">Items</h2>
-        <div className="mt-3 space-y-2 text-sm">
+        <h2 className="text-lg font-semibold text-[#F3F4F6]">Items</h2>
+        <div className="mt-3 space-y-2 text-sm text-[#F3F4F6]">
           {(items as ItemJoin[] | null)?.map((item) => {
             const raw = item.products;
             const name = Array.isArray(raw) ? raw[0]?.name : raw?.name;
             return (
-              <div key={item.id} className="flex justify-between border-b border-neutral-100 py-2">
+              <div key={item.id} className="flex justify-between border-b border-white/5 py-2">
                 <span>
                   {name} x {item.qty}
                 </span>
@@ -92,21 +96,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </Card>
 
       <Card>
-        <h2 className="text-lg font-semibold">Payment Proofs</h2>
-        <div className="mt-3 space-y-3 text-sm">
+        <h2 className="text-lg font-semibold text-[#F3F4F6]">Payment Proofs</h2>
+        <div className="mt-3 space-y-3 text-sm text-[#F3F4F6]">
           {(payments ?? []).map((p) => (
-            <div key={p.id} className="rounded-xl border border-neutral-200 p-3">
+            <div key={p.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3">
               <p>Reference: {p.reference_text ?? "-"}</p>
               <p>Submitted: {new Date(p.submitted_at).toLocaleString("en-MY")}</p>
               <p>Confirmed: {p.confirmed_at ? new Date(p.confirmed_at).toLocaleString("en-MY") : "No"}</p>
               {p.proof_image_url && (
-                <a href={p.proof_image_url} className="text-amber-700" target="_blank" rel="noreferrer">
+                <a href={p.proof_image_url} className="text-[#C9A227]" target="_blank" rel="noreferrer">
                   Open proof image
                 </a>
               )}
             </div>
           ))}
-          {payments?.length === 0 && <p className="text-neutral-500">No payment proof submitted yet.</p>}
+          {payments?.length === 0 && <p className="text-[#9CA3AF]">No payment proof submitted yet.</p>}
         </div>
       </Card>
     </section>

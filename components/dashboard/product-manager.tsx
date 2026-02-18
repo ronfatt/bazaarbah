@@ -56,9 +56,9 @@ export function ProductManager({ shops, products }: Props) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={createProduct} className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-4">
-        <h2 className="text-lg font-semibold">Add Product</h2>
-        <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="h-10 w-full rounded-xl border border-neutral-300 px-3 text-sm" required>
+      <form onSubmit={createProduct} className="space-y-3 rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
+        <h2 className="text-lg font-semibold text-[#F3F4F6]">Add Product</h2>
+        <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]" required>
           {shops.map((shop) => (
             <option key={shop.id} value={shop.id}>
               {shop.shop_name}
@@ -69,12 +69,12 @@ export function ProductManager({ shops, products }: Props) {
         <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
         <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="29.90" required />
         <Button type="submit">Create Product</Button>
-        {status && <p className="text-sm text-neutral-600">{status}</p>}
+        {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
       </form>
 
-      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <div className="overflow-hidden rounded-2xl border border-white/5 bg-[#112E27]">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-50 text-neutral-600">
+          <thead className="border-b border-white/5 bg-[#163C33] text-[#9CA3AF]">
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Price</th>
@@ -84,7 +84,7 @@ export function ProductManager({ shops, products }: Props) {
           </thead>
           <tbody>
             {grouped.map((p) => (
-              <tr key={p.id} className="border-t border-neutral-100">
+              <tr key={p.id} className="border-t border-white/5 text-[#F3F4F6] hover:bg-[#163C33]">
                 <td className="px-4 py-3">{p.name}</td>
                 <td className="px-4 py-3">{currencyFromCents(p.price_cents)}</td>
                 <td className="px-4 py-3">
@@ -93,7 +93,7 @@ export function ProductManager({ shops, products }: Props) {
                   </Button>
                 </td>
                 <td className="px-4 py-3">
-                  <Button variant="ghost" onClick={() => remove(p.id)}>
+                  <Button variant="danger" onClick={() => remove(p.id)}>
                     Delete
                   </Button>
                 </td>
@@ -101,7 +101,7 @@ export function ProductManager({ shops, products }: Props) {
             ))}
             {grouped.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={4} className="px-4 py-8 text-center text-[#9CA3AF]">
                   No products yet.
                 </td>
               </tr>

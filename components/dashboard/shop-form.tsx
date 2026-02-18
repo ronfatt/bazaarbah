@@ -34,9 +34,7 @@ export function ShopForm({ initialShop }: Props) {
 
     const json = await res.json();
     setStatus(res.ok ? "Saved." : json.error ?? "Failed");
-    if (res.ok && !initialShop) {
-      window.location.reload();
-    }
+    if (res.ok && !initialShop) window.location.reload();
   }
 
   return (
@@ -46,13 +44,13 @@ export function ShopForm({ initialShop }: Props) {
       <Input value={phoneWhatsapp} onChange={(e) => setPhoneWhatsapp(e.target.value)} placeholder="WhatsApp Number" required />
       <Textarea value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="Address (optional)" rows={2} />
       <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="Logo URL (optional)" />
-      <select value={theme} onChange={(e) => setTheme(e.target.value as "gold" | "minimal" | "cute")} className="h-10 w-full rounded-xl border border-neutral-300 px-3 text-sm">
+      <select value={theme} onChange={(e) => setTheme(e.target.value as "gold" | "minimal" | "cute")} className="h-10 w-full rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]">
         <option value="gold">gold</option>
         <option value="minimal">minimal</option>
         <option value="cute">cute</option>
       </select>
       <Button type="submit">{initialShop ? "Update Shop" : "Create Shop"}</Button>
-      {status && <p className="text-sm text-neutral-600">{status}</p>}
+      {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
     </form>
   );
 }

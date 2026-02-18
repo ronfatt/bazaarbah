@@ -18,8 +18,8 @@ export default async function ProductsPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <h1 className="text-2xl font-bold">Products</h1>
-        <p className="mt-2 text-sm text-neutral-600">Create, update availability, and remove products.</p>
+        <h1 className="text-2xl font-bold text-[#F3F4F6]">Products</h1>
+        <p className="mt-2 text-sm text-[#9CA3AF]">CRUD products and availability.</p>
       </Card>
       <ProductManager shops={(shops ?? []) as Shop[]} products={(products ?? []) as Product[]} />
     </section>
