@@ -12,6 +12,7 @@ const createSchema = z.object({
   addressText: z.string().max(240).optional(),
   theme: z.enum(["gold", "minimal", "cute"]).default("gold"),
   logoUrl: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().url().optional()),
+  paymentQrUrl: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().url().optional()),
 });
 
 const updateSchema = z.object({
@@ -22,6 +23,7 @@ const updateSchema = z.object({
   addressText: z.string().max(240).nullable().optional(),
   theme: z.enum(["gold", "minimal", "cute"]).optional(),
   logoUrl: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : v), z.string().url().nullable().optional()),
+  paymentQrUrl: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : v), z.string().url().nullable().optional()),
   isActive: z.boolean().optional(),
 });
 
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
         address_text: body.addressText ?? null,
         theme: body.theme,
         logo_url: body.logoUrl ?? null,
+        payment_qr_url: body.paymentQrUrl ?? null,
       })
       .select("*")
       .single();
@@ -108,6 +111,7 @@ export async function PATCH(req: NextRequest) {
     if (body.addressText !== undefined) patch.address_text = body.addressText;
     if (body.theme !== undefined) patch.theme = body.theme;
     if (body.logoUrl !== undefined) patch.logo_url = body.logoUrl;
+    if (body.paymentQrUrl !== undefined) patch.payment_qr_url = body.paymentQrUrl;
     if (body.isActive !== undefined) patch.is_active = body.isActive;
 
     const { data, error } = await admin

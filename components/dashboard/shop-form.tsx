@@ -16,6 +16,7 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
   const [addressText, setAddressText] = useState(initialShop?.address_text ?? "");
   const [theme, setTheme] = useState<"gold" | "minimal" | "cute">(initialShop?.theme ?? "gold");
   const [logoUrl, setLogoUrl] = useState(initialShop?.logo_url ?? "");
+  const [paymentQrUrl, setPaymentQrUrl] = useState(initialShop?.payment_qr_url ?? "");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://bazaarbah.com";
@@ -31,8 +32,8 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
 
     const method = initialShop ? "PATCH" : "POST";
     const body = initialShop
-      ? { shopId: initialShop.id, shopName, slug, phoneWhatsapp, addressText: addressText || null, theme, logoUrl: logoUrl || null }
-      : { shopName, slug, phoneWhatsapp, addressText, theme, logoUrl: logoUrl || undefined };
+      ? { shopId: initialShop.id, shopName, slug, phoneWhatsapp, addressText: addressText || null, theme, logoUrl: logoUrl || null, paymentQrUrl: paymentQrUrl || null }
+      : { shopName, slug, phoneWhatsapp, addressText, theme, logoUrl: logoUrl || undefined, paymentQrUrl: paymentQrUrl || undefined };
 
     const res = await fetch("/api/shops", {
       method,
@@ -59,6 +60,23 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
       return;
     }
     setLogoUrl(json.logoUrl);
+  }
+
+  async function onPaymentQrChange(file?: File) {
+    if (!file) return;
+    setUploadingLogo(true);
+    setStatus(null);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/shops/payment-qr", { method: "POST", body: form });
+    const json = await res.json();
+    setUploadingLogo(false);
+    if (!res.ok) {
+      setStatus(json.error ?? "QR upload failed");
+      return;
+    }
+    setPaymentQrUrl(json.paymentQrUrl);
+    setStatus("Payment QR uploaded.");
   }
 
   return (
@@ -103,6 +121,22 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoUrl} alt="Shop logo preview" className="h-14 w-14 rounded-lg border border-white/10 object-cover" />
             <p className="text-xs text-white/65">{t(lang, "shop.field.logo.done")}</p>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-semibold text-white">Payment QR Code (Manual Payment)</label>
+        <p className="mb-2 text-xs text-white/45">Upload your payment QR. Buyers will scan this on order page.</p>
+        <label className="inline-flex cursor-pointer items-center rounded-xl border border-white/10 bg-[#163C33] px-4 py-2 text-sm text-white hover:bg-[#1c4a40]">
+          {uploadingLogo ? "Uploading..." : "Upload Payment QR"}
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onPaymentQrChange(e.target.files?.[0])} />
+        </label>
+        {paymentQrUrl && (
+          <div className="mt-3 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={paymentQrUrl} alt="Payment QR preview" className="h-16 w-16 rounded-lg border border-white/10 object-cover" />
+            <p className="text-xs text-white/65">Payment QR uploaded.</p>
           </div>
         )}
       </div>

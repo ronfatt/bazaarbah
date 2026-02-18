@@ -26,6 +26,7 @@ export type Shop = {
   address_text: string | null;
   theme: "gold" | "minimal" | "cute";
   logo_url: string | null;
+  payment_qr_url: string | null;
   is_active: boolean;
   created_at: string;
 };

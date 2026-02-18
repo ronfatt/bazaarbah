@@ -262,6 +262,7 @@ const extra: Record<string, Record<Lang, string>> = {
   "buyer.reference_text": { en: "Reference text", zh: "转账参考号", ms: "Teks rujukan" },
   "buyer.proof_url": { en: "Proof image URL (optional)", zh: "凭证图片链接（可选）", ms: "URL imej bukti (pilihan)" },
   "buyer.submit": { en: "Submit Proof", zh: "提交凭证", ms: "Hantar Bukti" },
+  "buyer.i_paid": { en: "I Have Paid", zh: "我已付款", ms: "Saya Sudah Bayar" },
   "buyer.submitting": { en: "Submitting...", zh: "提交中...", ms: "Menghantar..." },
   "buyer.proof_ok": { en: "Proof submitted.", zh: "凭证已提交。", ms: "Bukti berjaya dihantar." },
   "admin.login_title": { en: "Admin Login", zh: "管理员登录", ms: "Log Masuk Admin" },

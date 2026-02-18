@@ -13,6 +13,7 @@ type PublicOrder = {
   subtotal_cents: number;
   created_at: string;
   shop_name: string;
+  payment_qr_url: string | null;
 };
 
 type PublicOrderItem = {
@@ -50,6 +51,12 @@ export default async function OrderCodePage({ params }: { params: Promise<{ orde
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
           <p className="font-semibold text-amber-800">{t(lang, "buyer.manual_qr")}</p>
           <p className="text-amber-700">{t(lang, "buyer.manual_qr_desc")}</p>
+          {order.payment_qr_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={order.payment_qr_url} alt="Seller payment QR" className="mt-3 h-56 w-56 rounded-lg border border-amber-200 bg-white object-contain p-2" />
+          ) : (
+            <p className="mt-2 text-xs text-amber-700">Seller has not uploaded payment QR yet. Please contact seller.</p>
+          )}
         </div>
       </Card>
 
