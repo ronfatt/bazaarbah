@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePlanTier, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow } from "@/lib/plan";
+import { ensurePublicBucket } from "@/lib/storage";
 
 const allowedPlans = new Set(["pro_88", "pro_128"]);
 
@@ -77,11 +78,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Slip file too large. Max 5MB." }, { status: 400 });
     }
 
-    try {
-      await admin.storage.createBucket("plan-proofs", { public: true, fileSizeLimit: maxBytes, allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"] });
-    } catch {
-      // Bucket may already exist.
-    }
+    await ensurePublicBucket(admin, "plan-proofs", maxBytes);
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "png";
     const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;

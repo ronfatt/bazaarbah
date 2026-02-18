@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertUnlockedByUserId } from "@/lib/auth";
+import { ensurePublicBucket } from "@/lib/storage";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = createAdminClient();
+    await ensurePublicBucket(admin, "plan-proofs", MAX_BYTES);
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${user.id}/product-${Date.now()}.${ext}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
