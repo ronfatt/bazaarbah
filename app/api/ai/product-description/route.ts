@@ -10,6 +10,7 @@ const schema = z.object({
   price: z.string().min(1).optional(),
   keySellingPoints: z.string().max(300).optional(),
   shopId: z.string().uuid().optional(),
+  lang: z.enum(["en", "zh", "ms"]).default("en"),
 });
 
 export async function POST(req: NextRequest) {
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
       productName: body.productName,
       price: body.price,
       keySellingPoints: body.keySellingPoints,
+      lang: body.lang,
     });
     const prompt = `${body.productName}|${body.price ?? ""}|${body.keySellingPoints ?? ""}`;
     const credits = await consumeAiCredit({

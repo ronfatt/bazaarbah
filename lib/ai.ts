@@ -87,15 +87,22 @@ export async function generateProductDescription(input: {
   productName: string;
   price?: string;
   keySellingPoints?: string;
+  lang?: "en" | "zh" | "ms";
 }) {
   const client = getClient();
+  const languageInstruction =
+    input.lang === "zh"
+      ? "Write in Simplified Chinese."
+      : input.lang === "ms"
+        ? "Write in Bahasa Melayu."
+        : "Write in English.";
   const response = await client.responses.create({
     model: "gpt-4.1-mini",
     input: [
       {
         role: "system",
         content:
-          "Write a concise ecommerce product description in plain text only. 2-4 short sentences, sales-friendly, no hashtags, no markdown.",
+          `${languageInstruction} Write a concise ecommerce product description in plain text only. 2-4 short sentences, sales-friendly, no hashtags, no markdown.`,
       },
       {
         role: "user",

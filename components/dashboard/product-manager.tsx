@@ -19,19 +19,43 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("29.90");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   const grouped = useMemo(() => products.filter((p) => !shopId || p.shop_id === shopId), [products, shopId]);
 
+  async function uploadProductImage(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/products/upload", { method: "POST", body: form });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error ?? "Upload failed");
+    }
+    return json.imageUrl as string;
+  }
+
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
-    if (uploadingImage) {
-      setStatus("Image is still uploading. Please wait.");
-      return;
-    }
     setStatus("...");
+    let finalImageUrl = imageUrl;
+
+    // Safety net: if user selected image but URL not ready, upload during submit.
+    if (!finalImageUrl && imageFile) {
+      try {
+        setUploadingImage(true);
+        finalImageUrl = await uploadProductImage(imageFile);
+        setImageUrl(finalImageUrl);
+      } catch (error) {
+        setUploadingImage(false);
+        setStatus(error instanceof Error ? error.message : "Upload failed");
+        return;
+      } finally {
+        setUploadingImage(false);
+      }
+    }
 
     const res = await fetch("/api/products", {
       method: "POST",
@@ -41,7 +65,7 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
         name,
         description,
         priceCents: Math.round(Number(price) * 100),
-        imageUrl: imageUrl || undefined,
+        imageUrl: finalImageUrl || undefined,
       }),
     });
 
@@ -52,18 +76,19 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
 
   async function onProductImageChange(file?: File) {
     if (!file) return;
+    setImageFile(file);
     setUploadingImage(true);
     setStatus(null);
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/products/upload", { method: "POST", body: form });
-    const json = await res.json();
-    setUploadingImage(false);
-    if (!res.ok) {
-      setStatus(json.error ?? "Upload failed");
+    try {
+      const uploadedUrl = await uploadProductImage(file);
+      setImageUrl(uploadedUrl);
+      setStatus("Image uploaded and ready.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Upload failed");
       return;
+    } finally {
+      setUploadingImage(false);
     }
-    setImageUrl(json.imageUrl);
   }
 
   async function generateDescription() {
@@ -81,6 +106,7 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
         price,
         keySellingPoints: description,
         shopId: shopId || undefined,
+        lang,
       }),
     });
     const json = await res.json();
@@ -135,6 +161,7 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
             {uploadingImage ? "Uploading..." : "Upload Image"}
             <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onProductImageChange(e.target.files?.[0])} />
           </label>
+          {imageFile && !imageUrl && <p className="text-xs text-white/65">Selected: {imageFile.name}</p>}
           {imageUrl && (
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
