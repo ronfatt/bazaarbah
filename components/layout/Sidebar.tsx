@@ -18,14 +18,24 @@ function NavItem({ item, active }: { item: Item; active: boolean }) {
   );
 }
 
-export function Sidebar({ items, planLabel }: { items: Item[]; planLabel: string }) {
+export function Sidebar({
+  items,
+  planLabel,
+  planTitle,
+  sellerOsLabel,
+}: {
+  items: Item[];
+  planLabel: string;
+  planTitle: string;
+  sellerOsLabel: string;
+}) {
   const pathname = usePathname();
 
   return (
     <div className="p-4 flex h-full flex-col gap-4">
       <div className="rounded-2xl bg-bb-surface/50 border border-bb-border/5 p-4 shadow-soft">
         <div className="text-xs text-white/45 tracking-widest">BAZAARBAH</div>
-        <div className="text-lg font-semibold">Seller OS</div>
+        <div className="text-lg font-semibold">{sellerOsLabel}</div>
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -36,7 +46,7 @@ export function Sidebar({ items, planLabel }: { items: Item[]; planLabel: string
       </nav>
 
       <div className="mt-auto rounded-2xl bg-bb-surface/40 border border-bb-border/5 p-3">
-        <div className="text-xs text-white/45">Plan</div>
+        <div className="text-xs text-white/45">{planTitle}</div>
         <div className="text-sm text-white/65">{planLabel}</div>
       </div>
     </div>

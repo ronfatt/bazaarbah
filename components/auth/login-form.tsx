@@ -1,16 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AppButton } from "@/components/ui/AppButton";
 import { Input } from "@/components/ui/input";
 
-export function LoginForm({ defaultReferralCode = "" }: { defaultReferralCode?: string }) {
+export function LoginForm({
+  defaultReferralCode = "",
+  i18n,
+}: {
+  defaultReferralCode?: string;
+  i18n?: {
+    emailPlaceholder: string;
+    passwordPlaceholder: string;
+    referralPlaceholder: string;
+    login: string;
+    register: string;
+    wait: string;
+    created: string;
+    failedLogin: string;
+    failedRegister: string;
+  };
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState(defaultReferralCode);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const texts = useMemo(
+    () => ({
+      emailPlaceholder: "seller@email.com",
+      passwordPlaceholder: "Password",
+      referralPlaceholder: "Referral code (optional)",
+      login: "Login",
+      register: "Register",
+      wait: "Please wait...",
+      created: "Account created. If email confirmation is enabled, confirm email first.",
+      failedLogin: "Login failed",
+      failedRegister: "Register failed",
+      ...i18n,
+    }),
+    [i18n],
+  );
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +54,7 @@ export function LoginForm({ defaultReferralCode = "" }: { defaultReferralCode?: 
       if (error) throw error;
       window.location.href = "/dashboard";
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Login failed");
+      setStatus(error instanceof Error ? error.message : texts.failedLogin);
     } finally {
       setLoading(false);
     }
@@ -43,9 +74,9 @@ export function LoginForm({ defaultReferralCode = "" }: { defaultReferralCode?: 
         },
       });
       if (error) throw error;
-      setStatus("Account created. If email confirmation is enabled, confirm email first.");
+      setStatus(texts.created);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Register failed");
+      setStatus(error instanceof Error ? error.message : texts.failedRegister);
     } finally {
       setLoading(false);
     }
@@ -53,16 +84,16 @@ export function LoginForm({ defaultReferralCode = "" }: { defaultReferralCode?: 
 
   return (
     <form onSubmit={onLogin} className="space-y-3">
-      <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seller@email.com" />
-      <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-      <Input value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder="Referral code (optional)" />
+      <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={texts.emailPlaceholder} />
+      <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={texts.passwordPlaceholder} />
+      <Input value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder={texts.referralPlaceholder} />
 
       <div className="flex gap-2">
         <AppButton type="submit" variant="primary" disabled={loading} className="w-full hover:scale-[1.02]">
-          {loading ? "Please wait..." : "Login"}
+          {loading ? texts.wait : texts.login}
         </AppButton>
         <AppButton type="button" variant="ghost" disabled={loading} className="w-full" onClick={onRegister}>
-          Register
+          {texts.register}
         </AppButton>
       </div>
 
