@@ -7,20 +7,36 @@ import { currencyFromCents } from "@/lib/utils";
 import type { Product, Shop } from "@/types";
 import { t, type Lang } from "@/lib/i18n";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUploader } from "@/components/ui/image-uploader";
+import { AIEnhancePanel } from "@/components/ui/ai-enhance-panel";
 
 type Props = {
   shops: Shop[];
   products: Product[];
+  imageCredits: number;
 };
 
-export function ProductManager({ shops, products, lang = "en" }: Props & { lang?: Lang }) {
+type EnhanceStyle = "studio" | "raya" | "premium";
+
+function activeImage(product: Product) {
+  const source = product.image_source ?? "original";
+  if (source === "enhanced" && product.image_enhanced_url) return product.image_enhanced_url;
+  return product.image_original_url ?? product.image_url ?? product.image_enhanced_url ?? null;
+}
+
+export function ProductManager({ shops, products, imageCredits: initialImageCredits, lang = "en" }: Props & { lang?: Lang }) {
   const [shopId, setShopId] = useState(shops[0]?.id ?? "");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("29.90");
-  const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageOriginalUrl, setImageOriginalUrl] = useState("");
+  const [imageEnhancedUrl, setImageEnhancedUrl] = useState("");
+  const [imageSource, setImageSource] = useState<"original" | "enhanced">("original");
+  const [enhanceStyle, setEnhanceStyle] = useState<EnhanceStyle>("studio");
+  const [imageCredits, setImageCredits] = useState(initialImageCredits);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [enhancingImage, setEnhancingImage] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -40,14 +56,13 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
     setStatus("...");
-    let finalImageUrl = imageUrl;
+    let finalOriginalUrl = imageOriginalUrl;
 
-    // Safety net: if user selected image but URL not ready, upload during submit.
-    if (!finalImageUrl && imageFile) {
+    if (!finalOriginalUrl && imageFile) {
       try {
         setUploadingImage(true);
-        finalImageUrl = await uploadProductImage(imageFile);
-        setImageUrl(finalImageUrl);
+        finalOriginalUrl = await uploadProductImage(imageFile);
+        setImageOriginalUrl(finalOriginalUrl);
       } catch (error) {
         setUploadingImage(false);
         setStatus(error instanceof Error ? error.message : "Upload failed");
@@ -65,7 +80,9 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
         name,
         description,
         priceCents: Math.round(Number(price) * 100),
-        imageUrl: finalImageUrl || undefined,
+        imageOriginalUrl: finalOriginalUrl || undefined,
+        imageEnhancedUrl: imageEnhancedUrl || undefined,
+        imageSource,
       }),
     });
 
@@ -81,7 +98,9 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
     setStatus(null);
     try {
       const uploadedUrl = await uploadProductImage(file);
-      setImageUrl(uploadedUrl);
+      setImageOriginalUrl(uploadedUrl);
+      setImageEnhancedUrl("");
+      setImageSource("original");
       setStatus("Image uploaded and ready.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Upload failed");
@@ -89,6 +108,49 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
     } finally {
       setUploadingImage(false);
     }
+  }
+
+  async function enhanceImage() {
+    if (!imageOriginalUrl) {
+      setStatus("Upload product photo first.");
+      return;
+    }
+    if (imageCredits < 1) {
+      setStatus("Not enough image credits. Upgrade in Billing.");
+      return;
+    }
+    setEnhancingImage(true);
+    setStatus(null);
+
+    const res = await fetch("/api/ai/enhance-product-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        shopId,
+        originalImageUrl: imageOriginalUrl,
+        productName: name || "Raya Product",
+        description: description || undefined,
+        style: enhanceStyle,
+        outputSize: "1024x1024",
+      }),
+    });
+
+    const json = await res.json();
+    setEnhancingImage(false);
+
+    if (!res.ok) {
+      if (json.error === "INSUFFICIENT_CREDITS") {
+        setImageCredits(0);
+        setStatus("You have 0 image credits. Upgrade or top-up in Billing.");
+      } else {
+        setStatus(json.error ?? "AI enhancement failed");
+      }
+      return;
+    }
+
+    setImageEnhancedUrl(json.imageEnhancedUrl);
+    setImageCredits(Number(json.remainingImageCredits ?? imageCredits));
+    setStatus(`Enhanced photo ready. Image credits left: ${json.remainingImageCredits ?? "-"}`);
   }
 
   async function generateDescription() {
@@ -128,6 +190,15 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
     window.location.reload();
   }
 
+  async function setMainSource(product: Product, source: "original" | "enhanced") {
+    await fetch(`/api/products/${product.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageSource: source }),
+    });
+    window.location.reload();
+  }
+
   async function remove(productId: string) {
     await fetch(`/api/products/${productId}`, { method: "DELETE" });
     window.location.reload();
@@ -135,7 +206,7 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
 
   return (
     <div className="space-y-6">
-      <form onSubmit={createProduct} className="space-y-3 rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
+      <form onSubmit={createProduct} className="space-y-4 rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
         <h2 className="text-lg font-semibold text-[#F3F4F6]">{t(lang, "dashboard.add_product")}</h2>
         <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]" required>
           {shops.map((shop) => (
@@ -144,6 +215,27 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
             </option>
           ))}
         </select>
+
+        <div className="space-y-2">
+          <p className="text-xs text-white/60">Product Photo</p>
+          <ImageUploader uploading={uploadingImage} onChange={onProductImageChange} previewUrl={imageOriginalUrl || undefined} label="Upload Image" />
+        </div>
+
+        {imageOriginalUrl ? (
+          <AIEnhancePanel
+            imageOriginalUrl={imageOriginalUrl}
+            imageEnhancedUrl={imageEnhancedUrl}
+            imageSource={imageSource}
+            imageCredits={imageCredits}
+            style={enhanceStyle}
+            generating={enhancingImage}
+            status={status}
+            onStyleChange={setEnhanceStyle}
+            onEnhance={enhanceImage}
+            onUseSource={setImageSource}
+          />
+        ) : null}
+
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t(lang, "products.title")} required />
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -155,25 +247,21 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short product description" rows={3} />
         </div>
         <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="29.90" required />
-        <div className="space-y-2">
-          <p className="text-xs text-white/60">Product Image (optional)</p>
-          <label className="inline-flex cursor-pointer items-center rounded-xl border border-white/10 bg-[#163C33] px-4 py-2 text-sm text-white hover:bg-[#1c4a40]">
-            {uploadingImage ? "Uploading..." : "Upload Image"}
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onProductImageChange(e.target.files?.[0])} />
-          </label>
-          {imageFile && !imageUrl && <p className="text-xs text-white/65">Selected: {imageFile.name}</p>}
-          {imageUrl && (
-            <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageUrl} alt="Product preview" className="h-14 w-14 rounded-lg border border-white/10 object-cover" />
-              <p className="text-xs text-white/65">Image uploaded</p>
+
+        {imageEnhancedUrl ? (
+          <div className="rounded-xl border border-white/10 bg-[#163C33]/60 p-3">
+            <p className="text-xs text-white/60">Main photo source</p>
+            <div className="mt-2 flex gap-2">
+              <Button type="button" variant={imageSource === "original" ? "default" : "outline"} onClick={() => setImageSource("original")}>Original</Button>
+              <Button type="button" variant={imageSource === "enhanced" ? "default" : "outline"} onClick={() => setImageSource("enhanced")}>Enhanced</Button>
             </div>
-          )}
-        </div>
-        <Button type="submit" disabled={uploadingImage || generatingDesc}>
+          </div>
+        ) : null}
+
+        <Button type="submit" disabled={uploadingImage || generatingDesc || enhancingImage}>
           {uploadingImage ? "Uploading image..." : t(lang, "dashboard.add_product")}
         </Button>
-        {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
+        {!imageOriginalUrl && status ? <p className="text-sm text-[#9CA3AF]">{status}</p> : null}
       </form>
 
       <div className="overflow-hidden rounded-2xl border border-white/5 bg-[#112E27]">
@@ -183,6 +271,7 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
               <th className="px-4 py-3">Image</th>
               <th className="px-4 py-3">{t(lang, "products.title")}</th>
               <th className="px-4 py-3">{t(lang, "orders.subtotal")}</th>
+              <th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Available</th>
               <th className="px-4 py-3">Action</th>
             </tr>
@@ -191,15 +280,25 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
             {grouped.map((p) => (
               <tr key={p.id} className="border-t border-white/5 text-[#F3F4F6] hover:bg-[#163C33]">
                 <td className="px-4 py-3">
-                  {p.image_url ? (
+                  {activeImage(p) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image_url} alt={p.name} className="h-10 w-10 rounded-md border border-white/10 object-cover" />
+                    <img src={activeImage(p)!} alt={p.name} className="h-10 w-10 rounded-md border border-white/10 object-cover" />
                   ) : (
                     <span className="text-xs text-white/40">No image</span>
                   )}
                 </td>
                 <td className="px-4 py-3">{p.name}</td>
                 <td className="px-4 py-3">{currencyFromCents(p.price_cents)}</td>
+                <td className="px-4 py-3">
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-white/70">{p.image_source === "enhanced" ? "Enhanced" : "Original"}</span>
+                  {p.image_enhanced_url ? (
+                    <div className="mt-2">
+                      <Button variant="outline" onClick={() => setMainSource(p, p.image_source === "enhanced" ? "original" : "enhanced")}>
+                        {p.image_source === "enhanced" ? "Use Original" : "Use Enhanced"}
+                      </Button>
+                    </div>
+                  ) : null}
+                </td>
                 <td className="px-4 py-3">
                   <Button variant="outline" onClick={() => toggleAvailability(p.id, !p.is_available)}>
                     {p.is_available ? "Yes" : "No"}
@@ -214,7 +313,7 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
             ))}
             {grouped.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[#9CA3AF]">
+                <td colSpan={6} className="px-4 py-8 text-center text-[#9CA3AF]">
                   {t(lang, "orders.no_orders")}
                 </td>
               </tr>

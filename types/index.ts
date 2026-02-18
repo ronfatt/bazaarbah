@@ -39,6 +39,11 @@ export type Product = {
   price_cents: number;
   currency: "MYR";
   image_url: string | null;
+  image_original_url?: string | null;
+  image_enhanced_url?: string | null;
+  image_source?: "original" | "enhanced";
+  enhanced_at?: string | null;
+  enhanced_meta?: Record<string, unknown> | null;
   is_available: boolean;
   created_at: string;
 };

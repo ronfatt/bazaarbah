@@ -9,6 +9,10 @@ const patchSchema = z.object({
   description: z.string().max(400).nullable().optional(),
   priceCents: z.number().int().min(0).optional(),
   imageUrl: z.string().url().nullable().optional(),
+  imageOriginalUrl: z.string().url().nullable().optional(),
+  imageEnhancedUrl: z.string().url().nullable().optional(),
+  imageSource: z.enum(["original", "enhanced"]).optional(),
+  enhancedMeta: z.record(z.string(), z.unknown()).nullable().optional(),
   isAvailable: z.boolean().optional(),
 });
 
@@ -31,12 +35,42 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { data: ownShops } = await admin.from("shops").select("id").eq("owner_id", user.id);
     const ownShopIds = ownShops?.map((s) => s.id) ?? [];
 
+    const { data: current } = await admin
+      .from("products")
+      .select("id,image_url,image_original_url,image_enhanced_url,image_source")
+      .eq("id", id)
+      .in("shop_id", ownShopIds)
+      .maybeSingle();
+
+    if (!current) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
     const patch: Record<string, unknown> = {};
     if (body.name !== undefined) patch.name = body.name;
     if (body.description !== undefined) patch.description = body.description;
     if (body.priceCents !== undefined) patch.price_cents = body.priceCents;
     if (body.imageUrl !== undefined) patch.image_url = body.imageUrl;
+    if (body.imageOriginalUrl !== undefined) patch.image_original_url = body.imageOriginalUrl;
+    if (body.imageEnhancedUrl !== undefined) patch.image_enhanced_url = body.imageEnhancedUrl;
+    if (body.imageSource !== undefined) patch.image_source = body.imageSource;
+    if (body.enhancedMeta !== undefined) patch.enhanced_meta = body.enhancedMeta;
     if (body.isAvailable !== undefined) patch.is_available = body.isAvailable;
+
+    const nextOriginal = body.imageOriginalUrl !== undefined ? body.imageOriginalUrl : current.image_original_url ?? current.image_url;
+    const nextEnhanced = body.imageEnhancedUrl !== undefined ? body.imageEnhancedUrl : current.image_enhanced_url;
+    const nextSource = body.imageSource ?? current.image_source ?? "original";
+    const nextImageUrl =
+      body.imageUrl !== undefined
+        ? body.imageUrl
+        : nextSource === "enhanced"
+          ? nextEnhanced ?? nextOriginal ?? null
+          : nextOriginal ?? nextEnhanced ?? null;
+
+    patch.image_url = nextImageUrl;
+    if (body.imageEnhancedUrl !== undefined && body.imageEnhancedUrl) {
+      patch.enhanced_at = new Date().toISOString();
+    }
 
     const { data, error } = await admin.from("products").update(patch).eq("id", id).in("shop_id", ownShopIds).select("*").single();
 

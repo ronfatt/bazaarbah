@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = createAdminClient();
-    await ensurePublicBucket(admin, "plan-proofs", MAX_BYTES);
+    await ensurePublicBucket(admin, "product-images", MAX_BYTES);
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${user.id}/product-${Date.now()}.${ext}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
 
-    const { error } = await admin.storage.from("plan-proofs").upload(path, bytes, {
+    const { error } = await admin.storage.from("product-images").upload(path, bytes, {
       contentType: file.type,
       upsert: true,
     });
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const { data } = admin.storage.from("plan-proofs").getPublicUrl(path);
+    const { data } = admin.storage.from("product-images").getPublicUrl(path);
     return NextResponse.json({ imageUrl: data.publicUrl });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed";
