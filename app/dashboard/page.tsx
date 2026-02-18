@@ -60,20 +60,20 @@ export default async function DashboardPage() {
 
   return (
     <div className="grid grid-cols-12 gap-6">
-      <div className="col-span-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard title="Today Orders" value={String(todayOrders)} trend={12} icon={ShoppingBag} />
-        <KpiCard title="Total Sales" value={currencyFromCents(totalSales)} trend={9} icon={Wallet} />
-        <KpiCard title="Pending" value={String(pending)} trend={-4} icon={Clock3} />
-        <KpiCard title="Paid" value={String(paid)} trend={11} icon={BadgeCheck} />
+      <div className="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <KpiCard title="Today Orders" value={String(todayOrders)} trend={12} icon={ShoppingBag} accent="teal" />
+        <KpiCard title="Total Sales" value={currencyFromCents(totalSales)} trend={9} icon={Wallet} accent="gold" />
+        <KpiCard title="Pending" value={String(pending)} trend={-4} icon={Clock3} accent="yellow" />
+        <KpiCard title="Paid" value={String(paid)} trend={11} icon={BadgeCheck} accent="green" />
       </div>
 
-      <div className="col-span-12 space-y-6 xl:col-span-8">
-        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+      <div className="col-span-12 space-y-5 xl:col-span-8">
+        <AppCard className="p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-widest text-bb-muted">Workspace</p>
+              <p className="text-xs uppercase tracking-widest text-white/45">Workspace</p>
               <h1 className="mt-1 text-2xl font-bold">Welcome back, {profile.display_name ?? "Seller"}</h1>
-              <p className="mt-2 text-sm text-bb-muted">Setup checklist + quick actions to launch faster.</p>
+              <p className="mt-2 text-sm text-white/65">Setup checklist + quick actions to launch faster.</p>
             </div>
             <Badge variant="ai">AI-ready</Badge>
           </div>
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
           {!hasShop && (
             <div className="mt-5 rounded-xl border border-bb-ai/15 bg-bb-surface2/40 p-4">
               <p className="text-sm font-semibold">Setup Checklist</p>
-              <ul className="mt-2 space-y-1 text-sm text-bb-muted">
+              <ul className="mt-2 space-y-1 text-sm text-white/65">
                 <li>1. Create your shop profile</li>
                 <li>2. Add first product</li>
                 <li>3. Share `/s/your-slug` link</li>
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
           )}
         </AppCard>
 
-        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+        <AppCard className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Orders</h2>
             <Link href="/dashboard/orders" className="text-sm text-bb-gold hover:underline">
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
 
           <AppTableWrap>
             <AppTable>
-              <thead className="bg-bb-surface2/70 text-bb-muted">
+              <thead className="bg-bb-surface2/70 text-white/45">
                 <tr>
                   <th className="px-4 py-3">Order</th>
                   <th className="px-4 py-3">Buyer</th>
@@ -142,7 +142,7 @@ export default async function DashboardPage() {
                 ))}
                 {recentOrders.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-bb-muted">
+                    <td colSpan={4} className="px-4 py-8 text-center text-white/45">
                       No orders yet.
                     </td>
                   </tr>
@@ -153,13 +153,13 @@ export default async function DashboardPage() {
         </AppCard>
       </div>
 
-      <div className="col-span-12 space-y-6 xl:col-span-4">
-        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+      <div className="col-span-12 space-y-5 xl:col-span-4 xl:sticky xl:top-24 xl:self-start">
+        <AppCard className="p-6 bg-[#16423A]/55">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-bb-ai" />
             <h3 className="text-lg font-semibold">AI Shortcuts</h3>
           </div>
-          <p className="mt-2 text-sm text-bb-muted">Generate assets faster with one-click flows.</p>
+          <p className="mt-2 text-sm text-white/65">Generate assets faster with one-click flows.</p>
           <div className="mt-4 space-y-2">
             <Link href="/dashboard/ai" className="block">
               <AppButton variant="ai" className="w-full justify-start">Product Background</AppButton>
@@ -173,20 +173,20 @@ export default async function DashboardPage() {
           </div>
         </AppCard>
 
-        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+        <AppCard className="p-6 bg-[#16423A]/55">
           <h3 className="text-lg font-semibold">Credits Meter</h3>
-          <p className="mt-2 text-sm text-bb-muted">Use credits intentionally for seasonal campaigns.</p>
+          <p className="mt-2 text-sm text-white/65">Use credits intentionally for seasonal campaigns.</p>
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
-              <span>Copy</span>
+              <span className="text-white/65">Copy</span>
               <span className="font-semibold">{profile.copy_credits}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
-              <span>Image</span>
+              <span className="text-white/65">Image</span>
               <span className="font-semibold">{profile.image_credits}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
-              <span>Poster</span>
+              <span className="text-white/65">Poster</span>
               <span className="font-semibold">{profile.poster_credits}</span>
             </div>
           </div>

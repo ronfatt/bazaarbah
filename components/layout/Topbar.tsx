@@ -11,7 +11,7 @@ export function Topbar({ email, credits, initial, signout }: Props) {
   return (
     <div className="sticky top-0 z-20 bg-bb-bg/70 backdrop-blur-xl border-b border-bb-border/5">
       <div className="h-16 px-6 flex items-center justify-between">
-        <div className="text-sm text-bb-muted">
+        <div className="text-sm text-white/65">
           Welcome back, <span className="text-bb-text font-medium">{email}</span>
         </div>
 

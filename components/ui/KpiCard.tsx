@@ -6,19 +6,31 @@ export function KpiCard({
   value,
   trend,
   icon: Icon,
+  accent,
 }: {
   title: string;
   value: string;
   trend: number;
   icon: LucideIcon;
+  accent: "teal" | "gold" | "yellow" | "green";
 }) {
   const positive = trend >= 0;
 
+  const accentClass =
+    accent === "teal"
+      ? "before:bg-bb-ai"
+      : accent === "gold"
+        ? "before:bg-bb-gold"
+        : accent === "yellow"
+          ? "before:bg-yellow-400"
+          : "before:bg-green-400";
+
   return (
-    <AppCard className="bg-gradient-to-br from-bb-surface to-bb-surface2 p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+    <AppCard className={`relative overflow-hidden bg-gradient-to-br from-bb-surface to-bb-surface2 p-6 ${accentClass}`}>
+      <div className="before:absolute before:left-0 before:top-0 before:h-1 before:w-full" />
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-bb-muted">{title}</p>
+          <p className="text-sm text-white/65">{title}</p>
           <p className="mt-2 text-3xl font-bold text-bb-text">{value}</p>
         </div>
         <div className="rounded-xl border border-bb-border/10 bg-bb-brand/50 p-2">

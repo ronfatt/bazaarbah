@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --bg: 11 31 26;
-  --surface: 17 46 39;
-  --surface2: 22 60 51;
+  --bg: 7 26 22;
+  --surface: 14 42 36;
+  --surface2: 18 53 46;
   --border: 255 255 255;
   --text: 243 244 246;
   --muted: 156 163 175;
@@ -38,10 +38,7 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(circle at 40% 20%, rgba(0, 194, 168, 0.1), transparent 45%),
-    radial-gradient(circle at 80% 30%, rgba(201, 162, 39, 0.1), transparent 40%),
-    rgb(var(--bg));
+  background: rgb(var(--bg));
   color: rgb(var(--text));
 }
 
