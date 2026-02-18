@@ -9,9 +9,32 @@ const patchSchema = z.object({
   listPriceCents: z.number().int().positive(),
   promoPriceCents: z.number().int().positive().nullable().optional(),
   promoActive: z.boolean(),
-  promoStartAt: z.string().datetime().nullable().optional(),
-  promoEndAt: z.string().datetime().nullable().optional(),
+  promoStartAt: z.string().trim().min(1).nullable().optional(),
+  promoEndAt: z.string().trim().min(1).nullable().optional(),
 });
+
+function parseDateInput(value: string | null | undefined) {
+  if (!value) return null;
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) {
+    return direct.toISOString();
+  }
+
+  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+
+  const [, ddRaw, mmRaw, yyyyRaw, hhRaw, minRaw, apRaw] = m;
+  const dd = Number(ddRaw);
+  const mm = Number(mmRaw);
+  const yyyy = Number(yyyyRaw);
+  let hh = Number(hhRaw) % 12;
+  const min = Number(minRaw);
+  if (apRaw.toUpperCase() === "PM") hh += 12;
+
+  const parsed = new Date(Date.UTC(yyyy, mm - 1, dd, hh, min, 0));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -56,6 +79,18 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Promo price must be lower than list price." }, { status: 400 });
   }
 
+  const promoStartAt = parseDateInput(payload.promoStartAt);
+  const promoEndAt = parseDateInput(payload.promoEndAt);
+  if (payload.promoStartAt && !promoStartAt) {
+    return NextResponse.json({ error: "Invalid promo start datetime format." }, { status: 400 });
+  }
+  if (payload.promoEndAt && !promoEndAt) {
+    return NextResponse.json({ error: "Invalid promo end datetime format." }, { status: 400 });
+  }
+  if (promoStartAt && promoEndAt && new Date(promoEndAt).getTime() <= new Date(promoStartAt).getTime()) {
+    return NextResponse.json({ error: "Promo end must be later than promo start." }, { status: 400 });
+  }
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("plan_prices")
@@ -64,8 +99,8 @@ export async function PATCH(req: NextRequest) {
       list_price_cents: payload.listPriceCents,
       promo_price_cents: payload.promoPriceCents ?? null,
       promo_active: payload.promoActive,
-      promo_start_at: payload.promoStartAt ?? null,
-      promo_end_at: payload.promoEndAt ?? null,
+      promo_start_at: promoStartAt,
+      promo_end_at: promoEndAt,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     });
