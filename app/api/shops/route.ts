@@ -11,7 +11,7 @@ const createSchema = z.object({
   phoneWhatsapp: z.string().min(6),
   addressText: z.string().max(240).optional(),
   theme: z.enum(["gold", "minimal", "cute"]).default("gold"),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().url().optional()),
 });
 
 const updateSchema = z.object({
@@ -21,7 +21,7 @@ const updateSchema = z.object({
   phoneWhatsapp: z.string().min(6).optional(),
   addressText: z.string().max(240).nullable().optional(),
   theme: z.enum(["gold", "minimal", "cute"]).optional(),
-  logoUrl: z.string().url().nullable().optional(),
+  logoUrl: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : v), z.string().url().nullable().optional()),
   isActive: z.boolean().optional(),
 });
 

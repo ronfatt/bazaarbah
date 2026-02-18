@@ -32,7 +32,7 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
     const method = initialShop ? "PATCH" : "POST";
     const body = initialShop
       ? { shopId: initialShop.id, shopName, slug, phoneWhatsapp, addressText: addressText || null, theme, logoUrl: logoUrl || null }
-      : { shopName, slug, phoneWhatsapp, addressText, theme, logoUrl };
+      : { shopName, slug, phoneWhatsapp, addressText, theme, logoUrl: logoUrl || undefined };
 
     const res = await fetch("/api/shops", {
       method,
