@@ -53,7 +53,7 @@ export function LoginForm() {
         <AppButton type="submit" variant="primary" disabled={loading} className="w-full hover:scale-[1.02]">
           {loading ? "Please wait..." : "Login"}
         </AppButton>
-        <AppButton type="button" variant="secondary" disabled={loading} className="w-full" onClick={onRegister}>
+        <AppButton type="button" variant="ghost" disabled={loading} className="w-full" onClick={onRegister}>
           Register
         </AppButton>
       </div>
