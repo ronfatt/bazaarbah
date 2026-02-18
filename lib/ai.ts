@@ -82,3 +82,28 @@ export async function generateBackgroundImage(input: {
 
   return { base64, prompt };
 }
+
+export async function generateProductDescription(input: {
+  productName: string;
+  price?: string;
+  keySellingPoints?: string;
+}) {
+  const client = getClient();
+  const response = await client.responses.create({
+    model: "gpt-4.1-mini",
+    input: [
+      {
+        role: "system",
+        content:
+          "Write a concise ecommerce product description in plain text only. 2-4 short sentences, sales-friendly, no hashtags, no markdown.",
+      },
+      {
+        role: "user",
+        content: `Product: ${input.productName}\nPrice: ${input.price ?? "-"}\nSelling points: ${
+          input.keySellingPoints ?? "-"
+        }\nReturn a single paragraph.`,
+      },
+    ],
+  });
+  return response.output_text.trim();
+}
