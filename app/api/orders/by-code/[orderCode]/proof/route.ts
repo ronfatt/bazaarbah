@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
   proofImageUrl: z.string().url().optional(),
@@ -12,25 +12,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   try {
     const body = schema.parse(await req.json());
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
-    const { data: order } = await admin.from("orders").select("id").eq("order_code", orderCode).maybeSingle();
-    if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    }
-
-    const { error } = await admin.from("payments").insert({
-      order_id: order.id,
-      method: "qr_manual",
-      proof_image_url: body.proofImageUrl ?? null,
-      reference_text: body.referenceText ?? null,
+    const { error } = await supabase.rpc("submit_payment_proof_public", {
+      p_order_code: orderCode,
+      p_reference_text: body.referenceText ?? null,
+      p_proof_image_url: body.proofImageUrl ?? null,
     });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    await admin.from("orders").update({ status: "proof_submitted" }).eq("id", order.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });

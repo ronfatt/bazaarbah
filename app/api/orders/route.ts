@@ -11,6 +11,35 @@ const orderSchema = z.object({
   items: z.array(z.object({ productId: z.string().uuid(), qty: z.number().int().min(1).max(99) })).min(1),
 });
 
+async function insertOrderWithRetry(admin: ReturnType<typeof createAdminClient>, payload: {
+  shopId: string;
+  buyerName?: string;
+  buyerPhone?: string;
+  subtotal: number;
+}) {
+  for (let i = 0; i < 5; i++) {
+    const code = generateOrderCode();
+    const { data, error } = await admin
+      .from("orders")
+      .insert({
+        order_code: code,
+        shop_id: payload.shopId,
+        buyer_name: payload.buyerName ?? null,
+        buyer_phone: payload.buyerPhone ?? null,
+        subtotal_cents: payload.subtotal,
+      })
+      .select("id,order_code,status,subtotal_cents")
+      .single();
+
+    if (!error && data) return { data, error: null };
+    if (!error?.message?.toLowerCase().includes("duplicate") && !error?.message?.toLowerCase().includes("unique")) {
+      return { data: null, error };
+    }
+  }
+
+  return { data: null, error: { message: "Could not generate unique order code" } };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = orderSchema.parse(await req.json());
@@ -55,18 +84,12 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    const orderCode = generateOrderCode();
-    const { data: order, error: orderErr } = await admin
-      .from("orders")
-      .insert({
-        order_code: orderCode,
-        shop_id: shopId,
-        buyer_name: payload.buyerName ?? null,
-        buyer_phone: payload.buyerPhone ?? null,
-        subtotal_cents: subtotal,
-      })
-      .select("id,order_code,status,subtotal_cents")
-      .single();
+    const { data: order, error: orderErr } = await insertOrderWithRetry(admin, {
+      shopId,
+      buyerName: payload.buyerName,
+      buyerPhone: payload.buyerPhone,
+      subtotal,
+    });
 
     if (orderErr || !order) {
       return NextResponse.json({ error: orderErr?.message ?? "Order failed" }, { status: 400 });

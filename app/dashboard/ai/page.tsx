@@ -7,21 +7,21 @@ export default async function AIPage() {
   const { user, profile } = await requireSeller();
   const admin = createAdminClient();
 
-  const { data: shop } = await admin.from("shops").select("id").eq("owner_id", user.id).order("created_at", { ascending: true }).maybeSingle();
+  const { data: shop } = await admin.from("shops").select("id,theme").eq("owner_id", user.id).order("created_at", { ascending: true }).maybeSingle();
 
   return (
     <section className="space-y-4">
-      <Card>
-        <h1 className="text-2xl font-bold">AI Tools</h1>
-        <p className="mt-2 text-sm text-neutral-600">Use credits to generate copy, product visuals, and promo posters.</p>
-        <div className="mt-4 flex flex-wrap gap-3 text-sm">
-          <p className="rounded-lg bg-neutral-100 px-3 py-1">Copy: {profile.copy_credits}</p>
-          <p className="rounded-lg bg-neutral-100 px-3 py-1">Image: {profile.image_credits}</p>
-          <p className="rounded-lg bg-neutral-100 px-3 py-1">Poster: {profile.poster_credits}</p>
+      <Card className="bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-800 text-neutral-100">
+        <h1 className="text-2xl font-bold">AI Marketing Bundle</h1>
+        <p className="mt-2 text-sm text-neutral-300">Text-safe poster pipeline: AI creates visuals, system handles typography.</p>
+        <div className="mt-4 grid gap-2 text-sm md:grid-cols-3">
+          <p className="rounded-lg border border-neutral-700 bg-neutral-900/70 px-3 py-2">Copy credits: {profile.copy_credits}</p>
+          <p className="rounded-lg border border-neutral-700 bg-neutral-900/70 px-3 py-2">Image credits: {profile.image_credits}</p>
+          <p className="rounded-lg border border-neutral-700 bg-neutral-900/70 px-3 py-2">Poster credits: {profile.poster_credits}</p>
         </div>
       </Card>
 
-      <AITools shopId={shop?.id} />
+      <AITools shopId={shop?.id} initialTheme={shop?.theme ?? "gold"} />
     </section>
   );
 }

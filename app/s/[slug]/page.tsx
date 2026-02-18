@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CheckoutForm } from "@/components/buyer/checkout-form";
+import { normalizeTheme, themeTokens } from "@/lib/theme";
 
 export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -19,26 +20,38 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
     .eq("is_available", true)
     .order("created_at", { ascending: false });
 
+  const theme = normalizeTheme(shop.theme);
+  const token = themeTokens[theme];
+
   return (
-    <main className="mx-auto min-h-screen w-full max-w-5xl px-6 py-10 md:px-10">
-      <h1 className="text-4xl font-bold text-neutral-900">{shop.shop_name}</h1>
-      <p className="mt-2 text-neutral-600">Raya pre-order shop. No account required.</p>
+    <main className={`min-h-screen bg-gradient-to-br ${token.page}`}>
+      <div className="mx-auto w-full max-w-5xl px-6 py-10 md:px-10">
+        <div className={`rounded-3xl border p-8 shadow-xl ${token.card}`}>
+          <h1 className={`text-4xl font-bold ${token.text}`}>{shop.shop_name}</h1>
+          <p className={`mt-2 text-sm ${token.text} opacity-85`}>Raya pre-order shop. No login needed.</p>
+        </div>
 
-      <section className="mt-8 grid gap-5 md:grid-cols-2">
-        <Card>
-          <h2 className="text-lg font-semibold">Products</h2>
-          <div className="mt-3 space-y-3">
-            {(products ?? []).map((p) => (
-              <div key={p.id} className="rounded-xl border border-neutral-200 p-3">
-                <p className="font-semibold">{p.name}</p>
-                <p className="text-sm text-neutral-600">{p.description}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <section className="mt-6 grid gap-5 md:grid-cols-2">
+          <Card className="bg-white/96">
+            <h2 className="text-lg font-semibold">Products</h2>
+            <div className="mt-3 space-y-3">
+              {(products ?? []).map((p) => (
+                <div key={p.id} className="rounded-xl border border-neutral-200 p-3">
+                  <p className="font-semibold">{p.name}</p>
+                  <p className="text-sm text-neutral-600">{p.description}</p>
+                </div>
+              ))}
+              {(products?.length ?? 0) === 0 && (
+                <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center text-sm text-neutral-500">
+                  Seasonal menu is being prepared. Check back soon.
+                </div>
+              )}
+            </div>
+          </Card>
 
-        <CheckoutForm shopSlug={shop.slug} products={(products ?? []).map((p) => ({ id: p.id, name: p.name, price_cents: p.price_cents }))} />
-      </section>
+          <CheckoutForm shopSlug={shop.slug} products={(products ?? []).map((p) => ({ id: p.id, name: p.name, price_cents: p.price_cents }))} />
+        </section>
+      </div>
     </main>
   );
 }

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { composePoster } from "@/lib/poster";
 import { createClient } from "@/lib/supabase/server";
-import { consumeCredit } from "@/lib/credits";
+import { composePoster } from "@/lib/poster";
 
 const schema = z.object({
   bgBase64: z.string().min(8),
@@ -10,7 +9,8 @@ const schema = z.object({
   subtitle: z.string().min(2),
   price: z.string().min(1),
   cta: z.string().min(1),
-  shopId: z.string().uuid().optional(),
+  theme: z.enum(["gold", "minimal", "cute"]).default("gold"),
+  aspect: z.enum(["16:9", "9:16"]).default("9:16"),
 });
 
 export async function POST(req: NextRequest) {
@@ -25,10 +25,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = schema.parse(await req.json());
-    const posterBase64 = await composePoster(body);
-    const prompt = `${body.title} | ${body.subtitle} | ${body.price} | ${body.cta}`;
-    const credits = await consumeCredit({ ownerId: user.id, type: "poster", prompt, shopId: body.shopId ?? null });
-    return NextResponse.json({ posterBase64, credits });
+    const posterBase64 = await composePoster({
+      bgBase64: body.bgBase64,
+      title: body.title,
+      subtitle: body.subtitle,
+      price: body.price,
+      cta: body.cta,
+      theme: body.theme,
+      aspect: body.aspect,
+    });
+
+    return NextResponse.json({ posterBase64 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to compose poster" }, { status: 400 });
   }

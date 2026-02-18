@@ -14,13 +14,15 @@ export function currencyFromCents(cents: number) {
 
 export function generateOrderCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const random = Array.from({ length: 4 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  const random = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
   return `RYA-${random}`;
 }
 
-export function generateReceiptNo(counter: number) {
+export function generateReceiptNo() {
   const year = new Date().getFullYear();
-  return `RCPT-${year}-${String(counter).padStart(4, "0")}`;
+  const stamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 900 + 100);
+  return `RCPT-${year}-${stamp}${random}`;
 }
 
 export function startOfTodayIso() {

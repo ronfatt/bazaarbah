@@ -19,9 +19,20 @@
 
 body {
   background:
-    radial-gradient(circle at 8% 0%, rgba(255, 203, 86, 0.35), transparent 45%),
-    radial-gradient(circle at 100% 100%, rgba(255, 145, 102, 0.2), transparent 45%),
-    var(--background);
+    radial-gradient(circle at 0% 0%, rgba(212, 175, 55, 0.24), transparent 35%),
+    radial-gradient(circle at 100% 100%, rgba(11, 61, 46, 0.14), transparent 35%),
+    linear-gradient(120deg, rgba(255, 245, 214, 0.25), rgba(255, 255, 255, 0.2));
   color: var(--foreground);
   min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, black 30%, transparent 95%);
+  z-index: -1;
 }

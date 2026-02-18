@@ -1,48 +1,58 @@
-# Raya Kuih Seller Platform (MVP)
+# Raya Kuih Seller Platform
 
-Seasonal SaaS for Raya sellers with seller dashboard + public buyer flow.
+Seasonal SaaS for Raya sellers with seller dashboard, buyer storefront, manual payment proof, receipt PDF, and AI marketing bundle.
 
-## Stack
-- Next.js App Router + Tailwind
-- Supabase (Auth + Postgres + Storage-ready)
-- Next.js route handlers for APIs
-- `pdf-lib` for receipts
-- `canvas` for poster composition
-- OpenAI API for copy + image generation
+## Core Routes
 
-## Routes
-- Seller (login required)
-  - `/dashboard`
-  - `/dashboard/shop`
-  - `/dashboard/products`
-  - `/dashboard/orders`
-  - `/dashboard/orders/[id]`
-  - `/dashboard/ai`
-  - `/dashboard/billing`
-- Buyer (no login)
-  - `/s/[slug]`
-  - `/o/[order_code]`
+### Seller (auth required)
+- `/dashboard` (KPI + weekly sales chart)
+- `/dashboard/shop`
+- `/dashboard/products`
+- `/dashboard/orders`
+- `/dashboard/orders/[id]`
+- `/dashboard/ai`
+- `/dashboard/billing`
+
+### Buyer (no login)
+- `/s/[slug]`
+- `/o/[order_code]`
+
+## AI Marketing Bundle
+
+- `POST /api/ai/product-image`
+  - Product background generation (no text), consumes `image_credits`
+- `POST /api/ai/poster`
+  - AI background + system typography overlay (16:9 / 9:16), consumes `poster_credits`
+- `POST /api/ai/copy`
+  - Outputs FB captions, WhatsApp broadcasts, hooks, consumes `copy_credits`
+
+### Anti-abuse
+- 3-second cooldown per user per AI type
+- Daily basic limits:
+  - poster 5
+  - image 10
+  - copy 50
 
 ## APIs
 - `GET/POST/PATCH /api/shops`
 - `POST /api/products`
 - `PATCH/DELETE /api/products/:id`
-- `POST /api/orders` (buyer creates order)
-- `POST /api/orders/by-code/:orderCode/proof` (buyer submits proof)
-- `POST /api/orders/:id/mark-paid` (seller confirms)
-- `POST /api/orders/:id/receipt` (create receipt record)
-- `GET /api/orders/:id/receipt` (download PDF)
-- `POST /api/ai/copy`
-- `POST /api/ai/poster`
-- `POST /api/ai/poster-compose`
+- `POST /api/orders`
+- `GET /api/orders/by-code/:orderCode`
+- `POST /api/orders/by-code/:orderCode/proof`
+- `POST /api/orders/:id/mark-paid` (auto creates receipt if missing)
+- `POST /api/orders/:id/receipt`
+- `GET /api/orders/:id/receipt`
 
-## Database Migration
-Run in Supabase SQL editor:
-- `/Users/rms/Desktop/bazaarBah/db/migrations/001_init.sql`
-- `/Users/rms/Desktop/bazaarBah/db/migrations/002_raya_core.sql`
+## Database Migrations
+Run in Supabase SQL Editor in this order:
+1. `/Users/rms/Desktop/bazaarBah/db/migrations/001_init.sql`
+2. `/Users/rms/Desktop/bazaarBah/db/migrations/002_raya_core.sql`
+3. `/Users/rms/Desktop/bazaarBah/db/migrations/003_rls_hardening.sql`
 
-`002_raya_core.sql` contains your requested schema:
-`profiles, shops, products, orders, order_items, payments, receipts, ai_jobs` with RLS.
+`003_rls_hardening.sql` adds:
+- seller/admin RLS hardening
+- buyer read/submit via controlled RPC by `order_code`
 
 ## Env
 Copy `.env.example` to `.env.local` and set:

@@ -9,6 +9,27 @@ type ItemJoin = {
   products: { name: string } | { name: string }[];
 };
 
+async function createReceiptIfMissing(admin: ReturnType<typeof createAdminClient>, orderId: string) {
+  const { data: existing } = await admin.from("receipts").select("id,receipt_no").eq("order_id", orderId).maybeSingle();
+  if (existing) return existing;
+
+  for (let i = 0; i < 5; i++) {
+    const receiptNo = generateReceiptNo();
+    const { data, error } = await admin
+      .from("receipts")
+      .insert({ order_id: orderId, receipt_no: receiptNo, pdf_url: `inline:/api/orders/${orderId}/receipt` })
+      .select("id,receipt_no")
+      .single();
+
+    if (!error && data) return data;
+    if (!error?.message?.toLowerCase().includes("duplicate") && !error?.message?.toLowerCase().includes("unique")) {
+      throw new Error(error?.message ?? "Receipt create failed");
+    }
+  }
+
+  throw new Error("Could not generate unique receipt number");
+}
+
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -28,20 +49,8 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  const { count } = await admin.from("receipts").select("id", { count: "exact", head: true });
-  const receiptNo = generateReceiptNo((count ?? 0) + 1);
-
-  const { data, error } = await admin
-    .from("receipts")
-    .insert({ order_id: order.id, receipt_no: receiptNo, pdf_url: `inline:/api/orders/${order.id}/receipt` })
-    .select("*")
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ receipt: data });
+  const receipt = await createReceiptIfMissing(admin, order.id);
+  return NextResponse.json({ receipt });
 }
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -1,4 +1,5 @@
-import { createCanvas, loadImage } from "canvas";
+import { CanvasRenderingContext2D, createCanvas, loadImage } from "canvas";
+import { normalizeTheme, posterPalette } from "@/lib/theme";
 
 type OverlayInput = {
   bgBase64: string;
@@ -6,11 +7,40 @@ type OverlayInput = {
   subtitle: string;
   price: string;
   cta: string;
+  theme: "gold" | "minimal" | "cute";
+  aspect: "16:9" | "9:16";
 };
 
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
 export async function composePoster(input: OverlayInput) {
-  const width = 1080;
-  const height = 1350;
+  const theme = normalizeTheme(input.theme);
+  const palette = posterPalette(theme);
+
+  const width = input.aspect === "16:9" ? 1600 : 1080;
+  const height = input.aspect === "16:9" ? 900 : 1920;
+  const pad = input.aspect === "16:9" ? 86 : 76;
+
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
 
@@ -18,22 +48,25 @@ export async function composePoster(input: OverlayInput) {
   const bg = await loadImage(bgBuffer);
   ctx.drawImage(bg, 0, 0, width, height);
 
-  ctx.fillStyle = "rgba(0,0,0,0.42)";
+  ctx.fillStyle = palette.overlay;
   ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = "#fff8e8";
-  ctx.font = "bold 88px sans-serif";
-  ctx.fillText(input.title, 72, 200, width - 144);
+  ctx.fillStyle = palette.heading;
+  ctx.font = input.aspect === "16:9" ? "bold 90px sans-serif" : "bold 82px sans-serif";
+  ctx.fillText(input.title, pad, input.aspect === "16:9" ? 170 : 230, width - pad * 2);
 
-  ctx.font = "42px sans-serif";
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText(input.subtitle, 72, 280, width - 144);
+  ctx.fillStyle = palette.subtitle;
+  ctx.font = input.aspect === "16:9" ? "44px sans-serif" : "48px sans-serif";
+  ctx.fillText(input.subtitle, pad, input.aspect === "16:9" ? 245 : 330, width - pad * 2);
 
-  ctx.fillStyle = "#f3b700";
-  ctx.fillRect(72, 1040, width - 144, 160);
-  ctx.fillStyle = "#231500";
-  ctx.font = "bold 68px sans-serif";
-  ctx.fillText(`${input.price} · ${input.cta}`, 108, 1145, width - 216);
+  const ctaH = input.aspect === "16:9" ? 120 : 150;
+  const ctaY = height - ctaH - pad;
+  ctx.fillStyle = palette.ctaBg;
+  drawRoundedRect(ctx, pad, ctaY, width - pad * 2, ctaH, 18);
+
+  ctx.fillStyle = palette.ctaText;
+  ctx.font = input.aspect === "16:9" ? "bold 52px sans-serif" : "bold 56px sans-serif";
+  ctx.fillText(`${input.price}  •  ${input.cta}`, pad + 26, ctaY + (input.aspect === "16:9" ? 76 : 94), width - pad * 2 - 48);
 
   return canvas.toBuffer("image/png").toString("base64");
 }
