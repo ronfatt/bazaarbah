@@ -3,8 +3,11 @@ import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import type { Product, Shop } from "@/types";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 export default async function ProductsPage() {
+  const lang = await getLangFromCookie();
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
@@ -18,10 +21,10 @@ export default async function ProductsPage() {
   return (
     <section className="space-y-4">
       <Card>
-        <h1 className="text-2xl font-bold text-[#F3F4F6]">Products</h1>
-        <p className="mt-2 text-sm text-[#9CA3AF]">CRUD products and availability.</p>
+        <h1 className="text-2xl font-bold text-[#F3F4F6]">{t(lang, "products.title")}</h1>
+        <p className="mt-2 text-sm text-[#9CA3AF]">{t(lang, "products.desc")}</p>
       </Card>
-      <ProductManager shops={(shops ?? []) as Shop[]} products={(products ?? []) as Product[]} />
+      <ProductManager shops={(shops ?? []) as Shop[]} products={(products ?? []) as Product[]} lang={lang} />
     </section>
   );
 }

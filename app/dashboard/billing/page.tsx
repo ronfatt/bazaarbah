@@ -4,8 +4,11 @@ import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePlanTier, PLAN_AI_CREDITS, PLAN_LABEL, type PlanPriceRow } from "@/lib/plan";
 import { PlanUpgradePanel } from "@/components/dashboard/plan-upgrade-panel";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 export default async function BillingPage() {
+  const lang = await getLangFromCookie();
   const { user, profile } = await requireSeller();
   const tier = normalizePlanTier(profile);
   const included = PLAN_AI_CREDITS[tier];
@@ -42,14 +45,14 @@ export default async function BillingPage() {
       <AppCard className="p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">Billing & Access</h1>
-            <p className="mt-2 text-sm text-white/65">Free users can view dashboard only. Submit upgrade request to unlock all modules.</p>
+            <h1 className="text-2xl font-bold">{t(lang, "billing.title")}</h1>
+            <p className="mt-2 text-sm text-white/65">{t(lang, "billing.free_desc")}</p>
           </div>
           <Badge variant={tier === "free" ? "pending" : "paid"}>{PLAN_LABEL[tier]}</Badge>
         </div>
 
         <div className="mt-4 rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm text-white/80">
-          <p>Plan credits included:</p>
+          <p>{t(lang, "billing.plan_credits")}</p>
           <p className="mt-1">
             Copy {included.copy} • Image {included.image} • Poster {included.poster}
           </p>
@@ -57,19 +60,19 @@ export default async function BillingPage() {
       </AppCard>
 
       <AppCard className="p-6">
-        <h2 className="text-lg font-semibold">Referral Program</h2>
-        <p className="mt-2 text-sm text-white/65">Share your code. When referred member upgrades, you get bonus AI credits.</p>
+        <h2 className="text-lg font-semibold">{t(lang, "billing.referral_title")}</h2>
+        <p className="mt-2 text-sm text-white/65">{t(lang, "billing.referral_desc")}</p>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm">
-            <p className="text-white/65">Your code</p>
+            <p className="text-white/65">{t(lang, "billing.your_code")}</p>
             <p className="mt-1 font-mono text-lg text-white">{referralRes.data?.referral_code ?? "-"}</p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm">
-            <p className="text-white/65">Referred upgrades</p>
+            <p className="text-white/65">{t(lang, "billing.referred_upgrades")}</p>
             <p className="mt-1 text-lg font-semibold text-white">{referredCount ?? 0}</p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm">
-            <p className="text-white/65">Total bonus credits</p>
+            <p className="text-white/65">{t(lang, "billing.total_bonus")}</p>
             <p className="mt-1 text-lg font-semibold text-white">{referralRes.data?.referral_bonus_total ?? 0}</p>
           </div>
         </div>
@@ -82,6 +85,7 @@ export default async function BillingPage() {
         posterCredits={effectivePoster}
         prices={prices}
         requests={(reqRes.data ?? [])}
+        lang={lang}
       />
     </section>
   );

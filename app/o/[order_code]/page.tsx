@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { currencyFromCents } from "@/lib/utils";
 import { PaymentProofForm } from "@/components/buyer/payment-proof-form";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 type PublicOrder = {
   id: string;
@@ -21,6 +23,7 @@ type PublicOrderItem = {
 };
 
 export default async function OrderCodePage({ params }: { params: Promise<{ order_code: string }> }) {
+  const lang = await getLangFromCookie();
   const { order_code } = await params;
   const supabase = await createClient();
 
@@ -39,20 +42,20 @@ export default async function OrderCodePage({ params }: { params: Promise<{ orde
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-6 py-10 md:px-10">
       <Card>
-        <h1 className="text-2xl font-bold">Order {order.order_code}</h1>
-        <p className="mt-1 text-sm text-neutral-600">Shop: {order.shop_name}</p>
-        <p className="mt-1 text-sm text-neutral-600">Status: {order.status}</p>
-        <p className="mt-1 text-sm font-semibold">Amount: {currencyFromCents(order.subtotal_cents)}</p>
+        <h1 className="text-2xl font-bold">{t(lang, "buyer.order_page")} {order.order_code}</h1>
+        <p className="mt-1 text-sm text-neutral-600">{t(lang, "buyer.shop")} {order.shop_name}</p>
+        <p className="mt-1 text-sm text-neutral-600">{t(lang, "dashboard.status")} {order.status}</p>
+        <p className="mt-1 text-sm font-semibold">{t(lang, "buyer.amount")} {currencyFromCents(order.subtotal_cents)}</p>
 
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
-          <p className="font-semibold text-amber-800">Manual QR Payment</p>
-          <p className="text-amber-700">Scan seller QR and submit your reference/proof below.</p>
+          <p className="font-semibold text-amber-800">{t(lang, "buyer.manual_qr")}</p>
+          <p className="text-amber-700">{t(lang, "buyer.manual_qr_desc")}</p>
         </div>
       </Card>
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
         <Card>
-          <h2 className="text-lg font-semibold">Items</h2>
+          <h2 className="text-lg font-semibold">{t(lang, "buyer.items")}</h2>
           <div className="mt-3 space-y-2 text-sm">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between border-b border-neutral-100 py-2">
@@ -63,10 +66,10 @@ export default async function OrderCodePage({ params }: { params: Promise<{ orde
               </div>
             ))}
           </div>
-          {items.length === 0 && <p className="mt-2 text-sm text-neutral-500">No items found.</p>}
+          {items.length === 0 && <p className="mt-2 text-sm text-neutral-500">{t(lang, "buyer.no_items")}</p>}
         </Card>
 
-        <PaymentProofForm orderCode={order.order_code} />
+        <PaymentProofForm orderCode={order.order_code} lang={lang} />
       </div>
     </main>
   );

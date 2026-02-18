@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { currencyFromCents } from "@/lib/utils";
+import { t, type Lang } from "@/lib/i18n";
 
 type ProductLite = { id: string; name: string; price_cents: number };
 
-export function CheckoutForm({ shopSlug, products }: { shopSlug: string; products: ProductLite[] }) {
+export function CheckoutForm({ shopSlug, products, lang = "en" }: { shopSlug: string; products: ProductLite[]; lang?: Lang }) {
   const [buyerName, setBuyerName] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
   const [qty, setQty] = useState<Record<string, number>>({});
@@ -23,7 +24,7 @@ export function CheckoutForm({ shopSlug, products }: { shopSlug: string; product
       .filter((p) => p.qty > 0);
 
     if (!items.length) {
-      setStatus("Pick at least one product.");
+      setStatus(t(lang, "buyer.pick_one"));
       return;
     }
 
@@ -35,7 +36,7 @@ export function CheckoutForm({ shopSlug, products }: { shopSlug: string; product
 
     const json = await res.json();
     if (!res.ok) {
-      setStatus(json.error ?? "Order failed.");
+      setStatus(json.error ?? t(lang, "buyer.order_failed"));
       return;
     }
 
@@ -44,7 +45,7 @@ export function CheckoutForm({ shopSlug, products }: { shopSlug: string; product
 
   return (
     <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-4">
-      <h2 className="text-lg font-semibold">Place Order</h2>
+      <h2 className="text-lg font-semibold">{t(lang, "buyer.place_order")}</h2>
       {products.map((p) => (
         <div key={p.id} className="flex items-center justify-between gap-3 border-b border-neutral-100 py-2">
           <div>
@@ -61,10 +62,10 @@ export function CheckoutForm({ shopSlug, products }: { shopSlug: string; product
           />
         </div>
       ))}
-      <Input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="Your Name (optional)" />
-      <Input value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} placeholder="Phone / WhatsApp (optional)" />
-      <p className="font-semibold">Total: {currencyFromCents(total)}</p>
-      <Button onClick={onCheckout}>Submit Order</Button>
+      <Input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder={t(lang, "buyer.name_optional")} />
+      <Input value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} placeholder={t(lang, "buyer.phone_optional")} />
+      <p className="font-semibold">{t(lang, "buyer.total")} {currencyFromCents(total)}</p>
+      <Button onClick={onCheckout}>{t(lang, "buyer.submit_order")}</Button>
       {status && <p className="text-sm text-red-600">{status}</p>}
     </div>
   );

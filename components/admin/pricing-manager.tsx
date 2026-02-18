@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { currencyFromCents } from "@/lib/utils";
+import { t, type Lang } from "@/lib/i18n";
 
 type Price = {
   plan_tier: "pro_88" | "pro_128";
@@ -13,7 +14,7 @@ type Price = {
   promo_end_at: string | null;
 };
 
-export function PricingManager({ initialPrices }: { initialPrices: Price[] }) {
+export function PricingManager({ initialPrices, lang = "en" }: { initialPrices: Price[]; lang?: Lang }) {
   const [prices, setPrices] = useState<Price[]>(initialPrices);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -40,10 +41,10 @@ export function PricingManager({ initialPrices }: { initialPrices: Price[] }) {
     const json = await res.json();
     setBusy(null);
     if (!res.ok) {
-      setStatus(json.error ?? "Failed to save pricing.");
+      setStatus(json.error ?? "Failed");
       return;
     }
-    setStatus(`${plan.plan_tier} pricing updated.`);
+    setStatus("OK");
     window.location.reload();
   }
 
@@ -104,8 +105,8 @@ export function PricingManager({ initialPrices }: { initialPrices: Price[] }) {
 
           <div className="mt-4">
             <AppButton onClick={() => save(plan)} disabled={busy === plan.plan_tier}>
-              {busy === plan.plan_tier ? "Saving..." : "Save Pricing"}
-            </AppButton>
+                {busy === plan.plan_tier ? "..." : t(lang, "admin.pricing")}
+              </AppButton>
           </div>
         </div>
       ))}
@@ -113,4 +114,3 @@ export function PricingManager({ initialPrices }: { initialPrices: Price[] }) {
     </div>
   );
 }
-

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
+import { t, type Lang } from "@/lib/i18n";
 
 type Announcement = {
   id: string;
@@ -12,7 +13,7 @@ type Announcement = {
   created_at: string;
 };
 
-export function AnnouncementManager({ announcements }: { announcements: Announcement[] }) {
+export function AnnouncementManager({ announcements, lang = "en" }: { announcements: Announcement[]; lang?: Lang }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,10 +30,10 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
     const json = await res.json();
     setBusy(false);
     if (!res.ok) {
-      setStatus(json.error ?? "Failed to publish");
+      setStatus(json.error ?? "Failed");
       return;
     }
-    setStatus("Announcement published to all members.");
+    setStatus(t(lang, "admin.announcement_desc"));
     window.location.reload();
   }
 
@@ -50,8 +51,8 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-white/10 bg-[#163C33] p-5">
-        <h3 className="text-lg font-semibold text-white">Create Announcement</h3>
-        <p className="mt-1 text-sm text-white/65">This will be shown to all members on their dashboard.</p>
+        <h3 className="text-lg font-semibold text-white">{t(lang, "admin.announcement_center")}</h3>
+        <p className="mt-1 text-sm text-white/65">{t(lang, "admin.announcement_desc")}</p>
         <div className="mt-3 space-y-2">
           <input
             value={title}
@@ -68,7 +69,7 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
         </div>
         <div className="mt-3">
           <AppButton onClick={publish} disabled={busy || title.trim().length < 2 || body.trim().length < 4}>
-            {busy ? "Publishing..." : "Publish to All Members"}
+            {busy ? "..." : t(lang, "admin.announcements")}
           </AppButton>
         </div>
         {status ? <p className="mt-2 text-sm text-white/80">{status}</p> : null}
@@ -79,7 +80,7 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
           <div key={a.id} className="rounded-xl border border-white/10 bg-[#163C33] p-4">
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold text-white">{a.title}</p>
-              <Badge variant={a.is_active ? "paid" : "neutral"}>{a.is_active ? "Active" : "Inactive"}</Badge>
+              <Badge variant={a.is_active ? "paid" : "neutral"}>{a.is_active ? t(lang, "plan.active") : "Inactive"}</Badge>
             </div>
             <p className="mt-2 text-sm text-white/75">{a.body}</p>
             <p className="mt-2 text-xs text-white/45">{new Date(a.created_at).toLocaleString("en-MY")}</p>
@@ -101,4 +102,3 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
     </div>
   );
 }
-

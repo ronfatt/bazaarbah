@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
+import { t, type Lang } from "@/lib/i18n";
 
 type MemberRow = {
   id: string;
@@ -18,7 +19,7 @@ type MemberRow = {
   created_at: string;
 };
 
-export function MemberManagementTable({ rows }: { rows: MemberRow[] }) {
+export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]; lang?: Lang }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [warningTitle, setWarningTitle] = useState<Record<string, string>>({});
@@ -36,10 +37,10 @@ export function MemberManagementTable({ rows }: { rows: MemberRow[] }) {
     const json = await res.json();
     setBusy(null);
     if (!res.ok) {
-      setStatus(json.error ?? "Action failed");
+      setStatus(json.error ?? "Failed");
       return;
     }
-    setStatus("Updated successfully.");
+    setStatus("OK");
     window.location.reload();
   }
 
@@ -49,10 +50,10 @@ export function MemberManagementTable({ rows }: { rows: MemberRow[] }) {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-white/10 bg-[#163C33] text-white/60">
             <tr>
-              <th className="px-4 py-3">Member</th>
+              <th className="px-4 py-3">{t(lang, "admin.members")}</th>
               <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">Credits</th>
-              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">{t(lang, "dashboard.status")}</th>
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
@@ -60,7 +61,7 @@ export function MemberManagementTable({ rows }: { rows: MemberRow[] }) {
             {rows.map((row) => (
               <tr key={row.id} className="border-t border-white/5 text-white/80 hover:bg-[#163C33]/60">
                 <td className="px-4 py-3">
-                  <p className="font-semibold text-white">{row.display_name ?? "Member"}</p>
+                  <p className="font-semibold text-white">{row.display_name ?? t(lang, "admin.members")}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.id.slice(0, 10)}...</p>
                   <p className="mt-0.5 text-[11px] text-white/45">Joined {new Date(row.created_at).toLocaleDateString("en-MY")}</p>
                 </td>
@@ -84,7 +85,7 @@ export function MemberManagementTable({ rows }: { rows: MemberRow[] }) {
                   <p>Poster {row.poster_credits}</p>
                 </td>
                 <td className="px-4 py-3">
-                  {row.is_banned ? <Badge variant="cancelled">Banned</Badge> : <Badge variant="paid">Active</Badge>}
+                  {row.is_banned ? <Badge variant="cancelled">Banned</Badge> : <Badge variant="paid">{t(lang, "plan.active")}</Badge>}
                   {row.ban_reason ? <p className="mt-1 text-xs text-rose-300">{row.ban_reason}</p> : null}
                 </td>
                 <td className="px-4 py-3">
@@ -152,4 +153,3 @@ export function MemberManagementTable({ rows }: { rows: MemberRow[] }) {
     </div>
   );
 }
-

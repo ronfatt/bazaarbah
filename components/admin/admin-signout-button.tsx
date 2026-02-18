@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
+import { t, type Lang } from "@/lib/i18n";
 
-export function AdminSignoutButton() {
+export function AdminSignoutButton({ lang = "en" }: { lang?: Lang }) {
   const [loading, setLoading] = useState(false);
 
   async function onSignOut() {
@@ -14,8 +15,7 @@ export function AdminSignoutButton() {
 
   return (
     <AppButton variant="secondary" onClick={onSignOut} disabled={loading} className="h-9 px-3 text-xs">
-      {loading ? "Signing out..." : "Sign out"}
+      {loading ? `${t(lang, "common.sign_out")}...` : t(lang, "common.sign_out")}
     </AppButton>
   );
 }
-

@@ -9,6 +9,8 @@ import { currencyFromCents } from "@/lib/utils";
 import { PLAN_LABEL } from "@/lib/plan";
 import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
 import Link from "next/link";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 type RequestRow = {
   id: string;
@@ -52,6 +54,7 @@ export default async function AdminPlanRequestsPortalPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
+  const lang = await getLangFromCookie();
   await requireAdminPortalUser();
   const params = await searchParams;
   const statusFilter = params.status ?? "all";
@@ -98,30 +101,30 @@ export default async function AdminPlanRequestsPortalPage({
         <AppCard className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-              <p className="mt-2 text-sm text-white/65">Upgrade review, approval SLA, and audit visibility in one panel.</p>
+              <h1 className="text-2xl font-bold">{t(lang, "admin.dashboard_title")}</h1>
+              <p className="mt-2 text-sm text-white/65">{t(lang, "admin.dashboard_desc")}</p>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/admin/members" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Members
+                {t(lang, "admin.members")}
               </Link>
               <Link href="/admin/announcements" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Announcements
+                {t(lang, "admin.announcements")}
               </Link>
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Pricing
+                {t(lang, "admin.pricing")}
               </Link>
               <Badge variant="ai">Live Ops</Badge>
-              <AdminSignoutButton />
+              <AdminSignoutButton lang={lang} />
             </div>
           </div>
         </AppCard>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard title="Pending Reviews" value={String(pendingCount)} trend={pendingCount > 0 ? 8 : 0} icon={Clock3} accent="yellow" />
-          <KpiCard title="Approved Today" value={String(approvedToday)} trend={6} icon={CheckCircle2} accent="green" />
-          <KpiCard title="Avg Review Time" value={`${avgMins} min`} trend={-3} icon={ShieldAlert} accent="teal" />
-          <KpiCard title="Approved Revenue" value={currencyFromCents(totalApprovedAmount)} trend={12} icon={Users} accent="gold" />
+          <KpiCard title={t(lang, "admin.pending_reviews")} value={String(pendingCount)} trend={pendingCount > 0 ? 8 : 0} icon={Clock3} accent="yellow" />
+          <KpiCard title={t(lang, "admin.approved_today")} value={String(approvedToday)} trend={6} icon={CheckCircle2} accent="green" />
+          <KpiCard title={t(lang, "admin.avg_review_time")} value={`${avgMins} min`} trend={-3} icon={ShieldAlert} accent="teal" />
+          <KpiCard title={t(lang, "admin.approved_revenue")} value={currencyFromCents(totalApprovedAmount)} trend={12} icon={Users} accent="gold" />
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -133,7 +136,7 @@ export default async function AdminPlanRequestsPortalPage({
                   <input
                     name="q"
                     defaultValue={params.q ?? ""}
-                    placeholder="Search by display name, user id, or reference"
+                    placeholder={t(lang, "admin.search_requests")}
                     className="h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] pl-9 pr-3 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
                   />
                 </label>
@@ -142,26 +145,26 @@ export default async function AdminPlanRequestsPortalPage({
                   defaultValue={statusFilter}
                   className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
                 >
-                  <option value="all">All statuses</option>
-                  <option value="pending_review">Pending only</option>
-                  <option value="approved">Approved only</option>
-                  <option value="rejected">Rejected only</option>
+                  <option value="all">{t(lang, "admin.all_statuses")}</option>
+                  <option value="pending_review">{t(lang, "admin.pending_only")}</option>
+                  <option value="approved">{t(lang, "admin.approved_only")}</option>
+                  <option value="rejected">{t(lang, "admin.rejected_only")}</option>
                 </select>
                 <button
                   type="submit"
                   className="h-10 rounded-xl bg-gradient-to-r from-[#C9A227] to-[#E2C044] px-4 text-sm font-semibold text-black hover:brightness-110"
                 >
-                  Apply
+                  {t(lang, "common.apply")}
                 </button>
               </form>
             </AppCard>
 
-            <PlanReviewTable rows={rows} />
+            <PlanReviewTable rows={rows} lang={lang} />
           </div>
 
           <div className="space-y-6 xl:col-span-3">
             <AppCard className="p-5">
-              <h3 className="text-lg font-semibold">Plan Distribution</h3>
+              <h3 className="text-lg font-semibold">{t(lang, "admin.plan_distribution")}</h3>
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex items-center justify-between rounded-xl bg-[#163C33] p-3">
                   <span className="text-white/65">Free</span>
@@ -179,18 +182,18 @@ export default async function AdminPlanRequestsPortalPage({
             </AppCard>
 
             <AppCard className="p-5">
-              <h3 className="text-lg font-semibold">Audit Trail</h3>
+              <h3 className="text-lg font-semibold">{t(lang, "admin.audit_trail")}</h3>
               <div className="mt-3 space-y-2 text-xs">
                 {logs.map((log) => (
                   <div key={log.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-white/75">
-                    <p className="font-semibold text-white">{log.action === "plan_request_approved" ? "Approved" : "Rejected"}</p>
-                    <p className="mt-1">User: {log.target_user_id.slice(0, 8)}...</p>
-                    <p>Plan: {log.target_plan ? PLAN_LABEL[log.target_plan] : "-"}</p>
-                    <p>At: {new Date(log.created_at).toLocaleString("en-MY")}</p>
-                    {log.note ? <p className="mt-1 text-rose-300">Note: {log.note}</p> : null}
+                    <p className="font-semibold text-white">{log.action === "plan_request_approved" ? t(lang, "admin.approved") : t(lang, "admin.rejected")}</p>
+                    <p className="mt-1">{t(lang, "admin.user")} {log.target_user_id.slice(0, 8)}...</p>
+                    <p>{t(lang, "admin.plan")} {log.target_plan ? PLAN_LABEL[log.target_plan] : "-"}</p>
+                    <p>{t(lang, "admin.at")} {new Date(log.created_at).toLocaleString("en-MY")}</p>
+                    {log.note ? <p className="mt-1 text-rose-300">{t(lang, "admin.note")} {log.note}</p> : null}
                   </div>
                 ))}
-                {logs.length === 0 ? <p className="text-white/45">No audit logs yet.</p> : null}
+                {logs.length === 0 ? <p className="text-white/45">{t(lang, "admin.no_audit")}</p> : null}
               </div>
             </AppCard>
           </div>

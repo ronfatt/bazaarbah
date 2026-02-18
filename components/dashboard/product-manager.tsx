@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { currencyFromCents } from "@/lib/utils";
 import type { Product, Shop } from "@/types";
+import { t, type Lang } from "@/lib/i18n";
 
 type Props = {
   shops: Shop[];
   products: Product[];
 };
 
-export function ProductManager({ shops, products }: Props) {
+export function ProductManager({ shops, products, lang = "en" }: Props & { lang?: Lang }) {
   const [shopId, setShopId] = useState(shops[0]?.id ?? "");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -22,7 +23,7 @@ export function ProductManager({ shops, products }: Props) {
 
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("Saving...");
+    setStatus("...");
 
     const res = await fetch("/api/products", {
       method: "POST",
@@ -36,7 +37,7 @@ export function ProductManager({ shops, products }: Props) {
     });
 
     const json = await res.json();
-    setStatus(res.ok ? "Saved." : json.error ?? "Failed");
+    setStatus(res.ok ? "OK" : json.error ?? "Failed");
     if (res.ok) window.location.reload();
   }
 
@@ -57,7 +58,7 @@ export function ProductManager({ shops, products }: Props) {
   return (
     <div className="space-y-6">
       <form onSubmit={createProduct} className="space-y-3 rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-[#F3F4F6]">Add Product</h2>
+        <h2 className="text-lg font-semibold text-[#F3F4F6]">{t(lang, "dashboard.add_product")}</h2>
         <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]" required>
           {shops.map((shop) => (
             <option key={shop.id} value={shop.id}>
@@ -65,10 +66,10 @@ export function ProductManager({ shops, products }: Props) {
             </option>
           ))}
         </select>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product Name" required />
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t(lang, "products.title")} required />
         <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
         <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="29.90" required />
-        <Button type="submit">Create Product</Button>
+        <Button type="submit">{t(lang, "dashboard.add_product")}</Button>
         {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
       </form>
 
@@ -76,8 +77,8 @@ export function ProductManager({ shops, products }: Props) {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-white/5 bg-[#163C33] text-[#9CA3AF]">
             <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Price</th>
+              <th className="px-4 py-3">{t(lang, "products.title")}</th>
+              <th className="px-4 py-3">{t(lang, "orders.subtotal")}</th>
               <th className="px-4 py-3">Available</th>
               <th className="px-4 py-3">Action</th>
             </tr>
@@ -102,7 +103,7 @@ export function ProductManager({ shops, products }: Props) {
             {grouped.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-[#9CA3AF]">
-                  No products yet.
+                  {t(lang, "orders.no_orders")}
                 </td>
               </tr>
             )}

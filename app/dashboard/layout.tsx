@@ -2,7 +2,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { SignoutButton } from "@/components/dashboard/signout-button";
 import { requireSeller } from "@/lib/auth";
 import { normalizePlanTier, PLAN_LABEL, totalAiCredits } from "@/lib/plan";
-import { getLangFromCookie, t } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 function links(lang: Awaited<ReturnType<typeof getLangFromCookie>>) {
   return [

@@ -10,6 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSeller } from "@/lib/auth";
 import { currencyFromCents, startOfTodayIso } from "@/lib/utils";
 import { hasUnlockedFeatures, normalizePlanTier, PLAN_AI_CREDITS, PLAN_LABEL } from "@/lib/plan";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 function statusVariant(status: string): "pending" | "paid" | "cancelled" | "neutral" {
   if (status === "paid") return "paid";
@@ -19,6 +21,7 @@ function statusVariant(status: string): "pending" | "paid" | "cancelled" | "neut
 }
 
 export default async function DashboardPage() {
+  const lang = await getLangFromCookie();
   const { user, profile } = await requireSeller();
   const unlocked = hasUnlockedFeatures(profile);
   const tier = normalizePlanTier(profile);
@@ -76,11 +79,11 @@ export default async function DashboardPage() {
       {(notices?.length ?? 0) > 0 && (
         <div className="col-span-12">
           <AppCard className="p-5">
-            <p className="text-xs uppercase tracking-widest text-white/45">Notices</p>
+            <p className="text-xs uppercase tracking-widest text-white/45">{t(lang, "dashboard.notices")}</p>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               {(notices ?? []).map((notice) => (
                 <div key={notice.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3">
-                  <p className="text-xs text-white/45">{notice.type === "warning" ? "Warning" : "Announcement"}</p>
+                  <p className="text-xs text-white/45">{notice.type === "warning" ? t(lang, "dashboard.warning") : t(lang, "dashboard.announcement")}</p>
                   <p className="mt-1 font-semibold text-white">{notice.title}</p>
                   <p className="mt-1 line-clamp-3 text-sm text-white/70">{notice.body}</p>
                 </div>
@@ -91,30 +94,30 @@ export default async function DashboardPage() {
       )}
 
       <div className="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard title="Today Orders" value={String(todayOrders)} trend={12} icon={ShoppingBag} accent="teal" />
-        <KpiCard title="Total Sales" value={currencyFromCents(totalSales)} trend={9} icon={Wallet} accent="gold" />
-        <KpiCard title="Pending" value={String(pending)} trend={-4} icon={Clock3} accent="yellow" />
-        <KpiCard title="Paid" value={String(paid)} trend={11} icon={BadgeCheck} accent="green" />
+        <KpiCard title={t(lang, "dashboard.today_orders")} value={String(todayOrders)} trend={12} icon={ShoppingBag} accent="teal" />
+        <KpiCard title={t(lang, "dashboard.total_sales")} value={currencyFromCents(totalSales)} trend={9} icon={Wallet} accent="gold" />
+        <KpiCard title={t(lang, "dashboard.pending")} value={String(pending)} trend={-4} icon={Clock3} accent="yellow" />
+        <KpiCard title={t(lang, "dashboard.paid")} value={String(paid)} trend={11} icon={BadgeCheck} accent="green" />
       </div>
 
       <div className="col-span-12 space-y-5 xl:col-span-8">
         <AppCard className="p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-widest text-white/45">Workspace</p>
-              <h1 className="mt-1 text-2xl font-bold">Welcome back, {profile.display_name ?? "Seller"}</h1>
-              <p className="mt-2 text-sm text-white/65">Setup checklist + quick actions to launch faster.</p>
+              <p className="text-xs uppercase tracking-widest text-white/45">{t(lang, "dashboard.workspace")}</p>
+              <h1 className="mt-1 text-2xl font-bold">{t(lang, "dashboard.welcome_named")} {profile.display_name ?? t(lang, "common.seller")}</h1>
+              <p className="mt-2 text-sm text-white/65">{t(lang, "dashboard.setup_quick")}</p>
             </div>
-            <Badge variant="ai">AI-ready</Badge>
+            <Badge variant="ai">{t(lang, "dashboard.ai_ready")}</Badge>
           </div>
 
           {!unlocked && (
             <div className="mt-5 rounded-xl border border-[#C9A227]/30 bg-[#C9A227]/10 p-4">
-              <p className="text-sm font-semibold text-bb-text">Your account is on Free plan</p>
-              <p className="mt-1 text-sm text-white/65">Upgrade in Billing and submit bank slip. Once approved, Shop/Products/Orders/AI will unlock.</p>
+              <p className="text-sm font-semibold text-bb-text">{t(lang, "dashboard.free_title")}</p>
+              <p className="mt-1 text-sm text-white/65">{t(lang, "dashboard.free_desc")}</p>
               <div className="mt-4">
                 <Link href="/dashboard/billing">
-                  <AppButton variant="primary">Upgrade Now</AppButton>
+                  <AppButton variant="primary">{t(lang, "dashboard.upgrade_now")}</AppButton>
                 </Link>
               </div>
             </div>
@@ -122,18 +125,18 @@ export default async function DashboardPage() {
 
           {unlocked && !hasShop && (
             <div className="mt-5 rounded-xl border border-bb-ai/15 bg-bb-surface2/40 p-4">
-              <p className="text-sm font-semibold">Setup Checklist</p>
+              <p className="text-sm font-semibold">{t(lang, "dashboard.setup_checklist")}</p>
               <ul className="mt-2 space-y-1 text-sm text-white/65">
-                <li>1. Create your shop profile</li>
-                <li>2. Add first product</li>
-                <li>3. Share `/s/your-slug` link</li>
+                <li>{t(lang, "dashboard.step1")}</li>
+                <li>{t(lang, "dashboard.step2")}</li>
+                <li>{t(lang, "dashboard.step3")}</li>
               </ul>
               <div className="mt-4 flex gap-2">
                 <Link href="/dashboard/shop">
-                  <AppButton variant="primary">Create Shop</AppButton>
+                  <AppButton variant="primary">{t(lang, "dashboard.create_shop")}</AppButton>
                 </Link>
                 <Link href="/dashboard/products">
-                  <AppButton variant="secondary">Add Product</AppButton>
+                  <AppButton variant="secondary">{t(lang, "dashboard.add_product")}</AppButton>
                 </Link>
               </div>
             </div>
@@ -141,7 +144,7 @@ export default async function DashboardPage() {
 
           {unlocked && hasShop && (
             <div className="mt-5">
-              <p className="text-sm font-semibold">Weekly Sales</p>
+              <p className="text-sm font-semibold">{t(lang, "dashboard.weekly_sales")}</p>
               <div className="mt-3">
                 <SalesChart data={weekly} />
               </div>
@@ -151,9 +154,9 @@ export default async function DashboardPage() {
 
         <AppCard className="p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recent Orders</h2>
+            <h2 className="text-lg font-semibold">{t(lang, "dashboard.recent_orders")}</h2>
             <Link href="/dashboard/orders" className="text-sm text-bb-gold hover:underline">
-              View all
+              {t(lang, "dashboard.view_all")}
             </Link>
           </div>
 
@@ -161,10 +164,10 @@ export default async function DashboardPage() {
             <AppTable>
               <thead className="bg-bb-surface2/70 text-white/45">
                 <tr>
-                  <th className="px-4 py-3">Order</th>
-                  <th className="px-4 py-3">Buyer</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">{t(lang, "dashboard.order")}</th>
+                  <th className="px-4 py-3">{t(lang, "dashboard.buyer")}</th>
+                  <th className="px-4 py-3">{t(lang, "dashboard.status")}</th>
+                  <th className="px-4 py-3">{t(lang, "dashboard.amount")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -175,7 +178,7 @@ export default async function DashboardPage() {
                         {o.order_code}
                       </Link>
                     </td>
-                    <td className="px-4 py-3">{o.buyer_name ?? "Guest"}</td>
+                    <td className="px-4 py-3">{o.buyer_name ?? t(lang, "common.guest")}</td>
                     <td className="px-4 py-3">
                       <Badge variant={statusVariant(o.status)}>{o.status}</Badge>
                     </td>
@@ -185,7 +188,7 @@ export default async function DashboardPage() {
                 {recentOrders.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-white/45">
-                      No orders yet.
+                      {t(lang, "dashboard.no_orders")}
                     </td>
                   </tr>
                 )}
@@ -199,34 +202,34 @@ export default async function DashboardPage() {
         <AppCard className="p-6 bg-[#16423A]/55">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-bb-ai" />
-            <h3 className="text-lg font-semibold">AI Shortcuts</h3>
+            <h3 className="text-lg font-semibold">{t(lang, "dashboard.ai_shortcuts")}</h3>
           </div>
           <p className="mt-2 text-sm text-white/65">
-            {unlocked ? "Generate assets faster with one-click flows." : "Upgrade to unlock AI bundle and shop operations."}
+            {unlocked ? t(lang, "dashboard.ai_shortcuts_desc_on") : t(lang, "dashboard.ai_shortcuts_desc_off")}
           </p>
           <div className="mt-4 space-y-2">
             {unlocked ? (
               <>
                 <Link href="/dashboard/ai" className="block">
                   <AppButton variant="ai" className="w-full justify-start">
-                    Product Background
+                    {t(lang, "dashboard.product_bg")}
                   </AppButton>
                 </Link>
                 <Link href="/dashboard/ai" className="block">
                   <AppButton variant="ai" className="w-full justify-start">
-                    Poster Generator
+                    {t(lang, "dashboard.poster_generator")}
                   </AppButton>
                 </Link>
                 <Link href="/dashboard/ai" className="block">
                   <AppButton variant="ai" className="w-full justify-start">
-                    Copy Bundle
+                    {t(lang, "dashboard.copy_bundle")}
                   </AppButton>
                 </Link>
               </>
             ) : (
               <Link href="/dashboard/billing" className="block">
                 <AppButton variant="primary" className="w-full">
-                  Upgrade Plan
+                  {t(lang, "dashboard.upgrade_plan")}
                 </AppButton>
               </Link>
             )}
@@ -234,8 +237,8 @@ export default async function DashboardPage() {
         </AppCard>
 
         <AppCard className="p-6 bg-[#16423A]/55">
-          <h3 className="text-lg font-semibold">Credits Meter</h3>
-          <p className="mt-2 text-sm text-white/65">Current plan: {PLAN_LABEL[tier]}</p>
+          <h3 className="text-lg font-semibold">{t(lang, "dashboard.credits_meter")}</h3>
+          <p className="mt-2 text-sm text-white/65">{t(lang, "dashboard.current_plan")} {PLAN_LABEL[tier]}</p>
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
               <span className="text-white/65">Copy</span>

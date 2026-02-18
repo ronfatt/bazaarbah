@@ -2,29 +2,30 @@
 
 import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
+import { t, type Lang } from "@/lib/i18n";
 
-export function OrderActions({ orderId, canMarkPaid }: { orderId: string; canMarkPaid: boolean }) {
+export function OrderActions({ orderId, canMarkPaid, lang = "en" }: { orderId: string; canMarkPaid: boolean; lang?: Lang }) {
   const [status, setStatus] = useState<string | null>(null);
 
   async function markPaid() {
-    setStatus("Marking paid...");
+    setStatus("...");
     const res = await fetch(`/api/orders/${orderId}/mark-paid`, { method: "POST" });
-    setStatus(res.ok ? "Paid." : "Failed.");
+    setStatus(res.ok ? t(lang, "dashboard.paid") : "Failed.");
     if (res.ok) window.location.reload();
   }
 
   async function createReceipt() {
-    setStatus("Generating receipt...");
+    setStatus("...");
     const res = await fetch(`/api/orders/${orderId}/receipt`, { method: "POST" });
-    setStatus(res.ok ? "Receipt generated." : "Failed.");
+    setStatus(res.ok ? "OK" : "Failed.");
     if (res.ok) window.location.reload();
   }
 
   return (
     <div className="flex flex-wrap gap-3">
-      {canMarkPaid && <AppButton onClick={markPaid}>Mark Paid</AppButton>}
+      {canMarkPaid && <AppButton onClick={markPaid}>{t(lang, "dashboard.paid")}</AppButton>}
       <AppButton variant="secondary" onClick={createReceipt}>
-        Generate Receipt Record
+        Generate Receipt
       </AppButton>
       <a href={`/api/orders/${orderId}/receipt`} target="_blank" rel="noreferrer">
         <AppButton variant="secondary">Download PDF</AppButton>

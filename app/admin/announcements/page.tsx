@@ -6,6 +6,8 @@ import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
 import { AnnouncementManager } from "@/components/admin/announcement-manager";
 import { requireAdminPortalUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 type Announcement = {
   id: string;
@@ -16,6 +18,7 @@ type Announcement = {
 };
 
 export default async function AdminAnnouncementsPage() {
+  const lang = await getLangFromCookie();
   await requireAdminPortalUser();
   const admin = createAdminClient();
   const { data } = await admin
@@ -33,28 +36,28 @@ export default async function AdminAnnouncementsPage() {
         <AppCard className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold">Announcement Center</h1>
-              <p className="mt-2 text-sm text-white/65">Publish platform updates and policy notices to all members.</p>
+              <h1 className="text-2xl font-bold">{t(lang, "admin.announcement_center")}</h1>
+              <p className="mt-2 text-sm text-white/65">{t(lang, "admin.announcement_desc")}</p>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/admin/plan-requests" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Plan Reviews
+                {t(lang, "admin.plan_reviews")}
               </Link>
               <Link href="/admin/members" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Members
+                {t(lang, "admin.members")}
               </Link>
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Pricing
+                {t(lang, "admin.pricing")}
               </Link>
               <Badge variant="ai">
-                <Bell size={13} className="mr-1" /> {announcements.filter((a) => a.is_active).length} active
+                <Bell size={13} className="mr-1" /> {announcements.filter((a) => a.is_active).length} {t(lang, "admin.active_count")}
               </Badge>
-              <AdminSignoutButton />
+              <AdminSignoutButton lang={lang} />
             </div>
           </div>
         </AppCard>
 
-        <AnnouncementManager announcements={announcements} />
+        <AnnouncementManager announcements={announcements} lang={lang} />
       </div>
     </main>
   );

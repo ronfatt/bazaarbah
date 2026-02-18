@@ -6,6 +6,8 @@ import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
 import { requireAdminPortalUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MemberManagementTable } from "@/components/admin/member-management-table";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 type MemberRow = {
   id: string;
@@ -26,6 +28,7 @@ export default async function AdminMembersPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
+  const lang = await getLangFromCookie();
   await requireAdminPortalUser();
   const params = await searchParams;
   const q = (params.q ?? "").trim().toLowerCase();
@@ -53,22 +56,22 @@ export default async function AdminMembersPage({
         <AppCard className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold">Member Management</h1>
-              <p className="mt-2 text-sm text-white/65">Manage plan tier, ban/unban, and send direct warning notice.</p>
+              <h1 className="text-2xl font-bold">{t(lang, "admin.member_management")}</h1>
+              <p className="mt-2 text-sm text-white/65">{t(lang, "admin.member_desc")}</p>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/admin/plan-requests" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Plan Reviews
+                {t(lang, "admin.plan_reviews")}
               </Link>
               <Link href="/admin/announcements" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Announcements
+                {t(lang, "admin.announcements")}
               </Link>
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Pricing
+                {t(lang, "admin.pricing")}
               </Link>
               <Badge variant="ai">Members {rows.length}</Badge>
               <Badge variant={bannedCount > 0 ? "cancelled" : "paid"}>Banned {bannedCount}</Badge>
-              <AdminSignoutButton />
+              <AdminSignoutButton lang={lang} />
             </div>
           </div>
         </AppCard>
@@ -80,7 +83,7 @@ export default async function AdminMembersPage({
               <input
                 name="q"
                 defaultValue={params.q ?? ""}
-                placeholder="Search by name or member id"
+                placeholder={t(lang, "admin.search_requests")}
                 className="h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] pl-9 pr-3 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
               />
             </label>
@@ -89,17 +92,17 @@ export default async function AdminMembersPage({
               defaultValue={status}
               className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
             >
-              <option value="all">All members</option>
-              <option value="active">Active only</option>
-              <option value="banned">Banned only</option>
+              <option value="all">{t(lang, "admin.all_members")}</option>
+              <option value="active">{t(lang, "admin.active_only")}</option>
+              <option value="banned">{t(lang, "admin.banned_only")}</option>
             </select>
             <button type="submit" className="h-10 rounded-xl bg-gradient-to-r from-[#C9A227] to-[#E2C044] px-4 text-sm font-semibold text-black hover:brightness-110">
-              Apply
+              {t(lang, "common.apply")}
             </button>
           </form>
         </AppCard>
 
-        <MemberManagementTable rows={rows} />
+        <MemberManagementTable rows={rows} lang={lang} />
       </div>
     </main>
   );

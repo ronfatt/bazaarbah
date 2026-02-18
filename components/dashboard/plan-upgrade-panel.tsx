@@ -5,6 +5,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { currencyFromCents } from "@/lib/utils";
 import { PLAN_AI_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
+import { t, type Lang } from "@/lib/i18n";
 
 type PlanRequest = {
   id: string;
@@ -36,6 +37,7 @@ export function PlanUpgradePanel({
   posterCredits,
   prices,
   requests,
+  lang = "en",
 }: {
   currentTier: PlanTier;
   copyCredits: number;
@@ -43,6 +45,7 @@ export function PlanUpgradePanel({
   posterCredits: number;
   prices: Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>;
   requests: PlanRequest[];
+  lang?: Lang;
 }) {
   const [targetPlan, setTargetPlan] = useState<"pro_88" | "pro_128">(currentTier === "pro_88" ? "pro_128" : "pro_88");
   const [referenceText, setReferenceText] = useState("");
@@ -79,7 +82,7 @@ export function PlanUpgradePanel({
       return;
     }
 
-    setResult("Upgrade request submitted. We will review your bank slip soon.");
+    setResult(t(lang, "dashboard.upgrade_now"));
     window.location.reload();
   }
 
@@ -98,7 +101,7 @@ export function PlanUpgradePanel({
             >
               <div className="flex items-center justify-between">
                 <p className="text-lg font-semibold text-white">{PLAN_LABEL[plan]}</p>
-                {isCurrent ? <Badge variant="paid">Current</Badge> : null}
+                {isCurrent ? <Badge variant="paid">{t(lang, "plan.active")}</Badge> : null}
               </div>
               <p className="mt-1 text-sm text-white/70">
                 {plan === "free" ? "RM0" : currencyFromCents(resolveEffectivePrice(prices[plan] ?? null) ?? PLAN_PRICE_CENTS[plan])}

@@ -5,8 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
 import { AppButton } from "@/components/ui/AppButton";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 export default async function AdminAuthPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const lang = await getLangFromCookie();
   const params = await searchParams;
 
   try {
@@ -33,17 +36,17 @@ export default async function AdminAuthPage({ searchParams }: { searchParams: Pr
           <p className="inline-flex items-center gap-2 rounded-full border border-bb-ai/20 bg-bb-ai/10 px-3 py-1 text-xs text-bb-ai">
             <ShieldCheck size={14} /> ADMIN PORTAL
           </p>
-          <h1 className="mt-3 text-3xl font-bold">Admin Login</h1>
-          <p className="mt-2 text-sm text-white/65">Only accounts with admin role can enter approval dashboard.</p>
-          {params.error === "not_admin" && <p className="mt-3 text-sm text-rose-300">Current account is not admin. Please login with an admin account.</p>}
-          {params.error === "banned" && <p className="mt-3 text-sm text-rose-300">This account has been banned.</p>}
+          <h1 className="mt-3 text-3xl font-bold">{t(lang, "admin.login_title")}</h1>
+          <p className="mt-2 text-sm text-white/65">{t(lang, "admin.login_desc")}</p>
+          {params.error === "not_admin" && <p className="mt-3 text-sm text-rose-300">{t(lang, "admin.not_admin")}</p>}
+          {params.error === "banned" && <p className="mt-3 text-sm text-rose-300">{t(lang, "admin.banned")}</p>}
           <div className="mt-6">
-            <AdminLoginForm />
+            <AdminLoginForm lang={lang} />
           </div>
           <div className="mt-4">
             <Link href="/auth">
               <AppButton variant="ghost" className="w-full">
-                Back to Seller Login
+                {t(lang, "admin.back_seller")}
               </AppButton>
             </Link>
           </div>

@@ -5,6 +5,8 @@ import { OrderActions } from "@/components/dashboard/order-actions";
 import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents } from "@/lib/utils";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 type ItemJoin = {
   id: string;
@@ -21,6 +23,7 @@ function statusClass(status: string) {
 }
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const lang = await getLangFromCookie();
   const { id } = await params;
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
@@ -59,26 +62,26 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClass(order.status)}`}>{order.status}</span>
           </div>
           <Link href="/dashboard/orders" className="text-sm font-semibold text-[#C9A227]">
-            Back
+            {t(lang, "common.back")}
           </Link>
         </div>
 
         <div className="mt-4 grid gap-2 text-sm text-[#9CA3AF] md:grid-cols-2">
-          <p>Buyer: {order.buyer_name ?? "Guest"}</p>
+          <p>{t(lang, "dashboard.buyer")}: {order.buyer_name ?? t(lang, "common.guest")}</p>
           <p>Phone: {order.buyer_phone ?? "-"}</p>
-          <p>Total: {currencyFromCents(order.subtotal_cents)}</p>
+          <p>{t(lang, "buyer.total")} {currencyFromCents(order.subtotal_cents)}</p>
           <p>Created: {new Date(order.created_at).toLocaleString("en-MY")}</p>
         </div>
 
         <div className="mt-5">
-          <OrderActions orderId={order.id} canMarkPaid={order.status !== "paid"} />
+          <OrderActions orderId={order.id} canMarkPaid={order.status !== "paid"} lang={lang} />
         </div>
 
         {receipt && <p className="mt-4 text-sm text-emerald-400">Receipt: {receipt.receipt_no}</p>}
       </Card>
 
       <Card>
-        <h2 className="text-lg font-semibold text-[#F3F4F6]">Items</h2>
+        <h2 className="text-lg font-semibold text-[#F3F4F6]">{t(lang, "buyer.items")}</h2>
         <div className="mt-3 space-y-2 text-sm text-[#F3F4F6]">
           {(items as ItemJoin[] | null)?.map((item) => {
             const raw = item.products;
@@ -96,11 +99,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </Card>
 
       <Card>
-        <h2 className="text-lg font-semibold text-[#F3F4F6]">Payment Proofs</h2>
+        <h2 className="text-lg font-semibold text-[#F3F4F6]">{t(lang, "buyer.submit_proof")}</h2>
         <div className="mt-3 space-y-3 text-sm text-[#F3F4F6]">
           {(payments ?? []).map((p) => (
             <div key={p.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3">
-              <p>Reference: {p.reference_text ?? "-"}</p>
+              <p>{t(lang, "buyer.reference_text")}: {p.reference_text ?? "-"}</p>
               <p>Submitted: {new Date(p.submitted_at).toLocaleString("en-MY")}</p>
               <p>Confirmed: {p.confirmed_at ? new Date(p.confirmed_at).toLocaleString("en-MY") : "No"}</p>
               {p.proof_image_url && (
@@ -110,7 +113,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
           ))}
-          {payments?.length === 0 && <p className="text-[#9CA3AF]">No payment proof submitted yet.</p>}
+          {payments?.length === 0 && <p className="text-[#9CA3AF]">-</p>}
         </div>
       </Card>
     </section>

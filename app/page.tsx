@@ -4,7 +4,8 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
-import { getLangFromCookie, t } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 export default async function Home() {

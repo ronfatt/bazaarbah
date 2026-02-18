@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents } from "@/lib/utils";
+import { t } from "@/lib/i18n";
+import { getLangFromCookie } from "@/lib/i18n-server";
 
 const statuses = ["all", "pending_payment", "proof_submitted", "paid", "cancelled"] as const;
 
@@ -14,6 +16,7 @@ function statusClass(status: string) {
 }
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const lang = await getLangFromCookie();
   const { status } = await searchParams;
   const selected = statuses.includes((status as (typeof statuses)[number]) ?? "all") ? (status as string) : "all";
 
@@ -37,7 +40,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   return (
     <section className="space-y-4">
       <Card>
-        <h1 className="text-2xl font-bold text-[#F3F4F6]">Orders</h1>
+        <h1 className="text-2xl font-bold text-[#F3F4F6]">{t(lang, "orders.title")}</h1>
         <div className="mt-3 flex flex-wrap gap-2">
           {statuses.map((s) => (
             <Link
@@ -55,10 +58,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <table className="w-full text-left text-sm">
           <thead className="border-b border-white/5 bg-[#163C33] text-[#9CA3AF]">
             <tr>
-              <th className="px-4 py-3">Order Code</th>
-              <th className="px-4 py-3">Buyer</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Subtotal</th>
+              <th className="px-4 py-3">{t(lang, "orders.order_code")}</th>
+              <th className="px-4 py-3">{t(lang, "dashboard.buyer")}</th>
+              <th className="px-4 py-3">{t(lang, "dashboard.status")}</th>
+              <th className="px-4 py-3">{t(lang, "orders.subtotal")}</th>
             </tr>
           </thead>
           <tbody>
@@ -69,7 +72,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     {o.order_code}
                   </Link>
                 </td>
-                <td className="px-4 py-3">{o.buyer_name ?? "Guest"}</td>
+                <td className="px-4 py-3">{o.buyer_name ?? t(lang, "common.guest")}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusClass(o.status)}`}>{o.status}</span>
                 </td>
@@ -79,7 +82,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             {(orders?.length ?? 0) === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-[#9CA3AF]">
-                  No orders yet.
+                  {t(lang, "orders.no_orders")}
                 </td>
               </tr>
             )}

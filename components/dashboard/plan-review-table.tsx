@@ -5,6 +5,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { PLAN_LABEL } from "@/lib/plan";
 import { currencyFromCents } from "@/lib/utils";
+import { t, type Lang } from "@/lib/i18n";
 
 type ReviewRow = {
   id: string;
@@ -26,7 +27,7 @@ function statusBadge(status: ReviewRow["status"]) {
   return <Badge variant="pending">pending</Badge>;
 }
 
-export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
+export function PlanReviewTable({ rows, lang = "en" }: { rows: ReviewRow[]; lang?: Lang }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
@@ -42,10 +43,10 @@ export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
     const json = await res.json();
     setBusyId(null);
     if (!res.ok) {
-      setStatus(json.error ?? "Update failed");
+      setStatus(json.error ?? "Failed");
       return;
     }
-    setStatus(action === "approve" ? "Request approved." : "Request rejected.");
+    setStatus(action === "approve" ? t(lang, "admin.approved") : t(lang, "admin.rejected"));
     window.location.reload();
   }
 
@@ -55,13 +56,13 @@ export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-white/10 bg-[#163C33] text-white/55">
             <tr>
-              <th className="px-4 py-3">Seller</th>
+              <th className="px-4 py-3">{t(lang, "common.seller")}</th>
               <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">Amount</th>
               <th className="px-4 py-3">Submitted</th>
-              <th className="px-4 py-3">Reference</th>
+              <th className="px-4 py-3">{t(lang, "buyer.reference_text")}</th>
               <th className="px-4 py-3">Proof</th>
-              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">{t(lang, "dashboard.status")}</th>
               <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
@@ -72,7 +73,7 @@ export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
               return (
                 <tr key={row.id} className="border-t border-white/5 text-white/80 hover:bg-[#163C33]/65">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-white">{profile?.display_name ?? "Seller"}</p>
+                    <p className="font-semibold text-white">{profile?.display_name ?? t(lang, "common.seller")}</p>
                     <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.user_id.slice(0, 8)}...</p>
                   </td>
                   <td className="px-4 py-3">{PLAN_LABEL[row.target_plan]}</td>
@@ -100,7 +101,7 @@ export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
                         />
                         <div className="flex items-center gap-2">
                           <AppButton variant="primary" onClick={() => review(row.id, "approve")} disabled={busyId === row.id} className="h-8 px-3 text-xs">
-                            {busyId === row.id ? "..." : "Approve"}
+                            {busyId === row.id ? "..." : t(lang, "admin.approved")}
                           </AppButton>
                           <AppButton
                             variant="secondary"
@@ -108,7 +109,7 @@ export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
                             disabled={busyId === row.id}
                             className="h-8 px-3 text-xs"
                           >
-                            Reject
+                            {t(lang, "admin.rejected")}
                           </AppButton>
                         </div>
                       </div>
@@ -122,7 +123,7 @@ export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center text-white/45">
-                  No plan requests found.
+                  -
                 </td>
               </tr>
             )}
