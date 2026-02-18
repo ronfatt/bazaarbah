@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminPortalUser } from "@/lib/auth";
 import { currencyFromCents } from "@/lib/utils";
 import { PLAN_LABEL } from "@/lib/plan";
+import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
 
 type RequestRow = {
   id: string;
@@ -99,7 +100,10 @@ export default async function AdminPlanRequestsPortalPage({
               <h1 className="text-2xl font-bold">Admin Dashboard</h1>
               <p className="mt-2 text-sm text-white/65">Upgrade review, approval SLA, and audit visibility in one panel.</p>
             </div>
-            <Badge variant="ai">Live Ops</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="ai">Live Ops</Badge>
+              <AdminSignoutButton />
+            </div>
           </div>
         </AppCard>
 
@@ -185,4 +189,3 @@ export default async function AdminPlanRequestsPortalPage({
     </main>
   );
 }
-
