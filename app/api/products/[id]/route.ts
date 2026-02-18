@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertUnlockedByUserId } from "@/lib/auth";
 
 const patchSchema = z.object({
   name: z.string().min(2).optional(),
@@ -23,6 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   try {
+    await assertUnlockedByUserId(user.id);
     const body = patchSchema.parse(await req.json());
     const admin = createAdminClient();
 
@@ -44,7 +46,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return NextResponse.json({ product: data });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Invalid payload";
+    const status = message.toLowerCase().includes("upgrade required") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -60,6 +64,12 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const admin = createAdminClient();
+  try {
+    await assertUnlockedByUserId(user.id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Plan upgrade required";
+    return NextResponse.json({ error: message }, { status: 403 });
+  }
   const { data: ownShops } = await admin.from("shops").select("id").eq("owner_id", user.id);
   const ownShopIds = ownShops?.map((s) => s.id) ?? [];
 

@@ -1,6 +1,8 @@
 import { Card } from "@/components/ui/card";
+import { requireUnlockedSeller } from "@/lib/auth";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireUnlockedSeller();
   return (
     <section className="space-y-4">
       <Card>

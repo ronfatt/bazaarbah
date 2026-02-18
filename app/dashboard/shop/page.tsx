@@ -1,10 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { ShopForm } from "@/components/dashboard/shop-form";
-import { requireSeller } from "@/lib/auth";
+import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function ShopPage() {
-  const { user } = await requireSeller();
+  const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
   const { data: shops } = await admin.from("shops").select("*").eq("owner_id", user.id).order("created_at", { ascending: true });

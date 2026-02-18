@@ -9,6 +9,7 @@ import { SalesChart } from "@/components/dashboard/sales-chart";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSeller } from "@/lib/auth";
 import { currencyFromCents, startOfTodayIso } from "@/lib/utils";
+import { hasUnlockedFeatures, normalizePlanTier, PLAN_AI_CREDITS, PLAN_LABEL } from "@/lib/plan";
 
 function statusVariant(status: string): "pending" | "paid" | "cancelled" | "neutral" {
   if (status === "paid") return "paid";
@@ -19,6 +20,8 @@ function statusVariant(status: string): "pending" | "paid" | "cancelled" | "neut
 
 export default async function DashboardPage() {
   const { user, profile } = await requireSeller();
+  const unlocked = hasUnlockedFeatures(profile);
+  const tier = normalizePlanTier(profile);
   const admin = createAdminClient();
 
   const { data: shops } = await admin.from("shops").select("id,slug,shop_name").eq("owner_id", user.id);
@@ -57,6 +60,7 @@ export default async function DashboardPage() {
 
   const recentOrders = (orders ?? []).slice(0, 6);
   const hasShop = shopIds.length > 0;
+  const includedCredits = PLAN_AI_CREDITS[tier];
 
   return (
     <div className="grid grid-cols-12 gap-6">
@@ -78,7 +82,19 @@ export default async function DashboardPage() {
             <Badge variant="ai">AI-ready</Badge>
           </div>
 
-          {!hasShop && (
+          {!unlocked && (
+            <div className="mt-5 rounded-xl border border-[#C9A227]/30 bg-[#C9A227]/10 p-4">
+              <p className="text-sm font-semibold text-bb-text">Your account is on Free plan</p>
+              <p className="mt-1 text-sm text-white/65">Upgrade in Billing and submit bank slip. Once approved, Shop/Products/Orders/AI will unlock.</p>
+              <div className="mt-4">
+                <Link href="/dashboard/billing">
+                  <AppButton variant="primary">Upgrade Now</AppButton>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {unlocked && !hasShop && (
             <div className="mt-5 rounded-xl border border-bb-ai/15 bg-bb-surface2/40 p-4">
               <p className="text-sm font-semibold">Setup Checklist</p>
               <ul className="mt-2 space-y-1 text-sm text-white/65">
@@ -97,7 +113,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {hasShop && (
+          {unlocked && hasShop && (
             <div className="mt-5">
               <p className="text-sm font-semibold">Weekly Sales</p>
               <div className="mt-3">
@@ -159,35 +175,59 @@ export default async function DashboardPage() {
             <Sparkles size={16} className="text-bb-ai" />
             <h3 className="text-lg font-semibold">AI Shortcuts</h3>
           </div>
-          <p className="mt-2 text-sm text-white/65">Generate assets faster with one-click flows.</p>
+          <p className="mt-2 text-sm text-white/65">
+            {unlocked ? "Generate assets faster with one-click flows." : "Upgrade to unlock AI bundle and shop operations."}
+          </p>
           <div className="mt-4 space-y-2">
-            <Link href="/dashboard/ai" className="block">
-              <AppButton variant="ai" className="w-full justify-start">Product Background</AppButton>
-            </Link>
-            <Link href="/dashboard/ai" className="block">
-              <AppButton variant="ai" className="w-full justify-start">Poster Generator</AppButton>
-            </Link>
-            <Link href="/dashboard/ai" className="block">
-              <AppButton variant="ai" className="w-full justify-start">Copy Bundle</AppButton>
-            </Link>
+            {unlocked ? (
+              <>
+                <Link href="/dashboard/ai" className="block">
+                  <AppButton variant="ai" className="w-full justify-start">
+                    Product Background
+                  </AppButton>
+                </Link>
+                <Link href="/dashboard/ai" className="block">
+                  <AppButton variant="ai" className="w-full justify-start">
+                    Poster Generator
+                  </AppButton>
+                </Link>
+                <Link href="/dashboard/ai" className="block">
+                  <AppButton variant="ai" className="w-full justify-start">
+                    Copy Bundle
+                  </AppButton>
+                </Link>
+              </>
+            ) : (
+              <Link href="/dashboard/billing" className="block">
+                <AppButton variant="primary" className="w-full">
+                  Upgrade Plan
+                </AppButton>
+              </Link>
+            )}
           </div>
         </AppCard>
 
         <AppCard className="p-6 bg-[#16423A]/55">
           <h3 className="text-lg font-semibold">Credits Meter</h3>
-          <p className="mt-2 text-sm text-white/65">Use credits intentionally for seasonal campaigns.</p>
+          <p className="mt-2 text-sm text-white/65">Current plan: {PLAN_LABEL[tier]}</p>
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
               <span className="text-white/65">Copy</span>
-              <span className="font-semibold">{profile.copy_credits}</span>
+              <span className="font-semibold">
+                {profile.copy_credits}/{includedCredits.copy}
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
               <span className="text-white/65">Image</span>
-              <span className="font-semibold">{profile.image_credits}</span>
+              <span className="font-semibold">
+                {profile.image_credits}/{includedCredits.image}
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
               <span className="text-white/65">Poster</span>
-              <span className="font-semibold">{profile.poster_credits}</span>
+              <span className="font-semibold">
+                {profile.poster_credits}/{includedCredits.poster}
+              </span>
             </div>
           </div>
         </AppCard>

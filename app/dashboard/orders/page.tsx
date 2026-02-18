@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { requireSeller } from "@/lib/auth";
+import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const { status } = await searchParams;
   const selected = statuses.includes((status as (typeof statuses)[number]) ?? "all") ? (status as string) : "all";
 
-  const { user } = await requireSeller();
+  const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
   const { data: shops } = await admin.from("shops").select("id").eq("owner_id", user.id);
   const shopIds = shops?.map((s) => s.id) ?? [];

@@ -1,11 +1,11 @@
 import { ProductManager } from "@/components/dashboard/product-manager";
-import { requireSeller } from "@/lib/auth";
+import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import type { Product, Shop } from "@/types";
 
 export default async function ProductsPage() {
-  const { user } = await requireSeller();
+  const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
   const { data: shops } = await admin.from("shops").select("*").eq("owner_id", user.id).order("created_at", { ascending: true });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/utils";
+import { assertUnlockedByUserId } from "@/lib/auth";
 
 const createSchema = z.object({
   shopName: z.string().min(2),
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    await assertUnlockedByUserId(user.id);
     const body = createSchema.parse(await req.json());
     const admin = createAdminClient();
 
@@ -78,7 +80,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ shop: data });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Invalid payload";
+    const status = message.toLowerCase().includes("upgrade required") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -93,6 +97,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
+    await assertUnlockedByUserId(user.id);
     const body = updateSchema.parse(await req.json());
     const admin = createAdminClient();
 
@@ -119,6 +124,8 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ shop: data });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Invalid payload";
+    const status = message.toLowerCase().includes("upgrade required") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

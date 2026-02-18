@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildReceiptPdf } from "@/lib/receipt";
 import { generateReceiptNo } from "@/lib/utils";
+import { assertUnlockedByUserId } from "@/lib/auth";
 
 type ItemJoin = {
   qty: number;
@@ -41,6 +42,12 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   }
 
   const admin = createAdminClient();
+  try {
+    await assertUnlockedByUserId(user.id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Plan upgrade required";
+    return NextResponse.json({ error: message }, { status: 403 });
+  }
   const { data: ownShops } = await admin.from("shops").select("id").eq("owner_id", user.id);
   const ownShopIds = ownShops?.map((s) => s.id) ?? [];
 

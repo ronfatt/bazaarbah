@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReceiptNo } from "@/lib/utils";
+import { assertUnlockedByUserId } from "@/lib/auth";
 
 async function createReceiptIfMissing(admin: ReturnType<typeof createAdminClient>, orderId: string) {
   const { data: exists } = await admin.from("receipts").select("id").eq("order_id", orderId).maybeSingle();
@@ -34,6 +35,12 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   }
 
   const admin = createAdminClient();
+  try {
+    await assertUnlockedByUserId(user.id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Plan upgrade required";
+    return NextResponse.json({ error: message }, { status: 403 });
+  }
   const { data: ownShops } = await admin.from("shops").select("id").eq("owner_id", user.id);
   const ownShopIds = ownShops?.map((s) => s.id) ?? [];
 

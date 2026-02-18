@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateBackgroundImage } from "@/lib/ai";
 import { consumeAiCredit } from "@/lib/credits";
+import { assertUnlockedByUserId } from "@/lib/auth";
 
 const schema = z.object({
   productName: z.string().min(2),
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    await assertUnlockedByUserId(user.id);
     const body = schema.parse(await req.json());
     const { base64, prompt } = await generateBackgroundImage({
       title: body.productName,
@@ -34,6 +36,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ imageBase64: base64, credits });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to generate product background" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Failed to generate product background";
+    const status = message.toLowerCase().includes("upgrade required") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -2,6 +2,7 @@ export type Profile = {
   id: string;
   display_name: string | null;
   role: "seller" | "admin";
+  plan_tier: "free" | "pro_88" | "pro_128";
   plan: "basic" | "pro";
   poster_credits: number;
   image_credits: number;

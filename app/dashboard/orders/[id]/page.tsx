@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { OrderActions } from "@/components/dashboard/order-actions";
-import { requireSeller } from "@/lib/auth";
+import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ function statusClass(status: string) {
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { user } = await requireSeller();
+  const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
   const { data: shops } = await admin.from("shops").select("id").eq("owner_id", user.id);

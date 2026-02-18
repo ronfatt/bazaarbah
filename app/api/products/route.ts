@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertUnlockedByUserId } from "@/lib/auth";
 
 const bodySchema = z.object({
   shopId: z.string().uuid(),
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    await assertUnlockedByUserId(user.id);
     const body = bodySchema.parse(await req.json());
     const admin = createAdminClient();
 
@@ -50,6 +52,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ product: data });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Invalid payload";
+    const status = message.toLowerCase().includes("upgrade required") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

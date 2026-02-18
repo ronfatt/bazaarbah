@@ -1,10 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { AITools } from "@/components/dashboard/ai-tools";
-import { requireSeller } from "@/lib/auth";
+import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function AIPage() {
-  const { user, profile } = await requireSeller();
+  const { user, profile } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
   const { data: shop } = await admin.from("shops").select("id,theme").eq("owner_id", user.id).order("created_at", { ascending: true }).maybeSingle();

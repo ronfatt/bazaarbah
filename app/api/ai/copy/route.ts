@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateMarketingCopy } from "@/lib/ai";
 import { consumeAiCredit } from "@/lib/credits";
+import { assertUnlockedByUserId } from "@/lib/auth";
 
 const schema = z.object({
   productName: z.string().min(2),
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    await assertUnlockedByUserId(user.id);
     const body = schema.parse(await req.json());
     const bundle = await generateMarketingCopy(body);
     const prompt = `${body.productName}|${body.keySellingPoints}|${body.price}|${body.platform}`;
@@ -30,6 +32,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ bundle, credits });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to generate copy" }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Failed to generate copy";
+    const status = message.toLowerCase().includes("upgrade required") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

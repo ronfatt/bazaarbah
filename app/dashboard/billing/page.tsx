@@ -1,39 +1,49 @@
-import { Card } from "@/components/ui/card";
+import { AppCard } from "@/components/ui/AppCard";
+import { Badge } from "@/components/ui/Badge";
 import { requireSeller } from "@/lib/auth";
-
-const dailyCaps = {
-  basic: { poster: 5, image: 10, copy: 50 },
-  pro: { poster: 30, image: 80, copy: 300 },
-};
+import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizePlanTier, PLAN_AI_CREDITS, PLAN_LABEL } from "@/lib/plan";
+import { PlanUpgradePanel } from "@/components/dashboard/plan-upgrade-panel";
 
 export default async function BillingPage() {
-  const { profile } = await requireSeller();
-  const plan = (profile.plan === "pro" ? "pro" : "basic") as "basic" | "pro";
-  const cap = dailyCaps[plan];
+  const { user, profile } = await requireSeller();
+  const tier = normalizePlanTier(profile);
+  const included = PLAN_AI_CREDITS[tier];
+  const admin = createAdminClient();
+
+  const { data: requests } = await admin
+    .from("plan_requests")
+    .select("id,target_plan,amount_cents,status,proof_image_url,reference_text,note,submitted_at,reviewed_at")
+    .eq("user_id", user.id)
+    .order("submitted_at", { ascending: false });
 
   return (
-    <section className="space-y-4">
-      <Card>
-        <h1 className="text-2xl font-bold text-[#F3F4F6]">Billing & Credits</h1>
-        <p className="mt-2 text-sm text-[#9CA3AF]">Plan status, remaining credits, and daily request caps.</p>
-      </Card>
-
-      <Card>
-        <p className="text-sm text-[#9CA3AF]">Current Plan</p>
-        <p className="mt-1 text-xl font-semibold uppercase text-[#F3F4F6]">{plan}</p>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm text-[#F3F4F6]">Copy credits: {profile.copy_credits}</div>
-          <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm text-[#F3F4F6]">Image credits: {profile.image_credits}</div>
-          <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm text-[#F3F4F6]">Poster credits: {profile.poster_credits}</div>
+    <section className="space-y-5">
+      <AppCard className="p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Billing & Access</h1>
+            <p className="mt-2 text-sm text-white/65">Free users can view dashboard only. Submit upgrade request to unlock all modules.</p>
+          </div>
+          <Badge variant={tier === "free" ? "pending" : "paid"}>{PLAN_LABEL[tier]}</Badge>
         </div>
 
-        <div className="mt-4 rounded-xl border border-[#C9A227]/50 bg-[#C9A227]/10 p-3 text-sm text-[#F3F4F6]">
-          Daily cap: poster {cap.poster}, image {cap.image}, copy {cap.copy}
+        <div className="mt-4 rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm text-white/80">
+          <p>Plan credits included:</p>
+          <p className="mt-1">
+            Copy {included.copy} • Image {included.image} • Poster {included.poster}
+          </p>
         </div>
+      </AppCard>
 
-        <button className="mt-4 rounded-xl bg-[#C9A227] px-6 py-2 text-sm font-semibold text-black hover:bg-[#D4AF37]">Top-up Credits (Coming Soon)</button>
-      </Card>
+      <PlanUpgradePanel
+        currentTier={tier}
+        copyCredits={profile.copy_credits}
+        imageCredits={profile.image_credits}
+        posterCredits={profile.poster_credits}
+        requests={(requests ?? [])}
+      />
     </section>
   );
 }
+

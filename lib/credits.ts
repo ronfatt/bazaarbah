@@ -1,11 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hasUnlockedFeatures } from "@/lib/plan";
 
 type AiType = "copy" | "poster" | "product_image";
-
-const dailyLimitByPlan: Record<string, Record<AiType, number>> = {
-  basic: { poster: 5, product_image: 10, copy: 50 },
-  pro: { poster: 30, product_image: 80, copy: 300 },
-};
 
 const creditColumnByType: Record<AiType, "copy_credits" | "poster_credits" | "image_credits"> = {
   copy: "copy_credits",
@@ -22,8 +18,8 @@ export async function consumeAiCredit(input: {
 }) {
   const admin = createAdminClient();
 
-  const [profileRes, recentRes, todayRes] = await Promise.all([
-    admin.from("profiles").select("id,plan,copy_credits,poster_credits,image_credits").eq("id", input.ownerId).maybeSingle(),
+  const [profileRes, recentRes] = await Promise.all([
+    admin.from("profiles").select("id,plan,plan_tier,copy_credits,poster_credits,image_credits").eq("id", input.ownerId).maybeSingle(),
     admin
       .from("ai_jobs")
       .select("id")
@@ -31,27 +27,18 @@ export async function consumeAiCredit(input: {
       .eq("type", input.type)
       .gte("created_at", new Date(Date.now() - 3000).toISOString())
       .limit(1),
-    admin
-      .from("ai_jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", input.ownerId)
-      .eq("type", input.type)
-      .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
   ]);
 
   if (!profileRes.data) {
     throw new Error("Profile not found");
   }
 
-  if ((recentRes.data?.length ?? 0) > 0) {
-    throw new Error("Too many requests. Please wait 3 seconds.");
+  if (!hasUnlockedFeatures(profileRes.data)) {
+    throw new Error("Upgrade required. Free plan cannot use AI tools.");
   }
 
-  const plan = profileRes.data.plan ?? "basic";
-  const limit = dailyLimitByPlan[plan]?.[input.type] ?? dailyLimitByPlan.basic[input.type];
-  const usedToday = todayRes.count ?? 0;
-  if (usedToday >= limit) {
-    throw new Error(`Daily limit reached for ${input.type}.`);
+  if ((recentRes.data?.length ?? 0) > 0) {
+    throw new Error("Too many requests. Please wait 3 seconds.");
   }
 
   const creditColumn = creditColumnByType[input.type];
@@ -81,7 +68,5 @@ export async function consumeAiCredit(input: {
 
   return {
     remaining: creditsLeft - 1,
-    usedToday: usedToday + 1,
-    dailyLimit: limit,
   };
 }

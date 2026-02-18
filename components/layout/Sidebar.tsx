@@ -18,7 +18,7 @@ function NavItem({ item, active }: { item: Item; active: boolean }) {
   );
 }
 
-export function Sidebar({ items }: { items: Item[] }) {
+export function Sidebar({ items, planLabel }: { items: Item[]; planLabel: string }) {
   const pathname = usePathname();
 
   return (
@@ -37,7 +37,7 @@ export function Sidebar({ items }: { items: Item[] }) {
 
       <div className="mt-auto rounded-2xl bg-bb-surface/40 border border-bb-border/5 p-3">
         <div className="text-xs text-white/45">Plan</div>
-        <div className="text-sm text-white/65">Basic • RM88</div>
+        <div className="text-sm text-white/65">{planLabel}</div>
       </div>
     </div>
   );
