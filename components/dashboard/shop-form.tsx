@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { t, type Lang } from "@/lib/i18n";
 import type { Shop } from "@/types";
 
 type Props = { initialShop: Shop | null };
 
-export function ShopForm({ initialShop }: Props) {
+export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) {
   const [shopName, setShopName] = useState(initialShop?.shop_name ?? "");
   const [slug, setSlug] = useState(initialShop?.slug ?? "");
   const [phoneWhatsapp, setPhoneWhatsapp] = useState(initialShop?.phone_whatsapp ?? "");
@@ -63,52 +64,52 @@ export function ShopForm({ initialShop }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div>
-        <label className="mb-1 block text-sm font-semibold text-white">Shop Name</label>
+        <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.name.label")}</label>
         <Input value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Ain's Raya Cookies" required />
-        <p className="mt-1 text-xs text-white/45">This is the name customers will see on your shop page.</p>
+        <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.name.helper")}</p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-white">Shop Link Name</label>
+        <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.slug.label")}</label>
         <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="ains-raya" required />
-        <p className="mt-1 text-xs text-white/45">This will be part of your shop link.</p>
+        <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.slug.helper")}</p>
         <p className="mt-2 text-xs text-white/70">
-          Your shop link: <span className="font-mono text-bb-gold">{baseUrl}/s/{normalizedSlug || "your-shop-link"}</span>
+          {t(lang, "shop.field.slug.preview")} <span className="font-mono text-bb-gold">{baseUrl}/s/{normalizedSlug || "your-shop-link"}</span>
         </p>
-        <p className="mt-1 text-xs text-white/45">Use small letters and no spaces.</p>
+        <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.slug.note")}</p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-white">WhatsApp Number</label>
+        <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.whatsapp.label")}</label>
         <Input value={phoneWhatsapp} onChange={(e) => setPhoneWhatsapp(e.target.value)} placeholder="6012XXXXXXX" required />
-        <p className="mt-1 text-xs text-white/45">Customers will click this to contact you after placing an order.</p>
+        <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.whatsapp.helper")}</p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-white">Pickup / Delivery Area (Optional)</label>
+        <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.area.label")}</label>
         <Textarea value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="Tawau town area" rows={2} />
-        <p className="mt-1 text-xs text-white/45">Tell customers where you deliver or allow pickup.</p>
+        <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.area.helper")}</p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-white">Upload Shop Logo (Optional)</label>
-        <p className="mb-2 text-xs text-white/45">Upload a photo of your shop logo. You can skip this for now.</p>
+        <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.logo.label")}</label>
+        <p className="mb-2 text-xs text-white/45">{t(lang, "shop.field.logo.helper")}</p>
         <label className="inline-flex cursor-pointer items-center rounded-xl border border-white/10 bg-[#163C33] px-4 py-2 text-sm text-white hover:bg-[#1c4a40]">
-          {uploadingLogo ? "Uploading..." : "Upload Logo"}
+          {uploadingLogo ? t(lang, "shop.field.logo.uploading") : t(lang, "shop.field.logo.upload")}
           <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onLogoFileChange(e.target.files?.[0])} />
         </label>
         {logoUrl && (
           <div className="mt-3 flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoUrl} alt="Shop logo preview" className="h-14 w-14 rounded-lg border border-white/10 object-cover" />
-            <p className="text-xs text-white/65">Logo uploaded.</p>
+            <p className="text-xs text-white/65">{t(lang, "shop.field.logo.done")}</p>
           </div>
         )}
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-white">Shop Style</label>
-        <p className="mb-2 text-xs text-white/45">Choose how your shop page looks.</p>
+        <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.style.label")}</label>
+        <p className="mb-2 text-xs text-white/45">{t(lang, "shop.field.style.helper")}</p>
         <div className="grid gap-2 md:grid-cols-3">
           <button
             type="button"
@@ -116,8 +117,8 @@ export function ShopForm({ initialShop }: Props) {
             className={`rounded-xl border p-3 text-left ${theme === "gold" ? "border-bb-gold bg-bb-gold/10" : "border-white/10 bg-[#163C33]"}`}
           >
             <div className="h-10 rounded-md bg-gradient-to-r from-[#0B3D2E] to-[#D4AF37]" />
-            <p className="mt-2 text-sm font-semibold text-white">Gold Raya</p>
-            <p className="text-xs text-white/45">Premium look</p>
+            <p className="mt-2 text-sm font-semibold text-white">{t(lang, "shop.style.gold")}</p>
+            <p className="text-xs text-white/45">{t(lang, "shop.style.gold.sub")}</p>
           </button>
           <button
             type="button"
@@ -125,7 +126,7 @@ export function ShopForm({ initialShop }: Props) {
             className={`rounded-xl border p-3 text-left ${theme === "minimal" ? "border-bb-ai bg-bb-ai/10" : "border-white/10 bg-[#163C33]"}`}
           >
             <div className="h-10 rounded-md bg-gradient-to-r from-[#f7f7f7] to-[#1f2937]" />
-            <p className="mt-2 text-sm font-semibold text-white">Green Minimal</p>
+            <p className="mt-2 text-sm font-semibold text-white">{t(lang, "shop.style.minimal")}</p>
           </button>
           <button
             type="button"
@@ -133,13 +134,13 @@ export function ShopForm({ initialShop }: Props) {
             className={`rounded-xl border p-3 text-left ${theme === "cute" ? "border-pink-300 bg-pink-500/10" : "border-white/10 bg-[#163C33]"}`}
           >
             <div className="h-10 rounded-md bg-gradient-to-r from-[#FFFBEB] to-[#FB7185]" />
-            <p className="mt-2 text-sm font-semibold text-white">Cute Festive</p>
+            <p className="mt-2 text-sm font-semibold text-white">{t(lang, "shop.style.cute")}</p>
           </button>
         </div>
       </div>
 
-      <Button type="submit">Save &amp; Continue</Button>
-      <p className="text-xs text-white/45">Next step: Add your first product.</p>
+      <Button type="submit">{t(lang, "shop.save_continue")}</Button>
+      <p className="text-xs text-white/45">{t(lang, "shop.next_product")}</p>
       {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
     </form>
   );
