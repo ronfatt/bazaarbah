@@ -29,14 +29,15 @@ function statusBadge(status: ReviewRow["status"]) {
 export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
 
-  async function review(id: string, action: "approve" | "reject") {
+  async function review(id: string, action: "approve" | "reject", note?: string) {
     setBusyId(id);
     setStatus(null);
     const res = await fetch(`/api/admin/plan-requests/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, note }),
     });
     const json = await res.json();
     setBusyId(null);
@@ -50,42 +51,85 @@ export function PlanReviewTable({ rows }: { rows: ReviewRow[] }) {
 
   return (
     <div className="space-y-3">
-      {rows.map((row) => {
-        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-        return (
-          <div key={row.id} className="rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm text-white/80">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-semibold text-white">{profile?.display_name ?? row.user_id}</p>
-              {statusBadge(row.status)}
-            </div>
-            <p className="mt-1">
-              {PLAN_LABEL[row.target_plan]} • {currencyFromCents(row.amount_cents)}
-            </p>
-            <p className="mt-1 text-white/65">Submitted: {new Date(row.submitted_at).toLocaleString("en-MY")}</p>
-            {row.reference_text && <p className="mt-1 text-white/65">Ref: {row.reference_text}</p>}
-            {row.proof_image_url && (
-              <a href={row.proof_image_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-bb-gold hover:underline">
-                Open bank slip
-              </a>
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#112E27]">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-white/10 bg-[#163C33] text-white/55">
+            <tr>
+              <th className="px-4 py-3">Seller</th>
+              <th className="px-4 py-3">Plan</th>
+              <th className="px-4 py-3">Amount</th>
+              <th className="px-4 py-3">Submitted</th>
+              <th className="px-4 py-3">Reference</th>
+              <th className="px-4 py-3">Proof</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+              const pending = row.status === "pending_review";
+              return (
+                <tr key={row.id} className="border-t border-white/5 text-white/80 hover:bg-[#163C33]/65">
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-white">{profile?.display_name ?? "Seller"}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.user_id.slice(0, 8)}...</p>
+                  </td>
+                  <td className="px-4 py-3">{PLAN_LABEL[row.target_plan]}</td>
+                  <td className="px-4 py-3">{currencyFromCents(row.amount_cents)}</td>
+                  <td className="px-4 py-3 text-white/65">{new Date(row.submitted_at).toLocaleString("en-MY")}</td>
+                  <td className="px-4 py-3 text-white/65">{row.reference_text || "-"}</td>
+                  <td className="px-4 py-3">
+                    {row.proof_image_url ? (
+                      <a href={row.proof_image_url} target="_blank" rel="noreferrer" className="text-bb-gold hover:underline">
+                        Open Slip
+                      </a>
+                    ) : (
+                      <span className="text-white/35">No file</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">{statusBadge(row.status)}</td>
+                  <td className="px-4 py-3">
+                    {pending ? (
+                      <div className="space-y-2">
+                        <input
+                          value={rejectNotes[row.id] ?? ""}
+                          onChange={(e) => setRejectNotes((prev) => ({ ...prev, [row.id]: e.target.value }))}
+                          placeholder="Reject note (optional)"
+                          className="h-9 w-52 rounded-lg border border-white/10 bg-[#0B241F] px-3 text-xs text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
+                        />
+                        <div className="flex items-center gap-2">
+                          <AppButton variant="primary" onClick={() => review(row.id, "approve")} disabled={busyId === row.id} className="h-8 px-3 text-xs">
+                            {busyId === row.id ? "..." : "Approve"}
+                          </AppButton>
+                          <AppButton
+                            variant="secondary"
+                            onClick={() => review(row.id, "reject", rejectNotes[row.id])}
+                            disabled={busyId === row.id}
+                            className="h-8 px-3 text-xs"
+                          >
+                            Reject
+                          </AppButton>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-white/45">{row.note ? `Note: ${row.note}` : "-"}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-10 text-center text-white/45">
+                  No plan requests found.
+                </td>
+              </tr>
             )}
-            {row.note && <p className="mt-1 text-rose-300">Note: {row.note}</p>}
-
-            {row.status === "pending_review" && (
-              <div className="mt-3 flex items-center gap-2">
-                <AppButton variant="primary" onClick={() => review(row.id, "approve")} disabled={busyId === row.id}>
-                  {busyId === row.id ? "Processing..." : "Approve"}
-                </AppButton>
-                <AppButton variant="secondary" onClick={() => review(row.id, "reject")} disabled={busyId === row.id}>
-                  Reject
-                </AppButton>
-              </div>
-            )}
-          </div>
-        );
-      })}
-      {rows.length === 0 && <p className="text-sm text-white/45">No plan requests yet.</p>}
+          </tbody>
+        </table>
+      </div>
       {status && <p className="text-sm text-white/80">{status}</p>}
     </div>
   );
 }
-

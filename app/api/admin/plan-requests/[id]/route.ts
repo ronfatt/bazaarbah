@@ -81,5 +81,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: updateErr.message }, { status: 400 });
   }
 
+  const toStatus = payload.action === "approve" ? "approved" : "rejected";
+  await admin.from("admin_audit_logs").insert({
+    action: payload.action === "approve" ? "plan_request_approved" : "plan_request_rejected",
+    actor_id: user.id,
+    target_user_id: request.user_id,
+    plan_request_id: request.id,
+    target_plan: request.target_plan,
+    from_status: request.status,
+    to_status: toStatus,
+    note: payload.note ?? null,
+    meta: {},
+  });
+
   return NextResponse.json({ ok: true });
 }
