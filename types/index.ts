@@ -51,5 +51,6 @@ export type Order = {
   buyer_phone: string | null;
   status: "pending_payment" | "proof_submitted" | "paid" | "cancelled";
   subtotal_cents: number;
+  paid_at?: string | null;
   created_at: string;
 };

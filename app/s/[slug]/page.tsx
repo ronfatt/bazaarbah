@@ -4,9 +4,32 @@ import { CheckoutForm } from "@/components/buyer/checkout-form";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
-export default async function StorePage({ params }: { params: Promise<{ slug: string }> }) {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+type EditOrderRow = {
+  id: string;
+  order_code: string;
+  shop_id: string;
+  status: "pending_payment" | "proof_submitted" | "paid" | "cancelled";
+  buyer_name: string | null;
+  buyer_phone: string | null;
+};
+
+type EditOrderItemRow = {
+  product_id: string;
+  qty: number;
+};
+
+export default async function StorePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
   const lang = await getLangFromCookie();
   const { slug } = await params;
+  const query = await searchParams;
   const admin = createAdminClient();
 
   const { data: shop } = await admin
@@ -17,6 +40,36 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
     .maybeSingle();
 
   if (!shop) notFound();
+
+  let initialCart: string | undefined;
+  let initialBuyerName: string | undefined;
+  let initialBuyerPhone: string | undefined;
+  const editOrderCode = typeof query.editOrder === "string" ? query.editOrder : undefined;
+
+  if (editOrderCode) {
+    const { data: editOrderData } = await admin
+      .from("orders")
+      .select("id,order_code,shop_id,status,buyer_name,buyer_phone")
+      .eq("order_code", editOrderCode)
+      .maybeSingle();
+
+    const editOrder = editOrderData as EditOrderRow | null;
+
+    if (editOrder && editOrder.shop_id === shop.id && ["pending_payment", "proof_submitted"].includes(editOrder.status)) {
+      const { data: editItemsData } = await admin
+        .from("order_items")
+        .select("product_id,qty")
+        .eq("order_id", editOrder.id)
+        .order("id", { ascending: true });
+
+      const editItems = (editItemsData ?? []) as EditOrderItemRow[];
+      initialCart = editItems.map((item) => `${item.product_id}:${item.qty}`).join(",");
+      initialBuyerName = editOrder.buyer_name ?? undefined;
+      initialBuyerPhone = editOrder.buyer_phone ?? undefined;
+    } else if (typeof query.cart === "string") {
+      initialCart = query.cart;
+    }
+  }
 
   const { data: products } = await admin
     .from("products")
@@ -50,6 +103,10 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             image_url: p.image_url,
           }))}
           lang={lang}
+          initialCart={initialCart}
+          editOrderCode={editOrderCode}
+          initialBuyerName={initialBuyerName}
+          initialBuyerPhone={initialBuyerPhone}
         />
 
         {(products?.length ?? 0) === 0 ? (

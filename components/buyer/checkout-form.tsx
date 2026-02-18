@@ -14,11 +14,39 @@ type ProductLite = {
   image_url?: string | null;
 };
 
-export function CheckoutForm({ shopSlug, products, lang = "en" }: { shopSlug: string; products: ProductLite[]; lang?: Lang }) {
-  const [buyerName, setBuyerName] = useState("");
-  const [buyerPhone, setBuyerPhone] = useState("");
+function parseCartParam(raw: string | undefined) {
+  if (!raw) return {} as Record<string, number>;
+  const cart: Record<string, number> = {};
+  for (const pair of raw.split(",")) {
+    const [id, qtyRaw] = pair.split(":");
+    const qty = Number(qtyRaw);
+    if (id && Number.isFinite(qty) && qty > 0) cart[id] = Math.min(99, Math.floor(qty));
+  }
+  return cart;
+}
+
+export function CheckoutForm({
+  shopSlug,
+  products,
+  lang = "en",
+  initialCart,
+  editOrderCode,
+  initialBuyerName,
+  initialBuyerPhone,
+}: {
+  shopSlug: string;
+  products: ProductLite[];
+  lang?: Lang;
+  initialCart?: string;
+  editOrderCode?: string;
+  initialBuyerName?: string;
+  initialBuyerPhone?: string;
+}) {
+  const initialCartMap = useMemo(() => parseCartParam(initialCart), [initialCart]);
+  const [buyerName, setBuyerName] = useState(initialBuyerName ?? "");
+  const [buyerPhone, setBuyerPhone] = useState(initialBuyerPhone ?? "");
   const [qtyDraft, setQtyDraft] = useState<Record<string, number>>({});
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<Record<string, number>>(initialCartMap);
   const [status, setStatus] = useState<string | null>(null);
 
   const cartRows = useMemo(() => {
@@ -46,16 +74,24 @@ export function CheckoutForm({ shopSlug, products, lang = "en" }: { shopSlug: st
       return;
     }
 
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        shopSlug,
-        buyerName: buyerName.trim() || undefined,
-        buyerPhone: buyerPhone.trim() || undefined,
-        items,
-      }),
-    });
+    const payload = {
+      shopSlug,
+      buyerName: buyerName.trim() || undefined,
+      buyerPhone: buyerPhone.trim() || undefined,
+      items,
+    };
+
+    const res = editOrderCode
+      ? await fetch(`/api/orders/by-code/${editOrderCode}/items`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
     const json = await res.json();
     if (!res.ok) {
@@ -63,7 +99,7 @@ export function CheckoutForm({ shopSlug, products, lang = "en" }: { shopSlug: st
       return;
     }
 
-    window.location.href = `/o/${json.order.order_code}`;
+    window.location.href = editOrderCode ? `/o/${editOrderCode}` : `/o/${json.order.order_code}`;
   }
 
   function draftQty(id: string) {
@@ -79,6 +115,16 @@ export function CheckoutForm({ shopSlug, products, lang = "en" }: { shopSlug: st
     const nextQty = draftQty(id);
     setCart((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + nextQty }));
     setStatus(null);
+  }
+
+  function changeCartQty(id: string, next: number) {
+    setCart((prev) => {
+      if (next <= 0) {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [id]: Math.min(99, Math.floor(next)) };
+    });
   }
 
   return (
@@ -130,11 +176,25 @@ export function CheckoutForm({ shopSlug, products, lang = "en" }: { shopSlug: st
             <p className="text-sm text-neutral-500">Your order is empty.</p>
           ) : (
             cartRows.map((row) => (
-              <div key={row.id} className="flex items-center justify-between text-sm">
-                <p className="text-neutral-800">
-                  {row.name} x {row.qty}
-                </p>
-                <p className="font-medium text-neutral-900">{currencyFromCents(row.lineTotal)}</p>
+              <div key={row.id} className="space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+                <div className="flex items-center justify-between text-sm">
+                  <p className="text-neutral-800">{row.name}</p>
+                  <p className="font-medium text-neutral-900">{currencyFromCents(row.lineTotal)}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center rounded-lg border border-neutral-200 bg-white">
+                    <button type="button" onClick={() => changeCartQty(row.id, row.qty - 1)} className="px-3 py-1 text-neutral-700">
+                      -
+                    </button>
+                    <span className="min-w-8 text-center text-sm font-semibold text-neutral-900">{row.qty}</span>
+                    <button type="button" onClick={() => changeCartQty(row.id, row.qty + 1)} className="px-3 py-1 text-neutral-700">
+                      +
+                    </button>
+                  </div>
+                  <button type="button" className="text-xs font-semibold text-rose-600" onClick={() => changeCartQty(row.id, 0)}>
+                    Remove
+                  </button>
+                </div>
               </div>
             ))
           )}
