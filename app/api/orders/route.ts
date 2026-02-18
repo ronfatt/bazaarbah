@@ -6,8 +6,8 @@ import { generateOrderCode } from "@/lib/utils";
 const orderSchema = z.object({
   shopId: z.string().uuid().optional(),
   shopSlug: z.string().min(2).optional(),
-  buyerName: z.string().min(2).optional(),
-  buyerPhone: z.string().min(6).optional(),
+  buyerName: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().min(2).optional()),
+  buyerPhone: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().min(6).optional()),
   items: z.array(z.object({ productId: z.string().uuid(), qty: z.number().int().min(1).max(99) })).min(1),
 });
 

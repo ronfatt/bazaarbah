@@ -49,7 +49,12 @@ export function CheckoutForm({ shopSlug, products, lang = "en" }: { shopSlug: st
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shopSlug, buyerName, buyerPhone, items }),
+      body: JSON.stringify({
+        shopSlug,
+        buyerName: buyerName.trim() || undefined,
+        buyerPhone: buyerPhone.trim() || undefined,
+        items,
+      }),
     });
 
     const json = await res.json();
