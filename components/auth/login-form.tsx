@@ -7,24 +7,20 @@ import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setStatus(null);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
-        },
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      setStatus("Magic link sent. Check your email.");
+      window.location.href = "/dashboard";
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Login failed");
     } finally {
@@ -32,12 +28,36 @@ export function LoginForm() {
     }
   }
 
+  async function onRegister() {
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      setStatus("Account created. If email confirmation is enabled, confirm email first.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Register failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
+    <form onSubmit={onLogin} className="space-y-3">
       <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seller@email.com" />
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? "Sending..." : "Send Magic Link"}
-      </Button>
+      <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+
+      <div className="flex gap-2">
+        <Button type="submit" disabled={loading} className="w-full">
+          {loading ? "Please wait..." : "Login"}
+        </Button>
+        <Button type="button" variant="outline" disabled={loading} className="w-full" onClick={onRegister}>
+          Register
+        </Button>
+      </div>
+
       {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
     </form>
   );
