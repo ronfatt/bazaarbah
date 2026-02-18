@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { AppButton } from "@/components/ui/AppButton";
 
 export function OrderActions({ orderId, canMarkPaid }: { orderId: string; canMarkPaid: boolean }) {
   const [status, setStatus] = useState<string | null>(null);
@@ -22,14 +22,14 @@ export function OrderActions({ orderId, canMarkPaid }: { orderId: string; canMar
 
   return (
     <div className="flex flex-wrap gap-3">
-      {canMarkPaid && <Button onClick={markPaid}>Mark Paid</Button>}
-      <Button variant="outline" onClick={createReceipt}>
+      {canMarkPaid && <AppButton onClick={markPaid}>Mark Paid</AppButton>}
+      <AppButton variant="secondary" onClick={createReceipt}>
         Generate Receipt Record
-      </Button>
+      </AppButton>
       <a href={`/api/orders/${orderId}/receipt`} target="_blank" rel="noreferrer">
-        <Button variant="outline">Download PDF</Button>
+        <AppButton variant="secondary">Download PDF</AppButton>
       </a>
-      {status && <p className="w-full text-sm text-neutral-600">{status}</p>}
+      {status && <p className="w-full text-sm text-bb-muted">{status}</p>}
     </div>
   );
 }

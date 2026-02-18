@@ -1,28 +1,35 @@
 @import "tailwindcss";
 
 :root {
-  --bb-primary: #0e3b2e;
-  --bb-gold: #c9a227;
-  --bb-ai: #00c2a8;
+  --bg: 11 31 26;
+  --surface: 17 46 39;
+  --surface2: 22 60 51;
+  --border: 255 255 255;
+  --text: 243 244 246;
+  --muted: 156 163 175;
 
-  --bb-bg: #0b1f1a;
-  --bb-card: #112e27;
-  --bb-surface: #163c33;
-
-  --bb-text: #f3f4f6;
-  --bb-secondary: #9ca3af;
-  --bb-muted: #6b7280;
+  --brand: 14 59 46;
+  --gold: 201 162 39;
+  --ai: 0 194 168;
 }
 
 @theme inline {
-  --color-background: var(--bb-bg);
-  --color-foreground: var(--bb-text);
+  --color-bb-bg: rgb(var(--bg));
+  --color-bb-surface: rgb(var(--surface));
+  --color-bb-surface2: rgb(var(--surface2));
+  --color-bb-border: rgb(var(--border));
+  --color-bb-text: rgb(var(--text));
+  --color-bb-muted: rgb(var(--muted));
+  --color-bb-brand: rgb(var(--brand));
+  --color-bb-gold: rgb(var(--gold));
+  --color-bb-ai: rgb(var(--ai));
+
   --font-sans: Inter, Geist, "Plus Jakarta Sans", "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 * {
-  border-color: rgb(255 255 255 / 0.08);
+  border-color: rgb(var(--border) / 0.08);
 }
 
 html,
@@ -32,13 +39,13 @@ body {
 
 body {
   background:
-    radial-gradient(circle at 8% 6%, rgb(0 194 168 / 0.08), transparent 34%),
-    radial-gradient(circle at 92% 92%, rgb(201 162 39 / 0.08), transparent 30%),
-    var(--bb-bg);
-  color: var(--bb-text);
+    radial-gradient(circle at 40% 20%, rgba(0, 194, 168, 0.1), transparent 45%),
+    radial-gradient(circle at 80% 30%, rgba(201, 162, 39, 0.1), transparent 40%),
+    rgb(var(--bg));
+  color: rgb(var(--text));
 }
 
 ::selection {
-  background: rgb(0 194 168 / 0.35);
-  color: #03140f;
+  background: rgb(var(--ai) / 0.3);
+  color: rgb(3 20 15);
 }

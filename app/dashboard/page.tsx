@@ -1,11 +1,21 @@
 import Link from "next/link";
-import { ShoppingBag, Wallet, Clock3, BadgeCheck, ArrowUpRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { KpiCard } from "@/components/dashboard/kpi-card";
+import { ShoppingBag, Wallet, Clock3, BadgeCheck, Sparkles } from "lucide-react";
+import { AppCard } from "@/components/ui/AppCard";
+import { AppButton } from "@/components/ui/AppButton";
+import { Badge } from "@/components/ui/Badge";
+import { KpiCard } from "@/components/ui/KpiCard";
+import { AppTable, AppTableWrap } from "@/components/ui/AppTable";
 import { SalesChart } from "@/components/dashboard/sales-chart";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSeller } from "@/lib/auth";
 import { currencyFromCents, startOfTodayIso } from "@/lib/utils";
+
+function statusVariant(status: string): "pending" | "paid" | "cancelled" | "neutral" {
+  if (status === "paid") return "paid";
+  if (status === "cancelled") return "cancelled";
+  if (status === "pending_payment" || status === "proof_submitted") return "pending";
+  return "neutral";
+}
 
 export default async function DashboardPage() {
   const { user, profile } = await requireSeller();
@@ -14,31 +24,13 @@ export default async function DashboardPage() {
   const { data: shops } = await admin.from("shops").select("id,slug,shop_name").eq("owner_id", user.id);
   const shopIds = shops?.map((s) => s.id) ?? [];
 
-  if (!shopIds.length) {
-    return (
-      <section className="space-y-6">
-        <Card className="border-dashed border-[#00C2A8]/30 bg-gradient-to-br from-[#112E27] to-[#163C33]">
-          <p className="inline-flex items-center rounded-full bg-[#00C2A8]/10 px-3 py-1 text-xs font-medium text-[#00C2A8]">AI-ready Workspace</p>
-          <h1 className="mt-4 text-3xl font-bold text-[#F3F4F6]">Welcome back, {profile.display_name ?? "Seller"}</h1>
-          <p className="mt-2 max-w-xl text-sm text-[#9CA3AF]">Create your first shop to unlock products, orders, AI marketing bundle, and shareable buyer links.</p>
-          <div className="mt-6 flex gap-3">
-            <Link href="/dashboard/shop" className="rounded-xl bg-[#C9A227] px-6 py-2 text-sm font-semibold text-black hover:bg-[#D4AF37]">
-              Create Shop
-            </Link>
-            <Link href="/dashboard/ai" className="rounded-xl border border-white/10 bg-[#163C33] px-6 py-2 text-sm font-semibold text-white">
-              Open AI Tools
-            </Link>
-          </div>
-        </Card>
-      </section>
-    );
-  }
-
-  const { data: orders } = await admin
-    .from("orders")
-    .select("id,order_code,status,buyer_name,subtotal_cents,created_at")
-    .in("shop_id", shopIds)
-    .order("created_at", { ascending: false });
+  const { data: orders } = shopIds.length
+    ? await admin
+        .from("orders")
+        .select("id,order_code,status,buyer_name,subtotal_cents,created_at")
+        .in("shop_id", shopIds)
+        .order("created_at", { ascending: false })
+    : { data: [] as Array<{ id: string; order_code: string; status: string; buyer_name: string | null; subtotal_cents: number; created_at: string }> };
 
   const todayIso = startOfTodayIso();
   const todayOrders = orders?.filter((o) => o.created_at >= todayIso).length ?? 0;
@@ -60,93 +52,146 @@ export default async function DashboardPage() {
       orders
         ?.filter((o) => o.status === "paid" && o.created_at >= day.toISOString() && o.created_at < next.toISOString())
         .reduce((acc, o) => acc + o.subtotal_cents, 0) ?? 0;
-
     return { day: `${day.getMonth() + 1}/${day.getDate()}`, sales };
   });
 
-  const recentOrders = (orders ?? []).slice(0, 5);
+  const recentOrders = (orders ?? []).slice(0, 6);
+  const hasShop = shopIds.length > 0;
 
   return (
-    <section className="space-y-6">
-      <Card className="bg-gradient-to-r from-[#112E27] to-[#163C33]">
-        <p className="text-sm text-[#9CA3AF]">Welcome back</p>
-        <h1 className="mt-1 text-3xl font-bold text-[#F3F4F6]">{profile.display_name ?? "Seller"}</h1>
-        <p className="mt-2 text-sm text-[#9CA3AF]">Quick stats, recent orders, and AI shortcuts for today.</p>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-12 gap-6">
+      <div className="col-span-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard title="Today Orders" value={String(todayOrders)} trend={12} icon={ShoppingBag} />
         <KpiCard title="Total Sales" value={currencyFromCents(totalSales)} trend={9} icon={Wallet} />
         <KpiCard title="Pending" value={String(pending)} trend={-4} icon={Clock3} />
         <KpiCard title="Paid" value={String(paid)} trend={11} icon={BadgeCheck} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[#F3F4F6]">Weekly Sales</h2>
-            <span className="inline-flex items-center rounded-full bg-[#C9A227]/15 px-3 py-1 text-xs font-medium text-[#C9A227]">7 days</span>
+      <div className="col-span-12 space-y-6 xl:col-span-8">
+        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-bb-muted">Workspace</p>
+              <h1 className="mt-1 text-2xl font-bold">Welcome back, {profile.display_name ?? "Seller"}</h1>
+              <p className="mt-2 text-sm text-bb-muted">Setup checklist + quick actions to launch faster.</p>
+            </div>
+            <Badge variant="ai">AI-ready</Badge>
           </div>
-          <SalesChart data={weekly} />
-        </Card>
 
-        <Card>
-          <h3 className="text-lg font-semibold text-[#F3F4F6]">AI Shortcuts</h3>
-          <div className="mt-3 space-y-2">
-            <Link href="/dashboard/ai" className="flex items-center justify-between rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-sm text-[#F3F4F6] hover:border-[#00C2A8]/40">
-              Product Background <ArrowUpRight size={14} className="text-[#00C2A8]" />
-            </Link>
-            <Link href="/dashboard/ai" className="flex items-center justify-between rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-sm text-[#F3F4F6] hover:border-[#00C2A8]/40">
-              Poster Generator <ArrowUpRight size={14} className="text-[#00C2A8]" />
-            </Link>
-            <Link href="/dashboard/ai" className="flex items-center justify-between rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-sm text-[#F3F4F6] hover:border-[#00C2A8]/40">
-              Copy Bundle <ArrowUpRight size={14} className="text-[#00C2A8]" />
+          {!hasShop && (
+            <div className="mt-5 rounded-xl border border-bb-ai/15 bg-bb-surface2/40 p-4">
+              <p className="text-sm font-semibold">Setup Checklist</p>
+              <ul className="mt-2 space-y-1 text-sm text-bb-muted">
+                <li>1. Create your shop profile</li>
+                <li>2. Add first product</li>
+                <li>3. Share `/s/your-slug` link</li>
+              </ul>
+              <div className="mt-4 flex gap-2">
+                <Link href="/dashboard/shop">
+                  <AppButton variant="primary">Create Shop</AppButton>
+                </Link>
+                <Link href="/dashboard/products">
+                  <AppButton variant="secondary">Add Product</AppButton>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {hasShop && (
+            <div className="mt-5">
+              <p className="text-sm font-semibold">Weekly Sales</p>
+              <div className="mt-3">
+                <SalesChart data={weekly} />
+              </div>
+            </div>
+          )}
+        </AppCard>
+
+        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Recent Orders</h2>
+            <Link href="/dashboard/orders" className="text-sm text-bb-gold hover:underline">
+              View all
             </Link>
           </div>
-        </Card>
+
+          <AppTableWrap>
+            <AppTable>
+              <thead className="bg-bb-surface2/70 text-bb-muted">
+                <tr>
+                  <th className="px-4 py-3">Order</th>
+                  <th className="px-4 py-3">Buyer</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((o) => (
+                  <tr key={o.id} className="border-t border-bb-border/5 hover:bg-bb-surface2/50">
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <Link href={`/dashboard/orders/${o.id}`} className="text-bb-gold">
+                        {o.order_code}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3">{o.buyer_name ?? "Guest"}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={statusVariant(o.status)}>{o.status}</Badge>
+                    </td>
+                    <td className="px-4 py-3">{currencyFromCents(o.subtotal_cents)}</td>
+                  </tr>
+                ))}
+                {recentOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-bb-muted">
+                      No orders yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </AppTable>
+          </AppTableWrap>
+        </AppCard>
       </div>
 
-      <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[#F3F4F6]">Recent Orders</h3>
-          <Link href="/dashboard/orders" className="text-sm font-medium text-[#C9A227]">
-            View all
-          </Link>
-        </div>
-        <div className="space-y-2">
-          {recentOrders.map((order) => (
-            <Link
-              key={order.id}
-              href={`/dashboard/orders/${order.id}`}
-              className="flex items-center justify-between rounded-xl border border-white/5 bg-[#163C33] px-3 py-2 hover:border-[#00C2A8]/35"
-            >
-              <div>
-                <p className="font-mono text-xs text-[#9CA3AF]">{order.order_code}</p>
-                <p className="text-sm text-[#F3F4F6]">{order.buyer_name ?? "Guest"}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-[#F3F4F6]">{currencyFromCents(order.subtotal_cents)}</p>
-                <p className="text-xs text-[#6B7280]">{order.status}</p>
-              </div>
+      <div className="col-span-12 space-y-6 xl:col-span-4">
+        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-bb-ai" />
+            <h3 className="text-lg font-semibold">AI Shortcuts</h3>
+          </div>
+          <p className="mt-2 text-sm text-bb-muted">Generate assets faster with one-click flows.</p>
+          <div className="mt-4 space-y-2">
+            <Link href="/dashboard/ai" className="block">
+              <AppButton variant="ai" className="w-full justify-start">Product Background</AppButton>
             </Link>
-          ))}
-          {recentOrders.length === 0 && <p className="rounded-xl border border-dashed border-white/10 bg-[#163C33] p-6 text-sm text-[#9CA3AF]">No orders yet.</p>}
-        </div>
-      </Card>
+            <Link href="/dashboard/ai" className="block">
+              <AppButton variant="ai" className="w-full justify-start">Poster Generator</AppButton>
+            </Link>
+            <Link href="/dashboard/ai" className="block">
+              <AppButton variant="ai" className="w-full justify-start">Copy Bundle</AppButton>
+            </Link>
+          </div>
+        </AppCard>
 
-      <Card>
-        <h3 className="text-base font-semibold text-[#F3F4F6]">Share Links</h3>
-        <div className="mt-3 grid gap-2 text-sm">
-          {(shops ?? []).map((shop) => (
-            <div key={shop.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-[#163C33] px-3 py-2">
-              <span className="font-medium text-[#F3F4F6]">{shop.shop_name}</span>
-              <Link className="font-mono text-xs text-[#C9A227]" href={`/s/${shop.slug}`}>
-                /s/{shop.slug}
-              </Link>
+        <AppCard className="p-6 hover:-translate-y-0.5 hover:border-bb-ai/20 transition">
+          <h3 className="text-lg font-semibold">Credits Meter</h3>
+          <p className="mt-2 text-sm text-bb-muted">Use credits intentionally for seasonal campaigns.</p>
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
+              <span>Copy</span>
+              <span className="font-semibold">{profile.copy_credits}</span>
             </div>
-          ))}
-        </div>
-      </Card>
-    </section>
+            <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
+              <span>Image</span>
+              <span className="font-semibold">{profile.image_credits}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
+              <span>Poster</span>
+              <span className="font-semibold">{profile.poster_credits}</span>
+            </div>
+          </div>
+        </AppCard>
+      </div>
+    </div>
   );
 }
