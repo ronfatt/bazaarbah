@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+import { AppButton } from "@/components/ui/AppButton";
 import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
@@ -50,15 +50,15 @@ export function LoginForm() {
       <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={loading} className="w-full">
+        <AppButton type="submit" variant="primary" disabled={loading} className="w-full hover:scale-[1.02]">
           {loading ? "Please wait..." : "Login"}
-        </Button>
-        <Button type="button" variant="outline" disabled={loading} className="w-full" onClick={onRegister}>
+        </AppButton>
+        <AppButton type="button" variant="secondary" disabled={loading} className="w-full" onClick={onRegister}>
           Register
-        </Button>
+        </AppButton>
       </div>
 
-      {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
+      {status && <p className="text-sm text-bb-muted">{status}</p>}
     </form>
   );
 }

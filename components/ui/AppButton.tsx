@@ -6,7 +6,7 @@ const variants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-gradient-to-r from-bb-gold/90 to-bb-gold text-black hover:brightness-110 shadow-glowGold",
+        primary: "bg-gradient-to-r from-[#C9A227] to-[#E2C044] text-black hover:brightness-110",
         secondary: "bg-bb-surface2/70 border border-bb-border/10 text-bb-text hover:bg-bb-surface2",
         ai: "bg-bb-ai text-black hover:bg-bb-ai/85 shadow-glowAI",
       },
