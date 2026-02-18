@@ -36,6 +36,7 @@ export default async function AdminAuthPage({ searchParams }: { searchParams: Pr
           <h1 className="mt-3 text-3xl font-bold">Admin Login</h1>
           <p className="mt-2 text-sm text-white/65">Only accounts with admin role can enter approval dashboard.</p>
           {params.error === "not_admin" && <p className="mt-3 text-sm text-rose-300">Current account is not admin. Please login with an admin account.</p>}
+          {params.error === "banned" && <p className="mt-3 text-sm text-rose-300">This account has been banned.</p>}
           <div className="mt-6">
             <AdminLoginForm />
           </div>
@@ -51,4 +52,3 @@ export default async function AdminAuthPage({ searchParams }: { searchParams: Pr
     </main>
   );
 }
-

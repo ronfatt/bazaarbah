@@ -52,6 +52,13 @@ export async function requireSeller(options?: { loginPath?: string }) {
     if (data) profile = data;
   }
 
+  if (profile.is_banned) {
+    if (options?.loginPath === "/admin/auth") {
+      redirect("/admin/auth?error=banned");
+    }
+    redirect("/auth?error=banned");
+  }
+
   return { user, profile };
 }
 
@@ -63,9 +70,12 @@ export function assertUnlocked(profile: { plan_tier?: string | null; plan?: stri
 
 export async function assertUnlockedByUserId(userId: string) {
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id,plan,role").eq("id", userId).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("id,plan,role,is_banned").eq("id", userId).maybeSingle();
   if (!profile) {
     throw new Error("Profile not found");
+  }
+  if (profile.is_banned) {
+    throw new Error("Account is banned. Contact support.");
   }
   assertUnlocked(profile);
 }

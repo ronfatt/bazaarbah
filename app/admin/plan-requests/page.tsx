@@ -8,6 +8,7 @@ import { requireAdminPortalUser } from "@/lib/auth";
 import { currencyFromCents } from "@/lib/utils";
 import { PLAN_LABEL } from "@/lib/plan";
 import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
+import Link from "next/link";
 
 type RequestRow = {
   id: string;
@@ -101,6 +102,12 @@ export default async function AdminPlanRequestsPortalPage({
               <p className="mt-2 text-sm text-white/65">Upgrade review, approval SLA, and audit visibility in one panel.</p>
             </div>
             <div className="flex items-center gap-2">
+              <Link href="/admin/members" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                Members
+              </Link>
+              <Link href="/admin/announcements" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                Announcements
+              </Link>
               <Badge variant="ai">Live Ops</Badge>
               <AdminSignoutButton />
             </div>

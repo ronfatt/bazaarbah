@@ -24,7 +24,16 @@ export default async function DashboardPage() {
   const tier = normalizePlanTier(profile);
   const admin = createAdminClient();
 
-  const { data: shops } = await admin.from("shops").select("id,slug,shop_name").eq("owner_id", user.id);
+  const [{ data: shops }, { data: notices }] = await Promise.all([
+    admin.from("shops").select("id,slug,shop_name").eq("owner_id", user.id),
+    admin
+      .from("member_notices")
+      .select("id,title,body,type,scope,created_at")
+      .eq("is_active", true)
+      .or(`scope.eq.all,and(scope.eq.user,user_id.eq.${user.id})`)
+      .order("created_at", { ascending: false })
+      .limit(3),
+  ]);
   const shopIds = shops?.map((s) => s.id) ?? [];
 
   const { data: orders } = shopIds.length
@@ -64,6 +73,23 @@ export default async function DashboardPage() {
 
   return (
     <div className="grid grid-cols-12 gap-6">
+      {(notices?.length ?? 0) > 0 && (
+        <div className="col-span-12">
+          <AppCard className="p-5">
+            <p className="text-xs uppercase tracking-widest text-white/45">Notices</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              {(notices ?? []).map((notice) => (
+                <div key={notice.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3">
+                  <p className="text-xs text-white/45">{notice.type === "warning" ? "Warning" : "Announcement"}</p>
+                  <p className="mt-1 font-semibold text-white">{notice.title}</p>
+                  <p className="mt-1 line-clamp-3 text-sm text-white/70">{notice.body}</p>
+                </div>
+              ))}
+            </div>
+          </AppCard>
+        </div>
+      )}
+
       <div className="col-span-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard title="Today Orders" value={String(todayOrders)} trend={12} icon={ShoppingBag} accent="teal" />
         <KpiCard title="Total Sales" value={currencyFromCents(totalSales)} trend={9} icon={Wallet} accent="gold" />

@@ -7,6 +7,9 @@ export type Profile = {
   poster_credits: number;
   image_credits: number;
   copy_credits: number;
+  is_banned: boolean;
+  banned_at: string | null;
+  ban_reason: string | null;
   created_at: string;
 };
 
