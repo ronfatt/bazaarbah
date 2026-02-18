@@ -18,7 +18,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
   const { data: products } = await admin
     .from("products")
-    .select("id,name,description,price_cents")
+    .select("id,name,description,price_cents,image_url")
     .eq("shop_id", shop.id)
     .eq("is_available", true)
     .order("created_at", { ascending: false });
@@ -40,6 +40,10 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
             <div className="mt-3 space-y-3">
               {(products ?? []).map((p) => (
                 <div key={p.id} className="rounded-xl border border-neutral-200 p-3">
+                  {p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.image_url} alt={p.name} className="mb-2 h-36 w-full rounded-lg object-cover" />
+                  ) : null}
                   <p className="font-semibold">{p.name}</p>
                   <p className="text-sm text-neutral-600">{p.description}</p>
                 </div>

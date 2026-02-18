@@ -27,6 +27,10 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
 
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
+    if (uploadingImage) {
+      setStatus("Image is still uploading. Please wait.");
+      return;
+    }
     setStatus("...");
 
     const res = await fetch("/api/products", {
@@ -139,7 +143,9 @@ export function ProductManager({ shops, products, lang = "en" }: Props & { lang?
             </div>
           )}
         </div>
-        <Button type="submit">{t(lang, "dashboard.add_product")}</Button>
+        <Button type="submit" disabled={uploadingImage || generatingDesc}>
+          {uploadingImage ? "Uploading image..." : t(lang, "dashboard.add_product")}
+        </Button>
         {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
       </form>
 
