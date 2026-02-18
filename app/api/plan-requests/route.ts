@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizePlanTier, PLAN_PRICE_CENTS } from "@/lib/plan";
+import { normalizePlanTier, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow } from "@/lib/plan";
 
 const allowedPlans = new Set(["pro_88", "pro_128"]);
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id,plan").eq("id", user.id).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("id,plan,plan_tier").eq("id", user.id).maybeSingle();
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
@@ -58,7 +58,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid target plan." }, { status: 400 });
   }
 
-  const amountCents = PLAN_PRICE_CENTS[targetPlan as "pro_88" | "pro_128"];
+  const { data: planPrice } = await admin
+    .from("plan_prices")
+    .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at")
+    .eq("plan_tier", targetPlan)
+    .maybeSingle();
+  const amountCents =
+    resolveEffectivePrice((planPrice as PlanPriceRow | null) ?? null) ?? PLAN_PRICE_CENTS[targetPlan as "pro_88" | "pro_128"];
   const { data: pending } = await admin.from("plan_requests").select("id").eq("user_id", user.id).eq("status", "pending_review").limit(1);
   if ((pending?.length ?? 0) > 0) {
     return NextResponse.json({ error: "You already have a pending request." }, { status: 400 });

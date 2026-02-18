@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdminByUserId } from "@/lib/auth";
-import { PLAN_AI_CREDITS } from "@/lib/plan";
+import { PLAN_AI_CREDITS, REFERRAL_BONUS } from "@/lib/plan";
 
 const bodySchema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -64,6 +64,59 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .eq("id", request.user_id);
     if (profileErr) {
       return NextResponse.json({ error: profileErr.message }, { status: 400 });
+    }
+
+    const { data: upgradedUser } = await admin
+      .from("profiles")
+      .select("id,referred_by,referral_rewarded_at")
+      .eq("id", request.user_id)
+      .maybeSingle();
+
+    if (upgradedUser?.referred_by && !upgradedUser.referral_rewarded_at) {
+      const bonus = REFERRAL_BONUS[target];
+      const { data: referrer } = await admin
+        .from("profiles")
+        .select("id,copy_credits,image_credits,poster_credits,referral_bonus_total")
+        .eq("id", upgradedUser.referred_by)
+        .maybeSingle();
+
+      if (referrer) {
+        await admin
+          .from("profiles")
+          .update({
+            copy_credits: Number(referrer.copy_credits ?? 0) + bonus.copy,
+            image_credits: Number(referrer.image_credits ?? 0) + bonus.image,
+            poster_credits: Number(referrer.poster_credits ?? 0) + bonus.poster,
+            referral_bonus_total: Number(referrer.referral_bonus_total ?? 0) + bonus.copy + bonus.image + bonus.poster,
+          })
+          .eq("id", referrer.id);
+
+        await admin.from("profiles").update({ referral_rewarded_at: new Date().toISOString() }).eq("id", upgradedUser.id);
+
+        await admin.from("referral_rewards").insert({
+          referrer_id: referrer.id,
+          referred_user_id: upgradedUser.id,
+          plan_tier: target,
+          copy_bonus: bonus.copy,
+          image_bonus: bonus.image,
+          poster_bonus: bonus.poster,
+        });
+
+        await admin.from("admin_audit_logs").insert({
+          action: "referral_reward_issued",
+          actor_id: user.id,
+          target_user_id: referrer.id,
+          plan_request_id: request.id,
+          target_plan: target,
+          note: `Referral bonus for ${upgradedUser.id}`,
+          meta: {
+            referred_user_id: upgradedUser.id,
+            copy_bonus: bonus.copy,
+            image_bonus: bonus.image,
+            poster_bonus: bonus.poster,
+          },
+        });
+      }
     }
   }
 

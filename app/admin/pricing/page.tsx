@@ -1,31 +1,19 @@
 import Link from "next/link";
-import { Bell } from "lucide-react";
 import { AppCard } from "@/components/ui/AppCard";
 import { Badge } from "@/components/ui/Badge";
 import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
-import { AnnouncementManager } from "@/components/admin/announcement-manager";
+import { PricingManager } from "@/components/admin/pricing-manager";
 import { requireAdminPortalUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { PlanPriceRow } from "@/lib/plan";
 
-type Announcement = {
-  id: string;
-  title: string;
-  body: string;
-  is_active: boolean;
-  created_at: string;
-};
-
-export default async function AdminAnnouncementsPage() {
+export default async function AdminPricingPage() {
   await requireAdminPortalUser();
   const admin = createAdminClient();
   const { data } = await admin
-    .from("member_notices")
-    .select("id,title,body,is_active,created_at")
-    .eq("scope", "all")
-    .eq("type", "announcement")
-    .order("created_at", { ascending: false });
-
-  const announcements = (data ?? []) as Announcement[];
+    .from("plan_prices")
+    .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at")
+    .order("plan_tier", { ascending: true });
 
   return (
     <main className="min-h-screen bg-bb-bg px-6 py-6 text-bb-text">
@@ -33,8 +21,8 @@ export default async function AdminAnnouncementsPage() {
         <AppCard className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold">Announcement Center</h1>
-              <p className="mt-2 text-sm text-white/65">Publish platform updates and policy notices to all members.</p>
+              <h1 className="text-2xl font-bold">Pricing Control</h1>
+              <p className="mt-2 text-sm text-white/65">Configure list price and promo price shown in billing.</p>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/admin/plan-requests" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
@@ -43,18 +31,16 @@ export default async function AdminAnnouncementsPage() {
               <Link href="/admin/members" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 Members
               </Link>
-              <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
-                Pricing
+              <Link href="/admin/announcements" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                Announcements
               </Link>
-              <Badge variant="ai">
-                <Bell size={13} className="mr-1" /> {announcements.filter((a) => a.is_active).length} active
-              </Badge>
+              <Badge variant="ai">Pricing</Badge>
               <AdminSignoutButton />
             </div>
           </div>
         </AppCard>
 
-        <AnnouncementManager announcements={announcements} />
+        <PricingManager initialPrices={(data ?? []) as PlanPriceRow[]} />
       </div>
     </main>
   );

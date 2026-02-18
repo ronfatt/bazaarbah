@@ -2,7 +2,7 @@ import { LoginForm } from "@/components/auth/login-form";
 import { Store, Wand2, ReceiptText } from "lucide-react";
 import Link from "next/link";
 
-export default async function AuthPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function AuthPage({ searchParams }: { searchParams: Promise<{ error?: string; ref?: string }> }) {
   const params = await searchParams;
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_25%_30%,rgba(0,194,168,0.10),transparent_42%),radial-gradient(circle_at_80%_22%,rgba(201,162,39,0.09),transparent_40%),radial-gradient(circle_at_52%_55%,rgba(255,255,255,0.06),transparent_45%),#071A16] text-bb-text">
@@ -57,7 +57,7 @@ export default async function AuthPage({ searchParams }: { searchParams: Promise
             <p className="mt-2 text-sm text-white/65">Use email + password. New user can register directly.</p>
             {params.error === "banned" ? <p className="mt-2 text-sm text-rose-300">This account is currently banned. Contact admin support.</p> : null}
             <div className="mt-6">
-              <LoginForm />
+              <LoginForm defaultReferralCode={params.ref ?? ""} />
             </div>
             <div className="mt-3">
               <Link href="/admin/auth" className="text-xs text-white/45 hover:text-bb-ai">

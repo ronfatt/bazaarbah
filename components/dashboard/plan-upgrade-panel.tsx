@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { currencyFromCents } from "@/lib/utils";
-import { PLAN_AI_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, type PlanTier } from "@/lib/plan";
+import { PLAN_AI_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
 
 type PlanRequest = {
   id: string;
@@ -34,12 +34,14 @@ export function PlanUpgradePanel({
   copyCredits,
   imageCredits,
   posterCredits,
+  prices,
   requests,
 }: {
   currentTier: PlanTier;
   copyCredits: number;
   imageCredits: number;
   posterCredits: number;
+  prices: Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>;
   requests: PlanRequest[];
 }) {
   const [targetPlan, setTargetPlan] = useState<"pro_88" | "pro_128">(currentTier === "pro_88" ? "pro_128" : "pro_88");
@@ -51,6 +53,10 @@ export function PlanUpgradePanel({
 
   const pendingExists = requests.some((r) => r.status === "pending_review");
   const plans: PlanTier[] = ["free", "pro_88", "pro_128"];
+  const currentAmount =
+    targetPlan === "pro_88" || targetPlan === "pro_128"
+      ? resolveEffectivePrice(prices[targetPlan] ?? null) ?? PLAN_PRICE_CENTS[targetPlan]
+      : PLAN_PRICE_CENTS[targetPlan];
 
   async function submitUpgrade() {
     setLoading(true);
@@ -94,7 +100,12 @@ export function PlanUpgradePanel({
                 <p className="text-lg font-semibold text-white">{PLAN_LABEL[plan]}</p>
                 {isCurrent ? <Badge variant="paid">Current</Badge> : null}
               </div>
-              <p className="mt-1 text-sm text-white/70">{plan === "free" ? "RM0" : currencyFromCents(PLAN_PRICE_CENTS[plan])}</p>
+              <p className="mt-1 text-sm text-white/70">
+                {plan === "free" ? "RM0" : currencyFromCents(resolveEffectivePrice(prices[plan] ?? null) ?? PLAN_PRICE_CENTS[plan])}
+                {plan !== "free" && prices[plan]?.promo_active && prices[plan]?.promo_price_cents ? (
+                  <span className="ml-2 text-xs text-white/45 line-through">{currencyFromCents(prices[plan]?.list_price_cents ?? PLAN_PRICE_CENTS[plan])}</span>
+                ) : null}
+              </p>
               <p className="mt-3 text-xs text-white/60">
                 AI credits: Copy {credits.copy} • Image {credits.image} • Poster {credits.poster}
               </p>
@@ -145,7 +156,7 @@ export function PlanUpgradePanel({
 
             <label className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
               Amount
-              <p className="mt-2 text-lg font-semibold text-white">{currencyFromCents(PLAN_PRICE_CENTS[targetPlan])}</p>
+              <p className="mt-2 text-lg font-semibold text-white">{currencyFromCents(currentAmount)}</p>
             </label>
           </div>
 

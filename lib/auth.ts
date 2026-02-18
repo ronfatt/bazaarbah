@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { createHash } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasUnlockedFeatures, normalizePlanTier } from "@/lib/plan";
@@ -50,6 +51,21 @@ export async function requireSeller(options?: { loginPath?: string }) {
     const tier = normalizePlanTier(profile);
     const { data } = await admin.from("profiles").update({ plan_tier: tier }).eq("id", user.id).select("*").single();
     if (data) profile = data;
+  }
+
+  if (!profile.referral_code) {
+    const referralCode = createHash("sha1").update(user.id).digest("hex").slice(0, 10).toUpperCase();
+    const { data } = await admin.from("profiles").update({ referral_code: referralCode }).eq("id", user.id).select("*").single();
+    if (data) profile = data;
+  }
+
+  const referralInput = (user.user_metadata?.referral_code as string | undefined)?.trim().toUpperCase();
+  if (!profile.referred_by && referralInput) {
+    const { data: referrer } = await admin.from("profiles").select("id").eq("referral_code", referralInput).maybeSingle();
+    if (referrer?.id && referrer.id !== user.id) {
+      const { data } = await admin.from("profiles").update({ referred_by: referrer.id }).eq("id", user.id).is("referred_by", null).select("*").single();
+      if (data) profile = data;
+    }
   }
 
   if (profile.is_banned) {

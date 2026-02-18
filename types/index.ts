@@ -7,6 +7,10 @@ export type Profile = {
   poster_credits: number;
   image_credits: number;
   copy_credits: number;
+  referral_code: string | null;
+  referred_by: string | null;
+  referral_rewarded_at: string | null;
+  referral_bonus_total: number;
   is_banned: boolean;
   banned_at: string | null;
   ban_reason: string | null;

@@ -5,9 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { AppButton } from "@/components/ui/AppButton";
 import { Input } from "@/components/ui/input";
 
-export function LoginForm() {
+export function LoginForm({ defaultReferralCode = "" }: { defaultReferralCode?: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState(defaultReferralCode);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,7 +35,13 @@ export function LoginForm() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: referralCode.trim() ? { referral_code: referralCode.trim().toUpperCase() } : {},
+        },
+      });
       if (error) throw error;
       setStatus("Account created. If email confirmation is enabled, confirm email first.");
     } catch (error) {
@@ -48,6 +55,7 @@ export function LoginForm() {
     <form onSubmit={onLogin} className="space-y-3">
       <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seller@email.com" />
       <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+      <Input value={referralCode} onChange={(e) => setReferralCode(e.target.value)} placeholder="Referral code (optional)" />
 
       <div className="flex gap-2">
         <AppButton type="submit" variant="primary" disabled={loading} className="w-full hover:scale-[1.02]">

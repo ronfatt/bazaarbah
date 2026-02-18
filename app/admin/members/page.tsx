@@ -63,6 +63,9 @@ export default async function AdminMembersPage({
               <Link href="/admin/announcements" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 Announcements
               </Link>
+              <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                Pricing
+              </Link>
               <Badge variant="ai">Members {rows.length}</Badge>
               <Badge variant={bannedCount > 0 ? "cancelled" : "paid"}>Banned {bannedCount}</Badge>
               <AdminSignoutButton />
@@ -101,4 +104,3 @@ export default async function AdminMembersPage({
     </main>
   );
 }
-
