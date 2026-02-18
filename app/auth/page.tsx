@@ -1,5 +1,6 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { Store, Wand2, ReceiptText } from "lucide-react";
+import Link from "next/link";
 
 export default function AuthPage() {
   return (
@@ -55,6 +56,11 @@ export default function AuthPage() {
             <p className="mt-2 text-sm text-white/65">Use email + password. New user can register directly.</p>
             <div className="mt-6">
               <LoginForm />
+            </div>
+            <div className="mt-3">
+              <Link href="/admin/auth" className="text-xs text-white/45 hover:text-bb-ai">
+                Admin login
+              </Link>
             </div>
           </div>
         </section>

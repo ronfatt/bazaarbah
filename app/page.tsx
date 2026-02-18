@@ -29,9 +29,14 @@ export default async function Home() {
             <p className="font-mono text-xs tracking-[0.18em] text-bb-muted">BAZAARBAH</p>
             <p className="mt-1 text-sm text-bb-muted">AI-Powered Digital Bazaar</p>
           </div>
-          <Link href="/auth">
-            <AppButton variant="secondary">Login</AppButton>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/auth">
+              <AppButton variant="secondary">Login</AppButton>
+            </Link>
+            <Link href="/admin/auth">
+              <AppButton variant="ghost">Admin</AppButton>
+            </Link>
+          </div>
         </header>
 
         <section className="mx-auto mt-20 grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">

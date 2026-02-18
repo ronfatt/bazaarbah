@@ -3,14 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasUnlockedFeatures, normalizePlanTier } from "@/lib/plan";
 
-export async function requireSeller() {
+export async function requireSeller(options?: { loginPath?: string }) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth");
+    redirect(options?.loginPath ?? "/auth");
   }
 
   const admin = createAdminClient();
@@ -90,6 +90,14 @@ export async function requireAdminUser() {
   const { user, profile } = await requireSeller();
   if (profile.role !== "admin") {
     redirect("/dashboard");
+  }
+  return { user, profile };
+}
+
+export async function requireAdminPortalUser() {
+  const { user, profile } = await requireSeller({ loginPath: "/admin/auth" });
+  if (profile.role !== "admin") {
+    redirect("/admin/auth?error=not_admin");
   }
   return { user, profile };
 }
