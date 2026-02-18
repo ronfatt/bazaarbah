@@ -9,6 +9,9 @@ export default async function BillingPage() {
   const { user, profile } = await requireSeller();
   const tier = normalizePlanTier(profile);
   const included = PLAN_AI_CREDITS[tier];
+  const effectiveCopy = tier === "free" ? 0 : profile.copy_credits;
+  const effectiveImage = tier === "free" ? 0 : profile.image_credits;
+  const effectivePoster = tier === "free" ? 0 : profile.poster_credits;
   const admin = createAdminClient();
 
   const { data: requests } = await admin
@@ -38,12 +41,11 @@ export default async function BillingPage() {
 
       <PlanUpgradePanel
         currentTier={tier}
-        copyCredits={profile.copy_credits}
-        imageCredits={profile.image_credits}
-        posterCredits={profile.poster_credits}
+        copyCredits={effectiveCopy}
+        imageCredits={effectiveImage}
+        posterCredits={effectivePoster}
         requests={(requests ?? [])}
       />
     </section>
   );
 }
-

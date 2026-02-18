@@ -23,6 +23,12 @@ function statusBadge(status: PlanRequest["status"]) {
   return <Badge variant="pending">pending review</Badge>;
 }
 
+const PLAN_BENEFITS: Record<PlanTier, string[]> = {
+  free: ["Dashboard view only", "No shop/product/order actions", "Upgrade required for AI tools"],
+  pro_88: ["All selling modules unlocked", "Manual payment + receipt workflow", "Starter AI quota for seasonal campaign"],
+  pro_128: ["All selling modules unlocked", "Higher AI quota for frequent posting", "Priority for heavy marketing usage"],
+};
+
 export function PlanUpgradePanel({
   currentTier,
   copyCredits,
@@ -44,6 +50,7 @@ export function PlanUpgradePanel({
   const [result, setResult] = useState<string | null>(null);
 
   const pendingExists = requests.some((r) => r.status === "pending_review");
+  const plans: PlanTier[] = ["free", "pro_88", "pro_128"];
 
   async function submitUpgrade() {
     setLoading(true);
@@ -72,17 +79,46 @@ export function PlanUpgradePanel({
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {plans.map((plan) => {
+          const credits = PLAN_AI_CREDITS[plan];
+          const isCurrent = currentTier === plan;
+          return (
+            <div
+              key={plan}
+              className={`rounded-2xl border p-4 ${
+                isCurrent ? "border-[#C9A227]/50 bg-[#C9A227]/10" : "border-white/10 bg-[#163C33]"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-lg font-semibold text-white">{PLAN_LABEL[plan]}</p>
+                {isCurrent ? <Badge variant="paid">Current</Badge> : null}
+              </div>
+              <p className="mt-1 text-sm text-white/70">{plan === "free" ? "RM0" : currencyFromCents(PLAN_PRICE_CENTS[plan])}</p>
+              <p className="mt-3 text-xs text-white/60">
+                AI credits: Copy {credits.copy} • Image {credits.image} • Poster {credits.poster}
+              </p>
+              <ul className="mt-3 space-y-1 text-xs text-white/75">
+                {PLAN_BENEFITS[plan].map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm">
-          <p className="text-white/65">Copy credits</p>
+          <p className="text-white/65">Current copy credits</p>
           <p className="mt-1 text-lg font-semibold text-white">{copyCredits}</p>
         </div>
         <div className="rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm">
-          <p className="text-white/65">Image credits</p>
+          <p className="text-white/65">Current image credits</p>
           <p className="mt-1 text-lg font-semibold text-white">{imageCredits}</p>
         </div>
         <div className="rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm">
-          <p className="text-white/65">Poster credits</p>
+          <p className="text-white/65">Current poster credits</p>
           <p className="mt-1 text-lg font-semibold text-white">{posterCredits}</p>
         </div>
       </div>
@@ -180,4 +216,3 @@ export function PlanUpgradePanel({
     </div>
   );
 }
-
