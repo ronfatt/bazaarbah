@@ -1,0 +1,72 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+const patchSchema = z.object({
+  name: z.string().min(2).optional(),
+  description: z.string().max(400).nullable().optional(),
+  priceCents: z.number().int().min(0).optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  isAvailable: z.boolean().optional(),
+});
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = patchSchema.parse(await req.json());
+    const admin = createAdminClient();
+
+    const { data: ownShops } = await admin.from("shops").select("id").eq("owner_id", user.id);
+    const ownShopIds = ownShops?.map((s) => s.id) ?? [];
+
+    const patch: Record<string, unknown> = {};
+    if (body.name !== undefined) patch.name = body.name;
+    if (body.description !== undefined) patch.description = body.description;
+    if (body.priceCents !== undefined) patch.price_cents = body.priceCents;
+    if (body.imageUrl !== undefined) patch.image_url = body.imageUrl;
+    if (body.isAvailable !== undefined) patch.is_available = body.isAvailable;
+
+    const { data, error } = await admin.from("products").update(patch).eq("id", id).in("shop_id", ownShopIds).select("*").single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ product: data });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });
+  }
+}
+
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const admin = createAdminClient();
+  const { data: ownShops } = await admin.from("shops").select("id").eq("owner_id", user.id);
+  const ownShopIds = ownShops?.map((s) => s.id) ?? [];
+
+  const { error } = await admin.from("products").delete().eq("id", id).in("shop_id", ownShopIds);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

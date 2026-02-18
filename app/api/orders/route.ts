@@ -1,0 +1,87 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { generateOrderCode } from "@/lib/utils";
+
+const orderSchema = z.object({
+  shopId: z.string().uuid().optional(),
+  shopSlug: z.string().min(2).optional(),
+  buyerName: z.string().min(2).optional(),
+  buyerPhone: z.string().min(6).optional(),
+  items: z.array(z.object({ productId: z.string().uuid(), qty: z.number().int().min(1).max(99) })).min(1),
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const payload = orderSchema.parse(await req.json());
+    const admin = createAdminClient();
+
+    let shopId = payload.shopId;
+    if (!shopId && payload.shopSlug) {
+      const { data: shop } = await admin.from("shops").select("id").eq("slug", payload.shopSlug).eq("is_active", true).maybeSingle();
+      shopId = shop?.id;
+    }
+
+    if (!shopId) {
+      return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+    }
+
+    const productIds = payload.items.map((i) => i.productId);
+    const { data: products, error: productsErr } = await admin
+      .from("products")
+      .select("id,price_cents,shop_id,is_available")
+      .eq("shop_id", shopId)
+      .in("id", productIds);
+
+    if (productsErr || !products?.length) {
+      return NextResponse.json({ error: "Products not found" }, { status: 404 });
+    }
+
+    const productMap = new Map(products.filter((p) => p.is_available).map((p) => [p.id, p]));
+    let subtotal = 0;
+    const orderItems = payload.items.map((item) => {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        throw new Error("Invalid product in cart");
+      }
+
+      const line = product.price_cents * item.qty;
+      subtotal += line;
+      return {
+        product_id: item.productId,
+        qty: item.qty,
+        unit_price_cents: product.price_cents,
+        line_total_cents: line,
+      };
+    });
+
+    const orderCode = generateOrderCode();
+    const { data: order, error: orderErr } = await admin
+      .from("orders")
+      .insert({
+        order_code: orderCode,
+        shop_id: shopId,
+        buyer_name: payload.buyerName ?? null,
+        buyer_phone: payload.buyerPhone ?? null,
+        subtotal_cents: subtotal,
+      })
+      .select("id,order_code,status,subtotal_cents")
+      .single();
+
+    if (orderErr || !order) {
+      return NextResponse.json({ error: orderErr?.message ?? "Order failed" }, { status: 400 });
+    }
+
+    const itemsPayload = orderItems.map((item) => ({ ...item, order_id: order.id }));
+    const { error: itemsErr } = await admin.from("order_items").insert(itemsPayload);
+
+    if (itemsErr) {
+      await admin.from("orders").delete().eq("id", order.id);
+      return NextResponse.json({ error: itemsErr.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ order });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });
+  }
+}

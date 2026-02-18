@@ -1,0 +1,24 @@
+import { Card } from "@/components/ui/card";
+import { ShopForm } from "@/components/dashboard/shop-form";
+import { requireSeller } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export default async function ShopPage() {
+  const { user } = await requireSeller();
+  const admin = createAdminClient();
+
+  const { data: shops } = await admin.from("shops").select("*").eq("owner_id", user.id).order("created_at", { ascending: true });
+  const shop = shops?.[0] ?? null;
+
+  return (
+    <section className="space-y-4">
+      <Card>
+        <h1 className="text-2xl font-bold">Shop Profile</h1>
+        <p className="mt-2 text-sm text-neutral-600">Manage slug, theme, WhatsApp, and branding.</p>
+        <div className="mt-6">
+          <ShopForm initialShop={shop} />
+        </div>
+      </Card>
+    </section>
+  );
+}

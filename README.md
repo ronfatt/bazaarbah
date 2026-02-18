@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Raya Kuih Seller Platform (MVP)
 
-## Getting Started
+Seasonal SaaS for Raya sellers with seller dashboard + public buyer flow.
 
-First, run the development server:
+## Stack
+- Next.js App Router + Tailwind
+- Supabase (Auth + Postgres + Storage-ready)
+- Next.js route handlers for APIs
+- `pdf-lib` for receipts
+- `canvas` for poster composition
+- OpenAI API for copy + image generation
 
+## Routes
+- Seller (login required)
+  - `/dashboard`
+  - `/dashboard/shop`
+  - `/dashboard/products`
+  - `/dashboard/orders`
+  - `/dashboard/orders/[id]`
+  - `/dashboard/ai`
+  - `/dashboard/billing`
+- Buyer (no login)
+  - `/s/[slug]`
+  - `/o/[order_code]`
+
+## APIs
+- `GET/POST/PATCH /api/shops`
+- `POST /api/products`
+- `PATCH/DELETE /api/products/:id`
+- `POST /api/orders` (buyer creates order)
+- `POST /api/orders/by-code/:orderCode/proof` (buyer submits proof)
+- `POST /api/orders/:id/mark-paid` (seller confirms)
+- `POST /api/orders/:id/receipt` (create receipt record)
+- `GET /api/orders/:id/receipt` (download PDF)
+- `POST /api/ai/copy`
+- `POST /api/ai/poster`
+- `POST /api/ai/poster-compose`
+
+## Database Migration
+Run in Supabase SQL editor:
+- `/Users/rms/Desktop/bazaarBah/db/migrations/001_init.sql`
+- `/Users/rms/Desktop/bazaarBah/db/migrations/002_raya_core.sql`
+
+`002_raya_core.sql` contains your requested schema:
+`profiles, shops, products, orders, order_items, payments, receipts, ai_jobs` with RLS.
+
+## Env
+Copy `.env.example` to `.env.local` and set:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`
+
+## Run
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
