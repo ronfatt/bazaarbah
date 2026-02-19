@@ -96,9 +96,11 @@ export function AITools({
   const [posterProgress, setPosterProgress] = useState(0);
   const [posterError, setPosterError] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [enforcePhotoForPoster, setEnforcePhotoForPoster] = useState(true);
   const [historyItems, setHistoryItems] = useState<AiHistoryItem[]>(history);
   const [historyFilter, setHistoryFilter] = useState<"all" | "product_image" | "poster" | "copy">("all");
   const [historyBusy, setHistoryBusy] = useState(false);
+  const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
 
   function applyHistory(item: AiHistoryItem) {
     const payload = item.payload ?? {};
@@ -145,6 +147,23 @@ export function AITools({
     setHistoryItems((prev) => [item, ...prev].slice(0, 30));
   }
 
+  function previewCopyText(item: AiHistoryItem) {
+    const payload = item.payload ?? {};
+    const bundle = payload.bundle as CopyBundle | undefined;
+    if (!bundle) return null;
+    const firstCaption = bundle.fbCaptions?.[0]?.text ?? "";
+    const firstWa = bundle.whatsappBroadcasts?.[0] ?? "";
+    const firstHook = bundle.hooks?.[0] ?? "";
+    const joined = [firstCaption, firstWa, firstHook].filter(Boolean).join(" | ");
+    if (!joined) return null;
+    const expanded = Boolean(expandedHistory[item.id]);
+    return {
+      full: joined,
+      short: joined.length > 180 ? `${joined.slice(0, 180)}...` : joined,
+      expanded,
+    };
+  }
+
   async function deleteHistoryItem(id: string) {
     setHistoryBusy(true);
     try {
@@ -188,6 +207,13 @@ export function AITools({
     if (theme === "cute") return "from-[#112E27] via-[#1d3f37] to-[#1d4b41]";
     return "from-[#112E27] via-[#163C33] to-[#0E3B2E]";
   }, [theme]);
+
+  const posterSourceImageUrl =
+    productImage.startsWith("http://") || productImage.startsWith("https://")
+      ? productImage
+      : uploadedImageUrl && (uploadedImageUrl.startsWith("http://") || uploadedImageUrl.startsWith("https://"))
+        ? uploadedImageUrl
+        : null;
 
   async function generateCopy() {
     setCopyLoading(true);
@@ -314,6 +340,10 @@ export function AITools({
   }
 
   async function generatePoster() {
+    if (enforcePhotoForPoster && !posterSourceImageUrl) {
+      setPosterError("Generate or upload a product photo in A first, then generate poster.");
+      return;
+    }
     setPosterLoading(true);
     setPosterError(null);
     setPosterProgress(12);
@@ -327,7 +357,12 @@ export function AITools({
       const res = await fetch("/api/ai/poster", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...posterForm, style: theme, shopId }),
+        body: JSON.stringify({
+          ...posterForm,
+          style: theme,
+          shopId,
+          sourceImageUrl: posterSourceImageUrl ?? undefined,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Failed");
@@ -429,6 +464,36 @@ export function AITools({
             <h3 className="text-lg font-semibold">{t(lang, "ai.poster_title")}</h3>
           </div>
           <div className="grid gap-2">
+            <div className="rounded-xl border border-white/10 bg-[#163C33]/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-white/70">Poster image source</p>
+                <label className="flex items-center gap-2 text-xs text-white/70">
+                  <input
+                    type="checkbox"
+                    checked={enforcePhotoForPoster}
+                    onChange={(e) => setEnforcePhotoForPoster(e.target.checked)}
+                  />
+                  Require photo from A
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-white/50">
+                {posterSourceImageUrl
+                  ? "Using image from A) Product Photo Beautifier."
+                  : "No linked image yet. Run A first, or disable requirement to use AI background fallback."}
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-white/10 bg-[#112E27]">
+                  {posterSourceImageUrl ? (
+                    <Image src={posterSourceImageUrl} alt="Poster source preview" fill className="object-cover" unoptimized />
+                  ) : (
+                    <div className="grid h-full w-full place-items-center text-[10px] text-white/40">No image</div>
+                  )}
+                </div>
+                <p className="text-xs text-white/55">
+                  {posterSourceImageUrl ? "This thumbnail is the current background source for B." : "Generate in A first to link a source image."}
+                </p>
+              </div>
+            </div>
             <div className="grid gap-2 md:grid-cols-[1fr_auto]">
               <select
                 value={selectedProductId}
@@ -647,8 +712,45 @@ export function AITools({
                   <p className="text-sm font-semibold text-white">
                     {item.type === "product_image" ? "Product Background" : item.type === "poster" ? "Poster" : "Copy Bundle"}
                   </p>
-                  <p className="text-xs text-white/50">{new Date(item.createdAt).toLocaleString()}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-white/50">{new Date(item.createdAt).toLocaleString()}</p>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      disabled={historyBusy}
+                      onClick={() => deleteHistoryItem(item.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
+                {item.type === "copy" ? (
+                  (() => {
+                    const preview = previewCopyText(item);
+                    if (!preview) {
+                      return <p className="mt-2 text-xs text-white/50">No text preview in this record.</p>;
+                    }
+                    return (
+                      <div className="mt-2 rounded-lg border border-white/10 bg-[#112E27]/60 p-2">
+                        <p className="text-xs text-white/80">{preview.expanded ? preview.full : preview.short}</p>
+                        {preview.full.length > 180 ? (
+                          <button
+                            type="button"
+                            className="mt-1 text-xs text-[#00C2A8] hover:underline"
+                            onClick={() =>
+                              setExpandedHistory((prev) => ({
+                                ...prev,
+                                [item.id]: !prev[item.id],
+                              }))
+                            }
+                          >
+                            {preview.expanded ? "Show less" : "Show more"}
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  })()
+                ) : null}
                 {item.imageUrl ? (
                   <div className="mt-2 flex items-center gap-3">
                     <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-white/10">
@@ -663,9 +765,6 @@ export function AITools({
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => applyHistory(item)}>
                       Reuse
-                    </Button>
-                    <Button type="button" variant="danger" disabled={historyBusy} onClick={() => deleteHistoryItem(item.id)}>
-                      Delete
                     </Button>
                   </div>
                 </div>

@@ -15,6 +15,7 @@ const schema = z.object({
   cta: z.string().min(2).default("Order Now"),
   style: z.enum(["gold", "minimal", "cute"]).default("gold"),
   aspect: z.enum(["16:9", "9:16"]).default("9:16"),
+  sourceImageUrl: z.string().url().optional(),
   shopId: z.string().uuid().optional(),
 });
 
@@ -33,12 +34,30 @@ export async function POST(req: NextRequest) {
     const body = schema.parse(await req.json());
     const admin = createAdminClient();
 
-    const { base64, prompt } = await generateBackgroundImage({
-      title: body.productName,
-      description: body.sellingPoint,
-      style: body.style,
-      aspect: body.aspect,
-    });
+    let base64 = "";
+    let prompt = "";
+    let sourceKind: "uploaded_or_beautified" | "generated_background" = "generated_background";
+
+    if (body.sourceImageUrl) {
+      const sourceRes = await fetch(body.sourceImageUrl);
+      if (!sourceRes.ok) {
+        throw new Error("Failed to load source image for poster.");
+      }
+      const sourceBytes = Buffer.from(await sourceRes.arrayBuffer());
+      base64 = sourceBytes.toString("base64");
+      prompt = `poster-from-source|${body.productName}|${body.sellingPoint ?? ""}|${body.priceLabel}|${body.aspect}`;
+      sourceKind = "uploaded_or_beautified";
+    } else {
+      const generated = await generateBackgroundImage({
+        title: body.productName,
+        description: body.sellingPoint,
+        style: body.style,
+        aspect: body.aspect,
+      });
+      base64 = generated.base64;
+      prompt = generated.prompt;
+      sourceKind = "generated_background";
+    }
 
     const posterBase64 = await composePoster({
       bgBase64: base64,
@@ -85,6 +104,8 @@ export async function POST(req: NextRequest) {
         cta: body.cta,
         aspect: body.aspect,
         style: body.style,
+        sourceImageUrl: body.sourceImageUrl ?? null,
+        sourceKind,
       },
     });
 
