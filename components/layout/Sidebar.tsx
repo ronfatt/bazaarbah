@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +35,9 @@ export function Sidebar({
   return (
     <div className="p-4 flex h-full flex-col gap-4">
       <div className="rounded-2xl bg-bb-surface/50 border border-bb-border/5 p-4 shadow-soft">
-        <div className="text-xs text-white/45 tracking-widest">BAZAARBAH</div>
+        <div className="mb-2">
+          <Image src="/logo-sidebar.png" alt="BazaarBah" width={640} height={220} className="h-auto w-full object-contain" priority />
+        </div>
         <div className="text-lg font-semibold">{sellerOsLabel}</div>
       </div>
 

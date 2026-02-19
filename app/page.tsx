@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -29,8 +30,8 @@ export default async function Home() {
 
       <div className="relative px-8 py-8">
         <header className="flex items-center justify-between">
-          <div>
-            <p className="font-mono text-xs tracking-[0.18em] text-bb-muted">BAZAARBAH</p>
+          <div className="w-full max-w-[220px]">
+            <Image src="/logo-auth.png" alt="BazaarBah" width={720} height={360} className="h-auto w-full object-contain" priority />
             <p className="mt-1 text-sm text-bb-muted">{t(lang, "home.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">

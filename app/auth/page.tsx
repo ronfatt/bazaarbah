@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { Store, Wand2, ReceiptText } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
@@ -14,7 +15,9 @@ export default async function AuthPage({ searchParams }: { searchParams: Promise
 
       <div className="relative mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-10 px-8 py-10 lg:grid-cols-[0.42fr_0.58fr]">
         <section className="flex flex-col justify-center">
-          <p className="font-mono text-xs tracking-[0.18em] text-bb-muted">BAZAARBAH</p>
+          <div className="w-full max-w-[360px]">
+            <Image src="/logo-auth.png" alt="BazaarBah" width={720} height={360} className="h-auto w-full object-contain" priority />
+          </div>
           <h1 className="mt-3 text-4xl font-bold">{t(lang, "auth.title")}</h1>
           <p className="mt-3 text-sm text-white/65">{t(lang, "auth.desc")}</p>
 
