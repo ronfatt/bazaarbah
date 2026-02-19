@@ -40,17 +40,28 @@ export async function composePoster(input: OverlayInput) {
   const palette = posterPalette(theme);
 
   const fontDir = path.join(process.cwd(), "public", "fonts");
-  const regularCandidates = ["noto-sans-sc.otf", "NotoSansSC-Regular.otf"];
-  const boldCandidates = ["noto-sans-sc-bold.otf", "NotoSansSC-Bold.otf"];
+  const regularCandidates = [
+    "noto-sans-sc.otf",
+    "NotoSansSC-Regular.otf",
+    "noto-sans.otf",
+    "NotoSans-Regular.ttf",
+  ];
+  const boldCandidates = [
+    "noto-sans-sc-bold.otf",
+    "NotoSansSC-Bold.otf",
+    "noto-sans-bold.otf",
+    "NotoSans-Bold.ttf",
+  ];
   const regularFont = regularCandidates.map((name) => path.join(fontDir, name)).find((p) => fs.existsSync(p));
   const boldFont = boldCandidates.map((name) => path.join(fontDir, name)).find((p) => fs.existsSync(p));
   if (regularFont) {
-    registerFont(regularFont, { family: "Noto Sans SC" });
+    registerFont(regularFont, { family: "BazaarBah Sans" });
   }
   if (boldFont) {
-    registerFont(boldFont, { family: "Noto Sans SC", weight: "bold" });
+    registerFont(boldFont, { family: "BazaarBah Sans", weight: "bold" });
   }
-  const fontFamily = '"Noto Sans SC","Noto Sans","Arial Unicode MS","Segoe UI",sans-serif';
+  const fontFamily =
+    '"BazaarBah Sans","Noto Sans SC","Noto Sans","PingFang SC","Microsoft YaHei","Arial Unicode MS","Inter","Segoe UI",sans-serif';
 
   const width = input.aspect === "16:9" ? 1600 : 1080;
   const height = input.aspect === "16:9" ? 900 : 1920;
