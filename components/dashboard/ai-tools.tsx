@@ -87,7 +87,11 @@ export function AITools({
   const [copyLoading, setCopyLoading] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
 
-  const [imageForm, setImageForm] = useState({ productName: "", description: "" });
+  const [imageForm, setImageForm] = useState<{ productName: string; description: string; aspect: "1:1" | "16:9" | "9:16" }>({
+    productName: "",
+    description: "",
+    aspect: "1:1",
+  });
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [productImage, setProductImage] = useState<string>("");
   const [imageLoading, setImageLoading] = useState(false);
@@ -118,9 +122,11 @@ export function AITools({
     const payload = item.payload ?? {};
     if (item.type === "product_image") {
       const input = (payload.input as Record<string, string> | undefined) ?? {};
+      const aspect = input.aspect === "16:9" || input.aspect === "9:16" || input.aspect === "1:1" ? input.aspect : "1:1";
       setImageForm({
         productName: input.productName ?? "",
         description: input.description ?? "",
+        aspect,
       });
       if (item.imageUrl) setProductImage(item.imageUrl);
       return;
@@ -304,6 +310,12 @@ export function AITools({
 
     try {
       if (uploadedImageUrl) {
+        const outputSize =
+          imageForm.aspect === "1:1"
+            ? "1024x1024"
+            : imageForm.aspect === "16:9"
+              ? "1536x1024"
+              : "1024x1536";
         const res = await fetch("/api/ai/enhance-product-photo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -313,7 +325,7 @@ export function AITools({
             productName: imageForm.productName,
             description: imageForm.description || undefined,
             style: theme === "minimal" ? "studio" : theme === "cute" ? "raya" : "premium",
-            outputSize: "1024x1024",
+            outputSize,
           }),
         });
         const json = await res.json();
@@ -329,6 +341,7 @@ export function AITools({
               productName: imageForm.productName,
               description: imageForm.description,
               style: theme,
+              aspect: imageForm.aspect,
             },
           },
         });
@@ -351,6 +364,7 @@ export function AITools({
               productName: imageForm.productName,
               description: imageForm.description,
               style: theme,
+              aspect: imageForm.aspect,
             },
           },
         });
@@ -510,6 +524,15 @@ export function AITools({
           <div className="grid gap-2">
             <Input placeholder={t(lang, "ai.product_name_placeholder")} value={imageForm.productName} onChange={(e) => setImageForm((s) => ({ ...s, productName: e.target.value }))} />
             <Textarea rows={3} placeholder={t(lang, "ai.product_desc_placeholder")} value={imageForm.description} onChange={(e) => setImageForm((s) => ({ ...s, description: e.target.value }))} />
+            <select
+              value={imageForm.aspect}
+              onChange={(e) => setImageForm((s) => ({ ...s, aspect: e.target.value as "1:1" | "16:9" | "9:16" }))}
+              className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
+            >
+              <option value="1:1">1:1</option>
+              <option value="9:16">9:16</option>
+              <option value="16:9">16:9</option>
+            </select>
             <div className="rounded-xl border border-white/10 bg-[#0B241F] p-3">
               <p className="text-xs text-white/60">{t(lang, "ai.photo_upload_label")}</p>
               <ImageUploader uploading={imageLoading} onChange={uploadAiImage} previewUrl={uploadedImageUrl || undefined} label={t(lang, "ai.photo_upload_cta")} />

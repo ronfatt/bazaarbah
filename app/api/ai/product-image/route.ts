@@ -11,6 +11,7 @@ const schema = z.object({
   productName: z.string().min(2),
   description: z.string().max(240).optional(),
   style: z.enum(["gold", "minimal", "cute"]).default("gold"),
+  aspect: z.enum(["16:9", "9:16", "1:1"]).default("9:16"),
   shopId: z.string().uuid().optional(),
 });
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
       title: body.productName,
       description: body.description,
       style: body.style,
-      aspect: "9:16",
+      aspect: body.aspect === "1:1" ? "9:16" : body.aspect,
     });
 
     const bytes = Buffer.from(base64, "base64");
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
         productName: body.productName,
         description: body.description ?? "",
         style: body.style,
+        aspect: body.aspect,
       },
     });
 

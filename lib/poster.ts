@@ -93,7 +93,24 @@ export async function composePoster(input: OverlayInput) {
 
   const bgBuffer = Buffer.from(input.bgBase64, "base64");
   const bg = await loadImage(bgBuffer);
-  ctx.drawImage(bg, 0, 0, width, height);
+  const srcW = bg.width;
+  const srcH = bg.height;
+  const srcRatio = srcW / srcH;
+  const dstRatio = width / height;
+
+  // Draw source image in "cover" mode to avoid stretch when aspect ratios differ.
+  let drawW = srcW;
+  let drawH = srcH;
+  let sx = 0;
+  let sy = 0;
+  if (srcRatio > dstRatio) {
+    drawW = srcH * dstRatio;
+    sx = Math.floor((srcW - drawW) / 2);
+  } else if (srcRatio < dstRatio) {
+    drawH = srcW / dstRatio;
+    sy = Math.floor((srcH - drawH) / 2);
+  }
+  ctx.drawImage(bg, sx, sy, drawW, drawH, 0, 0, width, height);
 
   // Neutral readability shades (remove red-tint full overlay).
   const topShade = ctx.createLinearGradient(0, 0, 0, height * 0.6);
@@ -243,4 +260,3 @@ export async function composePoster(input: OverlayInput) {
 
   return canvas.toBuffer("image/png").toString("base64");
 }
-

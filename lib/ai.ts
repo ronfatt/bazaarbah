@@ -94,11 +94,11 @@ export async function generateBackgroundImage(input: {
   title: string;
   description?: string;
   style: "gold" | "minimal" | "cute";
-  aspect: "16:9" | "9:16";
+  aspect: "16:9" | "9:16" | "1:1";
 }) {
   const client = getClient();
   const theme = normalizeTheme(input.style) as ShopTheme;
-  const size = input.aspect === "16:9" ? "1536x1024" : "1024x1536";
+  const size = input.aspect === "16:9" ? "1536x1024" : input.aspect === "1:1" ? "1024x1024" : "1024x1536";
 
   const styleHint =
     theme === "gold"
