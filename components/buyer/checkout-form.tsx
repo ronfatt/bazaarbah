@@ -120,7 +120,8 @@ export function CheckoutForm({
   function changeCartQty(id: string, next: number) {
     setCart((prev) => {
       if (next <= 0) {
-        const { [id]: _removed, ...rest } = prev;
+        const rest = { ...prev };
+        delete rest[id];
         return rest;
       }
       return { ...prev, [id]: Math.min(99, Math.floor(next)) };

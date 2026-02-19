@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const { data: ownShops } = await admin.from("shops").select("id").eq("owner_id", user.id);
     const ownShopIds = ownShops?.map((s) => s.id) ?? [];
 
-    let productId = body.productId ?? null;
+    const productId = body.productId ?? null;
     let shopId = body.shopId ?? null;
     let originalImageUrl = body.originalImageUrl ?? null;
     let productName = body.productName ?? "Product";

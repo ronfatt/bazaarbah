@@ -33,7 +33,7 @@ export default async function AdminAIImpactPage() {
   await requireAdminPortalUser();
   const admin = createAdminClient();
 
-  const now = Date.now();
+  const now = Date.parse(new Date().toUTCString());
   const sevenDaysAgoIso = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
   const fourteenDaysAgoIso = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -50,8 +50,6 @@ export default async function AdminAIImpactPage() {
   const aiJobs = (aiJobsRes.data ?? []) as AiJobRow[];
 
   const shopOwner = new Map<string, string>(shops.map((s) => [s.id, s.owner_id]));
-  const sellerMap = new Map<string, ProfileRow>(sellers.map((s) => [s.id, s]));
-
   const sellerStats = sellers.map((seller) => {
     const sellerOrders = orders.filter((o) => shopOwner.get(o.shop_id) === seller.id);
     const sellerAi = aiJobs.filter((j) => j.owner_id === seller.id);
@@ -195,4 +193,3 @@ export default async function AdminAIImpactPage() {
     </main>
   );
 }
-

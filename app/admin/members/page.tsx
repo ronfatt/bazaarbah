@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, Users } from "lucide-react";
+import { Search } from "lucide-react";
 import { AppCard } from "@/components/ui/AppCard";
 import { Badge } from "@/components/ui/Badge";
 import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
