@@ -13,6 +13,7 @@ export function AIEnhancePanel({
   style,
   generating,
   status,
+  costPerEnhance,
   onStyleChange,
   onEnhance,
   onUseSource,
@@ -24,11 +25,12 @@ export function AIEnhancePanel({
   style: EnhanceStyle;
   generating: boolean;
   status: string | null;
+  costPerEnhance: number;
   onStyleChange: (style: EnhanceStyle) => void;
   onEnhance: () => void;
   onUseSource: (source: "original" | "enhanced") => void;
 }) {
-  const noCredits = imageCredits < 1;
+  const noCredits = imageCredits < costPerEnhance;
 
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-[#163C33]/50 p-4">
@@ -36,7 +38,7 @@ export function AIEnhancePanel({
         <div>
           <h3 className="text-sm font-semibold text-[#F3F4F6]">✨ Improve Photo with AI</h3>
           <p className="text-xs text-white/60">
-            Remove messy background and generate a clean, professional product photo. Uses 1 image credit.
+            Remove messy background and generate a clean, professional product photo. Uses {costPerEnhance} image credits.
           </p>
         </div>
         <CreditBadge label="AI credits" value={imageCredits} />
@@ -71,7 +73,7 @@ export function AIEnhancePanel({
           disabled={generating || noCredits || !imageOriginalUrl}
           className="rounded-xl"
         >
-          {generating ? "Enhancing... (10-30s)" : "Enhance with AI (1 image credit)"}
+          {generating ? "Enhancing... (10-30s)" : `Enhance with AI (${costPerEnhance} image credits)`}
         </Button>
         {noCredits ? (
           <p className="text-xs text-amber-300">

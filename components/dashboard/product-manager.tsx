@@ -14,6 +14,7 @@ type Props = {
   shops: Shop[];
   products: Product[];
   aiCredits: number;
+  imageCreditCost: number;
 };
 
 type EnhanceStyle = "studio" | "raya" | "premium";
@@ -24,7 +25,7 @@ function activeImage(product: Product) {
   return product.image_original_url ?? product.image_url ?? product.image_enhanced_url ?? null;
 }
 
-export function ProductManager({ shops, products, aiCredits: initialAiCredits, lang = "en" }: Props & { lang?: Lang }) {
+export function ProductManager({ shops, products, aiCredits: initialAiCredits, imageCreditCost, lang = "en" }: Props & { lang?: Lang }) {
   const [shopId, setShopId] = useState(shops[0]?.id ?? "");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -115,7 +116,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, l
       setStatus("Upload product photo first.");
       return;
     }
-    if (aiCredits < 1) {
+    if (aiCredits < imageCreditCost) {
       setStatus("Not enough AI credits. Upgrade in Billing.");
       return;
     }
@@ -230,6 +231,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, l
             style={enhanceStyle}
             generating={enhancingImage}
             status={status}
+            costPerEnhance={imageCreditCost}
             onStyleChange={setEnhanceStyle}
             onEnhance={enhanceImage}
             onUseSource={setImageSource}
