@@ -28,7 +28,7 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
   const [shopId, setShopId] = useState(shops[0]?.id ?? "");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("29.90");
+  const [price, setPrice] = useState("0.00");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageOriginalUrl, setImageOriginalUrl] = useState("");
   const [imageEnhancedUrl, setImageEnhancedUrl] = useState("");
@@ -246,7 +246,13 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
           </div>
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short product description" rows={3} />
         </div>
-        <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="29.90" required />
+        <Input
+          value={price}
+          onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+          onBlur={() => setPrice((prev) => Number(prev || 0).toFixed(2))}
+          placeholder="0.00"
+          required
+        />
 
         {imageEnhancedUrl ? (
           <div className="rounded-xl border border-white/10 bg-[#163C33]/60 p-3">

@@ -16,8 +16,16 @@ export async function generateMarketingCopy(input: {
   keySellingPoints: string;
   price: string;
   platform: "FB" | "IG" | "TikTok" | "WhatsApp";
+  lang?: "en" | "zh" | "ms";
 }) {
   const client = getClient();
+
+  const languageInstruction =
+    input.lang === "zh"
+      ? "Write in Simplified Chinese only."
+      : input.lang === "ms"
+        ? "Write in Bahasa Melayu only."
+        : "Write in English only.";
 
   const response = await client.responses.create({
     model: "gpt-4.1-mini",
@@ -25,7 +33,7 @@ export async function generateMarketingCopy(input: {
       {
         role: "system",
         content:
-          "Return valid JSON only. Create bilingual English + Bahasa Melayu copy. Keep concise and sales-friendly.",
+          `Return valid JSON only. ${languageInstruction} Keep concise and sales-friendly.`,
       },
       {
         role: "user",

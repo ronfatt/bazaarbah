@@ -5,12 +5,50 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
+function parseHistory(raw: string | null) {
+  if (!raw) return { imageUrl: null as string | null, payload: null as Record<string, unknown> | null };
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    return { imageUrl: raw, payload: null };
+  }
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const imageUrl =
+      (typeof parsed.posterUrl === "string" && parsed.posterUrl) ||
+      (typeof parsed.imageUrl === "string" && parsed.imageUrl) ||
+      null;
+    return { imageUrl, payload: parsed };
+  } catch {
+    return { imageUrl: null, payload: null };
+  }
+}
+
 export default async function AIPage() {
   const lang = await getLangFromCookie();
   const { user, profile } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
   const { data: shop } = await admin.from("shops").select("id,theme").eq("owner_id", user.id).order("created_at", { ascending: true }).maybeSingle();
+  const { data: products } = await admin
+    .from("products")
+    .select("id,name,price_cents,image_original_url,image_url")
+    .eq("shop_id", shop?.id ?? "");
+  const { data: jobs } = await admin
+    .from("ai_jobs")
+    .select("id,type,result_url,created_at")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  const history = (jobs ?? []).map((job) => {
+    const parsed = parseHistory(job.result_url);
+    return {
+      id: job.id,
+      type: job.type as "product_image" | "poster" | "copy",
+      createdAt: job.created_at,
+      imageUrl: parsed.imageUrl,
+      payload: parsed.payload,
+    };
+  });
 
   return (
     <section className="space-y-4">
@@ -25,7 +63,7 @@ export default async function AIPage() {
         </div>
       </Card>
 
-      <AITools shopId={shop?.id} initialTheme={shop?.theme ?? "gold"} />
+      <AITools shopId={shop?.id} initialTheme={shop?.theme ?? "gold"} lang={lang} products={products ?? []} history={history} />
     </section>
   );
 }

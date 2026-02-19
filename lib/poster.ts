@@ -1,4 +1,6 @@
-import { CanvasRenderingContext2D, createCanvas, loadImage } from "canvas";
+import { CanvasRenderingContext2D, createCanvas, loadImage, registerFont } from "canvas";
+import fs from "fs";
+import path from "path";
 import { normalizeTheme, posterPalette } from "@/lib/theme";
 
 type OverlayInput = {
@@ -37,6 +39,17 @@ export async function composePoster(input: OverlayInput) {
   const theme = normalizeTheme(input.theme);
   const palette = posterPalette(theme);
 
+  const fontDir = path.join(process.cwd(), "public", "fonts");
+  const regularFont = path.join(fontDir, "NotoSansSC-Regular.otf");
+  const boldFont = path.join(fontDir, "NotoSansSC-Bold.otf");
+  if (fs.existsSync(regularFont)) {
+    registerFont(regularFont, { family: "Noto Sans SC" });
+  }
+  if (fs.existsSync(boldFont)) {
+    registerFont(boldFont, { family: "Noto Sans SC", weight: "bold" });
+  }
+  const fontFamily = '"Noto Sans SC","Noto Sans","Arial Unicode MS","Segoe UI",sans-serif';
+
   const width = input.aspect === "16:9" ? 1600 : 1080;
   const height = input.aspect === "16:9" ? 900 : 1920;
   const pad = input.aspect === "16:9" ? 86 : 76;
@@ -52,11 +65,11 @@ export async function composePoster(input: OverlayInput) {
   ctx.fillRect(0, 0, width, height);
 
   ctx.fillStyle = palette.heading;
-  ctx.font = input.aspect === "16:9" ? "bold 90px sans-serif" : "bold 82px sans-serif";
+  ctx.font = input.aspect === "16:9" ? `bold 90px ${fontFamily}` : `bold 82px ${fontFamily}`;
   ctx.fillText(input.title, pad, input.aspect === "16:9" ? 170 : 230, width - pad * 2);
 
   ctx.fillStyle = palette.subtitle;
-  ctx.font = input.aspect === "16:9" ? "44px sans-serif" : "48px sans-serif";
+  ctx.font = input.aspect === "16:9" ? `44px ${fontFamily}` : `48px ${fontFamily}`;
   ctx.fillText(input.subtitle, pad, input.aspect === "16:9" ? 245 : 330, width - pad * 2);
 
   const ctaH = input.aspect === "16:9" ? 120 : 150;
@@ -65,7 +78,7 @@ export async function composePoster(input: OverlayInput) {
   drawRoundedRect(ctx, pad, ctaY, width - pad * 2, ctaH, 18);
 
   ctx.fillStyle = palette.ctaText;
-  ctx.font = input.aspect === "16:9" ? "bold 52px sans-serif" : "bold 56px sans-serif";
+  ctx.font = input.aspect === "16:9" ? `bold 52px ${fontFamily}` : `bold 56px ${fontFamily}`;
   ctx.fillText(`${input.price}  •  ${input.cta}`, pad + 26, ctaY + (input.aspect === "16:9" ? 76 : 94), width - pad * 2 - 48);
 
   return canvas.toBuffer("image/png").toString("base64");
