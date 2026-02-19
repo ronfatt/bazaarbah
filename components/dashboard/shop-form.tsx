@@ -25,6 +25,8 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+  const shopLink = `${baseUrl}/s/${normalizedSlug || "your-shop-link"}`;
+  const shopLinkQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(shopLink)}`;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,9 +94,34 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
         <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="ains-raya" required />
         <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.slug.helper")}</p>
         <p className="mt-2 text-xs text-white/70">
-          {t(lang, "shop.field.slug.preview")} <span className="font-mono text-bb-gold">{baseUrl}/s/{normalizedSlug || "your-shop-link"}</span>
+          {t(lang, "shop.field.slug.preview")} <span className="font-mono text-bb-gold">{shopLink}</span>
         </p>
         <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.slug.note")}</p>
+        <div className="mt-3 rounded-xl border border-white/10 bg-[#163C33] p-3">
+          <p className="text-xs font-semibold text-white/80">Shop Link QR</p>
+          <p className="mt-1 text-xs text-white/55">Share this QR so buyers can open your shop instantly.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={shopLinkQrUrl} alt="Shop link QR code" className="h-24 w-24 rounded-lg border border-white/10 bg-white p-1 object-contain" />
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={shopLinkQrUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-lg border border-white/10 bg-[#0B241F] px-3 py-2 text-xs text-white hover:bg-[#13312a]"
+              >
+                Open QR
+              </a>
+              <a
+                href={shopLinkQrUrl}
+                download={`shop-link-qr-${normalizedSlug || "shop"}.png`}
+                className="inline-flex items-center rounded-lg border border-white/10 bg-[#0B241F] px-3 py-2 text-xs text-white hover:bg-[#13312a]"
+              >
+                Download QR
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div>
