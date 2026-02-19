@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { currencyFromCents } from "@/lib/utils";
-import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
+import { PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
 import { t, type Lang } from "@/lib/i18n";
 
 type UpgradeTarget = "pro_88" | "pro_128" | "credit_100";
@@ -45,12 +45,16 @@ export function PlanUpgradePanel({
   currentTier,
   aiCredits,
   prices,
+  planTotals,
+  usageGuide,
   requests,
   lang = "en",
 }: {
   currentTier: PlanTier;
   aiCredits: number;
   prices: Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>;
+  planTotals?: Record<PlanTier, number>;
+  usageGuide?: { imageCost: number; posterCost: number };
   requests: PlanRequest[];
   lang?: Lang;
 }) {
@@ -65,7 +69,14 @@ export function PlanUpgradePanel({
   const pendingExists = requests.some((r) => r.status === "pending_review");
   const plans: PlanTier[] = ["free", "pro_88", "pro_128"];
   const currentAmount = targetPlan === "credit_100" ? TOPUP_100_PRICE_CENTS : resolveEffectivePrice(prices[targetPlan] ?? null) ?? PLAN_PRICE_CENTS[targetPlan];
-  const targetCredits = targetPlan === "credit_100" ? TOPUP_100_CREDITS : PLAN_AI_TOTAL_CREDITS[targetPlan];
+  const totals = {
+    free: Number(planTotals?.free ?? 0),
+    pro_88: Number(planTotals?.pro_88 ?? PLAN_AI_TOTAL_CREDITS.pro_88),
+    pro_128: Number(planTotals?.pro_128 ?? PLAN_AI_TOTAL_CREDITS.pro_128),
+  };
+  const imageCost = Math.max(1, Number(usageGuide?.imageCost ?? 1));
+  const posterCost = Math.max(1, Number(usageGuide?.posterCost ?? 1));
+  const targetCredits = targetPlan === "credit_100" ? TOPUP_100_CREDITS : totals[targetPlan];
   const selectableTargets: UpgradeTarget[] =
     currentTier === "free" ? ["pro_88", "pro_128", "credit_100"] : currentTier === "pro_88" ? ["pro_128", "credit_100"] : ["credit_100"];
 
@@ -98,12 +109,14 @@ export function PlanUpgradePanel({
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => {
-          const credits = PLAN_AI_CREDITS[plan];
           const isCurrent = currentTier === plan;
           const priceRow = plan === "free" ? null : (prices[plan] ?? null);
           const listPrice = priceRow?.list_price_cents ?? PLAN_PRICE_CENTS[plan];
           const effectivePrice = resolveEffectivePrice(priceRow) ?? PLAN_PRICE_CENTS[plan];
           const promoActuallyApplied = plan !== "free" && effectivePrice < listPrice;
+          const total = totals[plan];
+          const estPoster = Math.floor(total / posterCost);
+          const estImage = Math.floor(total / imageCost);
           return (
             <div
               key={plan}
@@ -121,10 +134,8 @@ export function PlanUpgradePanel({
                   <span className="ml-2 text-xs text-white/45 line-through">{currencyFromCents(listPrice)}</span>
                 ) : null}
               </p>
-              <p className="mt-3 text-xs text-white/60">AI total {PLAN_AI_TOTAL_CREDITS[plan]}</p>
-              <p className="mt-1 text-xs text-white/60">
-                AI credits: Copy {credits.copy} • Image {credits.image} • Poster {credits.poster}
-              </p>
+              <p className="mt-3 text-xs text-white/60">AI total {total}</p>
+              <p className="mt-1 text-xs text-white/60">Approx: {estPoster} posters or {estImage} product photo enhancements</p>
               <ul className="mt-3 space-y-1 text-xs text-white/75">
                 {PLAN_BENEFITS[plan].map((item) => (
                   <li key={item}>• {item}</li>

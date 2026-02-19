@@ -2,7 +2,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { Badge } from "@/components/ui/Badge";
 import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizePlanTier, PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, type PlanPriceRow } from "@/lib/plan";
+import { normalizePlanTier, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, type PlanPriceRow } from "@/lib/plan";
 import { PlanUpgradePanel } from "@/components/dashboard/plan-upgrade-panel";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
@@ -11,12 +11,10 @@ export default async function BillingPage() {
   const lang = await getLangFromCookie();
   const { user, profile } = await requireSeller();
   const tier = normalizePlanTier(profile);
-  const included = PLAN_AI_CREDITS[tier];
-  const includedTotal = PLAN_AI_TOTAL_CREDITS[tier];
   const effectiveAiCredits = tier === "free" ? 0 : Number(profile.ai_credits ?? 0);
   const admin = createAdminClient();
 
-  const [reqRes, priceRes, referralRes] = await Promise.all([
+  const [reqRes, priceRes, referralRes, costRes] = await Promise.all([
     admin
       .from("plan_requests")
       .select("id,target_plan,amount_cents,status,proof_image_url,reference_text,note,submitted_at,reviewed_at")
@@ -24,9 +22,10 @@ export default async function BillingPage() {
       .order("submitted_at", { ascending: false }),
     admin
       .from("plan_prices")
-      .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at")
+      .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at,ai_total_credits")
       .in("plan_tier", ["pro_88", "pro_128"]),
     admin.from("profiles").select("referral_code,referral_bonus_total").eq("id", user.id).maybeSingle(),
+    admin.from("ai_credit_costs").select("ai_type,cost"),
   ]);
 
   const prices = (priceRes.data ?? []).reduce<Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>>((acc, row) => {
@@ -36,6 +35,13 @@ export default async function BillingPage() {
     }
     return acc;
   }, {});
+  const aiTotals = {
+    free: 0,
+    pro_88: Number(prices.pro_88?.ai_total_credits ?? PLAN_AI_TOTAL_CREDITS.pro_88),
+    pro_128: Number(prices.pro_128?.ai_total_credits ?? PLAN_AI_TOTAL_CREDITS.pro_128),
+  };
+  const imageCost = Number(costRes.data?.find((c) => c.ai_type === "product_image")?.cost ?? 1);
+  const posterCost = Number(costRes.data?.find((c) => c.ai_type === "poster")?.cost ?? 1);
 
   const { count: referredCount } = await admin.from("referral_rewards").select("id", { count: "exact", head: true }).eq("referrer_id", user.id);
 
@@ -52,10 +58,8 @@ export default async function BillingPage() {
 
         <div className="mt-4 rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm text-white/80">
           <p>{t(lang, "billing.plan_credits")}</p>
-          <p className="mt-1">AI total {includedTotal}</p>
-          <p className="mt-1">
-            Copy {included.copy} • Image {included.image} • Poster {included.poster}
-          </p>
+          <p className="mt-1">AI total {aiTotals[tier]}</p>
+          <p className="mt-1">~{Math.floor(aiTotals[tier] / posterCost)} posters or ~{Math.floor(aiTotals[tier] / imageCost)} product photo enhancements</p>
           <p className="mt-1">Current balance: {effectiveAiCredits}</p>
         </div>
       </AppCard>
@@ -83,6 +87,8 @@ export default async function BillingPage() {
         currentTier={tier}
         aiCredits={effectiveAiCredits}
         prices={prices}
+        planTotals={aiTotals}
+        usageGuide={{ imageCost, posterCost }}
         requests={(reqRes.data ?? [])}
         lang={lang}
       />
