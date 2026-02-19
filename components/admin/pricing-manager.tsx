@@ -51,7 +51,17 @@ function rmInputToCents(value: string) {
   return Math.round(num * 100);
 }
 
-export function PricingManager({ initialPrices, initialCosts, lang = "en" }: { initialPrices: Price[]; initialCosts: Costs; lang?: Lang }) {
+export function PricingManager({
+  initialPrices,
+  initialCosts,
+  lang = "en",
+  hideAiCosts = false,
+}: {
+  initialPrices: Price[];
+  initialCosts: Costs;
+  lang?: Lang;
+  hideAiCosts?: boolean;
+}) {
   const [prices, setPrices] = useState<Price[]>(initialPrices);
   const [costs, setCosts] = useState<Costs>(initialCosts);
   const [status, setStatus] = useState<string | null>(null);
@@ -193,47 +203,49 @@ export function PricingManager({ initialPrices, initialCosts, lang = "en" }: { i
         </div>
       ))}
 
-      <div className="rounded-2xl border border-white/10 bg-[#163C33] p-5">
-        <h3 className="text-lg font-semibold text-white">AI Credit Cost per Action</h3>
-        <p className="mt-1 text-sm text-white/65">Set how many credits each generation uses.</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <label className="text-sm text-white/70">
-            Copy cost
-            <input
-              type="number"
-              min={1}
-              value={costs.copy}
-              onChange={(e) => setCosts((prev) => ({ ...prev, copy: Number(e.target.value || 1) }))}
-              className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
-            />
-          </label>
-          <label className="text-sm text-white/70">
-            Image cost
-            <input
-              type="number"
-              min={1}
-              value={costs.image}
-              onChange={(e) => setCosts((prev) => ({ ...prev, image: Number(e.target.value || 1) }))}
-              className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
-            />
-          </label>
-          <label className="text-sm text-white/70">
-            Poster cost
-            <input
-              type="number"
-              min={1}
-              value={costs.poster}
-              onChange={(e) => setCosts((prev) => ({ ...prev, poster: Number(e.target.value || 1) }))}
-              className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
-            />
-          </label>
+      {!hideAiCosts ? (
+        <div className="rounded-2xl border border-white/10 bg-[#163C33] p-5">
+          <h3 className="text-lg font-semibold text-white">AI Credit Cost per Action</h3>
+          <p className="mt-1 text-sm text-white/65">Set how many credits each generation uses.</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <label className="text-sm text-white/70">
+              Copy cost
+              <input
+                type="number"
+                min={1}
+                value={costs.copy}
+                onChange={(e) => setCosts((prev) => ({ ...prev, copy: Number(e.target.value || 1) }))}
+                className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+              />
+            </label>
+            <label className="text-sm text-white/70">
+              Image cost
+              <input
+                type="number"
+                min={1}
+                value={costs.image}
+                onChange={(e) => setCosts((prev) => ({ ...prev, image: Number(e.target.value || 1) }))}
+                className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+              />
+            </label>
+            <label className="text-sm text-white/70">
+              Poster cost
+              <input
+                type="number"
+                min={1}
+                value={costs.poster}
+                onChange={(e) => setCosts((prev) => ({ ...prev, poster: Number(e.target.value || 1) }))}
+                className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+              />
+            </label>
+          </div>
+          <div className="mt-4">
+            <AppButton onClick={saveCosts} disabled={busy === "costs"}>
+              {busy === "costs" ? "..." : "Save AI Costs"}
+            </AppButton>
+          </div>
         </div>
-        <div className="mt-4">
-          <AppButton onClick={saveCosts} disabled={busy === "costs"}>
-            {busy === "costs" ? "..." : "Save AI Costs"}
-          </AppButton>
-        </div>
-      </div>
+      ) : null}
       {status ? <p className="text-sm text-white/80">{status}</p> : null}
     </div>
   );

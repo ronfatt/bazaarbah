@@ -64,8 +64,12 @@ export async function GET() {
     admin.from("plan_prices").select("*").order("plan_tier", { ascending: true }),
     admin.from("ai_credit_costs").select("ai_type,cost"),
   ]);
-  if (priceErr || costErr) return NextResponse.json({ error: priceErr?.message ?? costErr?.message }, { status: 400 });
-  return NextResponse.json({ prices: prices ?? [], creditCosts: costs ?? [] });
+  if (priceErr) return NextResponse.json({ error: priceErr.message }, { status: 400 });
+  const isCostTableMissing = Boolean(costErr && (costErr as { code?: string }).code === "42P01");
+  if (costErr && !isCostTableMissing) {
+    return NextResponse.json({ error: costErr.message }, { status: 400 });
+  }
+  return NextResponse.json({ prices: prices ?? [], creditCosts: costs ?? [], costsEnabled: !isCostTableMissing });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -144,7 +148,13 @@ export async function PATCH(req: NextRequest) {
       { ai_type: "poster", cost: payload.posterCost, updated_at: now, updated_by: user.id },
     ];
     const { error } = await admin.from("ai_credit_costs").upsert(upserts);
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      const missingTable = (error as { code?: string }).code === "42P01";
+      return NextResponse.json(
+        { error: missingTable ? "ai_credit_costs table is missing. Run migration 011_unified_ai_credits.sql first." : error.message },
+        { status: 400 },
+      );
+    }
 
     await admin.from("admin_audit_logs").insert({
       action: "ai_credit_cost_updated",
