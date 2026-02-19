@@ -49,6 +49,9 @@ export default async function AdminAnnouncementsPage() {
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 {t(lang, "admin.pricing")}
               </Link>
+              <Link href="/admin/ai-impact" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                AI Impact
+              </Link>
               <Badge variant="ai">
                 <Bell size={13} className="mr-1" /> {announcements.filter((a) => a.is_active).length} {t(lang, "admin.active_count")}
               </Badge>

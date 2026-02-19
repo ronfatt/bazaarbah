@@ -111,6 +111,9 @@ export default async function AdminPlanRequestsPortalPage({
               <Link href="/admin/announcements" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 {t(lang, "admin.announcements")}
               </Link>
+              <Link href="/admin/ai-impact" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                AI Impact
+              </Link>
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 {t(lang, "admin.pricing")}
               </Link>
