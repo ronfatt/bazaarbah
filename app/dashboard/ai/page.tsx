@@ -30,7 +30,7 @@ export default async function AIPage() {
   const { data: shop } = await admin.from("shops").select("id,theme").eq("owner_id", user.id).order("created_at", { ascending: true }).maybeSingle();
   const { data: products } = await admin
     .from("products")
-    .select("id,name,price_cents,image_original_url,image_url")
+    .select("id,name,description,price_cents,image_original_url,image_enhanced_url,image_source,image_url")
     .eq("shop_id", shop?.id ?? "");
   const { data: jobs } = await admin
     .from("ai_jobs")

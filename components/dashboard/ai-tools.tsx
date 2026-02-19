@@ -27,7 +27,10 @@ type PosterCopyFields = {
 type ProductPick = {
   id: string;
   name: string;
+  description?: string | null;
   price_cents: number | null;
+  image_enhanced_url?: string | null;
+  image_source?: "original" | "enhanced" | null;
   image_original_url?: string | null;
   image_url?: string | null;
 };
@@ -57,6 +60,12 @@ function formatMoney(value: string) {
   const cleaned = value.replace(/[^0-9.]/g, "");
   const numeric = Number(cleaned || 0);
   return numeric.toFixed(2);
+}
+
+function preferredProductImage(product?: ProductPick) {
+  if (!product) return null;
+  if (product.image_source === "enhanced" && product.image_enhanced_url) return product.image_enhanced_url;
+  return product.image_original_url ?? product.image_url ?? product.image_enhanced_url ?? null;
 }
 
 export function AITools({
@@ -112,7 +121,7 @@ export function AITools({
   const [posterError, setPosterError] = useState<string | null>(null);
   const [posterTone, setPosterTone] = useState<"flash_sale" | "raya_premium" | "elegant_luxury" | "bazaar_santai" | "hard_selling">("raya_premium");
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [enforcePhotoForPoster, setEnforcePhotoForPoster] = useState(true);
+  const [posterSourceMode, setPosterSourceMode] = useState<"a" | "product" | "fallback">("a");
   const [historyItems, setHistoryItems] = useState<AiHistoryItem[]>(history);
   const [historyFilter, setHistoryFilter] = useState<"all" | "product_image" | "poster" | "copy">("all");
   const [historyBusy, setHistoryBusy] = useState(false);
@@ -240,12 +249,16 @@ export function AITools({
     return "from-[#112E27] via-[#163C33] to-[#0E3B2E]";
   }, [theme]);
 
-  const posterSourceImageUrl =
+  const selectedProduct = products.find((p) => p.id === selectedProductId);
+  const aSourceImageUrl =
     productImage.startsWith("http://") || productImage.startsWith("https://")
       ? productImage
       : uploadedImageUrl && (uploadedImageUrl.startsWith("http://") || uploadedImageUrl.startsWith("https://"))
         ? uploadedImageUrl
         : null;
+  const productSourceImageUrl = preferredProductImage(selectedProduct);
+  const posterSourceImageUrl =
+    posterSourceMode === "a" ? aSourceImageUrl : posterSourceMode === "product" ? productSourceImageUrl : null;
 
   async function generateCopy() {
     setCopyLoading(true);
@@ -380,8 +393,8 @@ export function AITools({
   }
 
   async function generatePoster() {
-    if (enforcePhotoForPoster && !posterSourceImageUrl) {
-      setPosterError("Generate or upload a product photo in A first, then generate poster.");
+    if (posterSourceMode !== "fallback" && !posterSourceImageUrl) {
+      setPosterError(posterSourceMode === "a" ? "Generate or upload a product photo in A first." : "Selected product has no image.");
       return;
     }
     setPosterLoading(true);
@@ -576,19 +589,26 @@ export function AITools({
             <div className="rounded-xl border border-white/10 bg-[#163C33]/40 p-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-white/70">Poster image source</p>
-                <label className="flex items-center gap-2 text-xs text-white/70">
-                  <input
-                    type="checkbox"
-                    checked={enforcePhotoForPoster}
-                    onChange={(e) => setEnforcePhotoForPoster(e.target.checked)}
-                  />
-                  Require photo from A
-                </label>
+                <select
+                  value={posterSourceMode}
+                  onChange={(e) => setPosterSourceMode(e.target.value as "a" | "product" | "fallback")}
+                  className="h-8 rounded-lg border border-white/10 bg-[#163C33] px-2 text-xs text-[#F3F4F6]"
+                >
+                  <option value="a">From A (Beautifier)</option>
+                  <option value="product">From Product</option>
+                  <option value="fallback">AI Background Fallback</option>
+                </select>
               </div>
               <p className="mt-1 text-xs text-white/50">
-                {posterSourceImageUrl
-                  ? "Using image from A) Product Photo Beautifier."
-                  : "No linked image yet. Run A first, or disable requirement to use AI background fallback."}
+                {posterSourceMode === "a"
+                  ? posterSourceImageUrl
+                    ? "Using image from A) Product Photo Beautifier."
+                    : "No linked image from A yet."
+                  : posterSourceMode === "product"
+                    ? posterSourceImageUrl
+                      ? "Using selected product main image."
+                      : "Select a product with image."
+                    : "No source image required. Poster will use AI-generated background."}
               </p>
               <div className="mt-2 flex items-center gap-3">
                 <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-white/10 bg-[#112E27]">
@@ -599,7 +619,7 @@ export function AITools({
                   )}
                 </div>
                 <p className="text-xs text-white/55">
-                  {posterSourceImageUrl ? "This thumbnail is the current background source for B." : "Generate in A first to link a source image."}
+                  {posterSourceImageUrl ? "This thumbnail is the current background source for B." : "Current source has no image."}
                 </p>
               </div>
             </div>
@@ -612,8 +632,18 @@ export function AITools({
                   const found = products.find((p) => p.id === id);
                   if (found) {
                     const price = found.price_cents ? (found.price_cents / 100).toFixed(2) : "0.00";
-                    setPosterForm((s) => ({ ...s, productName: found.name, priceLabel: `MYR ${price}` }));
-                    setCopyForm((s) => ({ ...s, productName: found.name, price }));
+                    setPosterForm((s) => ({
+                      ...s,
+                      productName: found.name,
+                      sellingPoint: found.description?.trim() ? found.description.slice(0, 120) : s.sellingPoint,
+                      priceLabel: `MYR ${price}`,
+                    }));
+                    setCopyForm((s) => ({
+                      ...s,
+                      productName: found.name,
+                      keySellingPoints: found.description?.trim() ? found.description.slice(0, 180) : s.keySellingPoints,
+                      price,
+                    }));
                   }
                 }}
                 className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
@@ -640,6 +670,32 @@ export function AITools({
                 {t(lang, "ai.use_copy_data")}
               </Button>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const found = products.find((p) => p.id === selectedProductId);
+                if (!found) return;
+                const price = found.price_cents ? (found.price_cents / 100).toFixed(2) : "0.00";
+                setPosterForm((s) => ({
+                  ...s,
+                  productName: found.name,
+                  sellingPoint: found.description?.trim() ? found.description.slice(0, 120) : s.sellingPoint,
+                  priceLabel: `MYR ${price}`,
+                }));
+                setCopyForm((s) => ({
+                  ...s,
+                  productName: found.name,
+                  keySellingPoints: found.description?.trim() ? found.description.slice(0, 180) : s.keySellingPoints,
+                  price,
+                }));
+                setPosterSourceMode("product");
+                setPosterError(null);
+              }}
+              disabled={!selectedProductId}
+            >
+              Use Product Data + Photo
+            </Button>
             <div className="grid gap-2 md:grid-cols-[1fr_auto]">
               <select
                 value={posterTone}
