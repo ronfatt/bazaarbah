@@ -26,6 +26,11 @@ export default async function AdminPricingPage() {
     .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at,ai_total_credits")
     .order("plan_tier", { ascending: true });
   const { data: costs, error: costsErr } = await admin.from("ai_credit_costs").select("ai_type,cost");
+  const { data: topup } = await admin
+    .from("credit_topup_configs")
+    .select("target_plan,label,credits,price_cents,is_active")
+    .eq("target_plan", "credit_100")
+    .maybeSingle();
 
   const pricesMap = new Map((data ?? []).map((row) => [row.plan_tier, row]));
   const mergedPrices = (["pro_88", "pro_128"] as const).map((tier) => {
@@ -73,6 +78,12 @@ export default async function AdminPricingPage() {
 
         <PricingManager
           initialPrices={mergedPrices as (PlanPriceRow & { ai_total_credits: number })[]}
+          initialTopup={{
+            label: topup?.label ?? "Credit Top-up",
+            credits: Number(topup?.credits ?? 100),
+            price_cents: Number(topup?.price_cents ?? 9800),
+            is_active: Boolean(topup?.is_active ?? true),
+          }}
           initialCosts={{
             copy: Number(costs?.find((c) => c.ai_type === "copy")?.cost ?? 1),
             image: Number(costs?.find((c) => c.ai_type === "product_image")?.cost ?? 1),

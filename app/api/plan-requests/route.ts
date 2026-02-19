@@ -5,7 +5,6 @@ import { normalizePlanTier, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPr
 import { ensurePublicBucket } from "@/lib/storage";
 
 const allowedPlans = new Set(["pro_88", "pro_128", "credit_100"]);
-const TOPUP_100_PRICE_CENTS = 9800;
 
 export async function GET() {
   const supabase = await createClient();
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "You are already on RM168 plan." }, { status: 400 });
   }
 
-  let amountCents = TOPUP_100_PRICE_CENTS;
+  let amountCents = 9800;
   if (targetPlan === "pro_88" || targetPlan === "pro_128") {
     const { data: planPrice } = await admin
       .from("plan_prices")
@@ -69,6 +68,16 @@ export async function POST(req: NextRequest) {
       .eq("plan_tier", targetPlan)
       .maybeSingle();
     amountCents = resolveEffectivePrice((planPrice as PlanPriceRow | null) ?? null) ?? PLAN_PRICE_CENTS[targetPlan as "pro_88" | "pro_128"];
+  } else {
+    const { data: topup } = await admin
+      .from("credit_topup_configs")
+      .select("price_cents,is_active")
+      .eq("target_plan", "credit_100")
+      .maybeSingle();
+    if (topup && topup.is_active === false) {
+      return NextResponse.json({ error: "Credit top-up is currently unavailable." }, { status: 400 });
+    }
+    amountCents = Number(topup?.price_cents ?? 9800);
   }
   const { data: pending } = await admin.from("plan_requests").select("id").eq("user_id", user.id).eq("status", "pending_review").limit(1);
   if ((pending?.length ?? 0) > 0) {

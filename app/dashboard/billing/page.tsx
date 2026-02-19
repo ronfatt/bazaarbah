@@ -27,6 +27,11 @@ export default async function BillingPage() {
     admin.from("profiles").select("referral_code,referral_bonus_total").eq("id", user.id).maybeSingle(),
     admin.from("ai_credit_costs").select("ai_type,cost"),
   ]);
+  const { data: topup } = await admin
+    .from("credit_topup_configs")
+    .select("target_plan,label,credits,price_cents,is_active")
+    .eq("target_plan", "credit_100")
+    .maybeSingle();
 
   const prices = (priceRes.data ?? []).reduce<Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>>((acc, row) => {
     if (row.plan_tier === "pro_88" || row.plan_tier === "pro_128") {
@@ -88,6 +93,12 @@ export default async function BillingPage() {
         aiCredits={effectiveAiCredits}
         prices={prices}
         planTotals={aiTotals}
+        topupConfig={{
+          label: topup?.label ?? "Credit Top-up",
+          credits: Number(topup?.credits ?? 100),
+          priceCents: Number(topup?.price_cents ?? 9800),
+          isActive: Boolean(topup?.is_active ?? true),
+        }}
         usageGuide={{ imageCost, posterCost }}
         requests={(reqRes.data ?? [])}
         lang={lang}

@@ -21,6 +21,13 @@ const patchSchema = z.discriminatedUnion("action", [
     imageCost: z.number().int().min(1).max(1000),
     posterCost: z.number().int().min(1).max(1000),
   }),
+  z.object({
+    action: z.literal("update_topup"),
+    credits: z.number().int().min(1).max(100000),
+    priceCents: z.number().int().positive(),
+    isActive: z.boolean().default(true),
+    label: z.string().trim().min(2).max(60).default("Credit Top-up"),
+  }),
 ]);
 
 function parseDateInput(value: string | null | undefined) {
@@ -60,16 +67,25 @@ export async function GET() {
   }
 
   const admin = createAdminClient();
-  const [{ data: prices, error: priceErr }, { data: costs, error: costErr }] = await Promise.all([
+  const [{ data: prices, error: priceErr }, { data: costs, error: costErr }, { data: topups, error: topupErr }] = await Promise.all([
     admin.from("plan_prices").select("*").order("plan_tier", { ascending: true }),
     admin.from("ai_credit_costs").select("ai_type,cost"),
+    admin.from("credit_topup_configs").select("target_plan,label,credits,price_cents,is_active").eq("target_plan", "credit_100").maybeSingle(),
   ]);
   if (priceErr) return NextResponse.json({ error: priceErr.message }, { status: 400 });
+  if (topupErr && (topupErr as { code?: string }).code !== "42P01") {
+    return NextResponse.json({ error: topupErr.message }, { status: 400 });
+  }
   const isCostTableMissing = Boolean(costErr && (costErr as { code?: string }).code === "42P01");
   if (costErr && !isCostTableMissing) {
     return NextResponse.json({ error: costErr.message }, { status: 400 });
   }
-  return NextResponse.json({ prices: prices ?? [], creditCosts: costs ?? [], costsEnabled: !isCostTableMissing });
+  return NextResponse.json({
+    prices: prices ?? [],
+    creditCosts: costs ?? [],
+    costsEnabled: !isCostTableMissing,
+    topupConfig: topups ?? null,
+  });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -140,7 +156,7 @@ export async function PATCH(req: NextRequest) {
         ai_total_credits: payload.aiTotalCredits,
       },
     });
-  } else {
+  } else if (payload.action === "update_costs") {
     const now = new Date().toISOString();
     const upserts = [
       { ai_type: "copy", cost: payload.copyCost, updated_at: now, updated_by: user.id },
@@ -164,6 +180,36 @@ export async function PATCH(req: NextRequest) {
         copy_cost: payload.copyCost,
         image_cost: payload.imageCost,
         poster_cost: payload.posterCost,
+      },
+    });
+  } else {
+    const now = new Date().toISOString();
+    const { error } = await admin.from("credit_topup_configs").upsert({
+      target_plan: "credit_100",
+      label: payload.label,
+      credits: payload.credits,
+      price_cents: payload.priceCents,
+      is_active: payload.isActive,
+      updated_by: user.id,
+      updated_at: now,
+    });
+    if (error) {
+      const missingTable = (error as { code?: string }).code === "42P01";
+      return NextResponse.json(
+        { error: missingTable ? "credit_topup_configs table is missing. Run migration 013_credit_topup_config.sql first." : error.message },
+        { status: 400 },
+      );
+    }
+    await admin.from("admin_audit_logs").insert({
+      action: "plan_price_updated",
+      actor_id: user.id,
+      target_user_id: user.id,
+      note: "credit_100",
+      meta: {
+        label: payload.label,
+        credits: payload.credits,
+        price_cents: payload.priceCents,
+        is_active: payload.isActive,
       },
     });
   }

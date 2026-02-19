@@ -32,13 +32,10 @@ const PLAN_BENEFITS: Record<PlanTier, string[]> = {
   pro_128: ["All selling modules unlocked", "Higher AI quota for frequent posting", "Priority for heavy marketing usage"],
 };
 
-const TOPUP_100_PRICE_CENTS = 9800;
-const TOPUP_100_CREDITS = 100;
-
-const TARGET_LABEL: Record<UpgradeTarget, string> = {
+const TARGET_LABEL_BASE: Record<UpgradeTarget, string> = {
   pro_88: PLAN_LABEL.pro_88,
   pro_128: PLAN_LABEL.pro_128,
-  credit_100: "Top-up 100 Credits",
+  credit_100: "Credit Top-up",
 };
 
 export function PlanUpgradePanel({
@@ -46,6 +43,7 @@ export function PlanUpgradePanel({
   aiCredits,
   prices,
   planTotals,
+  topupConfig,
   usageGuide,
   requests,
   lang = "en",
@@ -54,6 +52,7 @@ export function PlanUpgradePanel({
   aiCredits: number;
   prices: Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>;
   planTotals?: Record<PlanTier, number>;
+  topupConfig?: { label: string; credits: number; priceCents: number; isActive: boolean };
   usageGuide?: { imageCost: number; posterCost: number };
   requests: PlanRequest[];
   lang?: Lang;
@@ -68,7 +67,13 @@ export function PlanUpgradePanel({
 
   const pendingExists = requests.some((r) => r.status === "pending_review");
   const plans: PlanTier[] = ["free", "pro_88", "pro_128"];
-  const currentAmount = targetPlan === "credit_100" ? TOPUP_100_PRICE_CENTS : resolveEffectivePrice(prices[targetPlan] ?? null) ?? PLAN_PRICE_CENTS[targetPlan];
+  const topup = {
+    label: topupConfig?.label || TARGET_LABEL_BASE.credit_100,
+    credits: Math.max(1, Number(topupConfig?.credits ?? 100)),
+    priceCents: Math.max(1, Number(topupConfig?.priceCents ?? 9800)),
+    isActive: Boolean(topupConfig?.isActive ?? true),
+  };
+  const targetLabel: Record<UpgradeTarget, string> = { ...TARGET_LABEL_BASE, credit_100: topup.label };
   const totals = {
     free: Number(planTotals?.free ?? 0),
     pro_88: Number(planTotals?.pro_88 ?? PLAN_AI_TOTAL_CREDITS.pro_88),
@@ -76,16 +81,31 @@ export function PlanUpgradePanel({
   };
   const imageCost = Math.max(1, Number(usageGuide?.imageCost ?? 1));
   const posterCost = Math.max(1, Number(usageGuide?.posterCost ?? 1));
-  const targetCredits = targetPlan === "credit_100" ? TOPUP_100_CREDITS : totals[targetPlan];
   const selectableTargets: UpgradeTarget[] =
-    currentTier === "free" ? ["pro_88", "pro_128", "credit_100"] : currentTier === "pro_88" ? ["pro_128", "credit_100"] : ["credit_100"];
+    currentTier === "free"
+      ? topup.isActive
+        ? ["pro_88", "pro_128", "credit_100"]
+        : ["pro_88", "pro_128"]
+      : currentTier === "pro_88"
+        ? topup.isActive
+          ? ["pro_128", "credit_100"]
+          : ["pro_128"]
+        : topup.isActive
+          ? ["credit_100"]
+          : [];
+  const safeTargetPlan = selectableTargets.includes(targetPlan) ? targetPlan : selectableTargets[0] ?? "pro_128";
+  const currentAmount =
+    safeTargetPlan === "credit_100"
+      ? topup.priceCents
+      : resolveEffectivePrice(prices[safeTargetPlan] ?? null) ?? PLAN_PRICE_CENTS[safeTargetPlan];
+  const targetCredits = safeTargetPlan === "credit_100" ? topup.credits : totals[safeTargetPlan];
 
   async function submitUpgrade() {
     setLoading(true);
     setResult(null);
 
     const form = new FormData();
-    form.append("targetPlan", targetPlan);
+    form.append("targetPlan", safeTargetPlan);
     form.append("referenceText", referenceText);
     form.append("slipUrl", slipUrl);
     if (slipFile) {
@@ -146,10 +166,10 @@ export function PlanUpgradePanel({
         })}
         <div className="rounded-2xl border border-white/10 bg-[#163C33] p-4">
           <div className="flex items-center justify-between">
-            <p className="text-lg font-semibold text-white">Credit Top-up</p>
+            <p className="text-lg font-semibold text-white">{topup.label}</p>
           </div>
-          <p className="mt-1 text-sm text-white/70">{currencyFromCents(TOPUP_100_PRICE_CENTS)}</p>
-          <p className="mt-3 text-xs text-white/60">AI total +{TOPUP_100_CREDITS}</p>
+          <p className="mt-1 text-sm text-white/70">{currencyFromCents(topup.priceCents)}</p>
+          <p className="mt-3 text-xs text-white/60">AI total +{topup.credits}</p>
           <ul className="mt-3 space-y-1 text-xs text-white/75">
             <li>• Add credits without changing current plan</li>
             <li>• Manual bank transfer + admin approval</li>
@@ -174,14 +194,14 @@ export function PlanUpgradePanel({
           <label className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
             Target
             <select
-              value={targetPlan}
+              value={safeTargetPlan}
               onChange={(e) => setTargetPlan(e.target.value as UpgradeTarget)}
               className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
               disabled={pendingExists}
             >
               {selectableTargets.map((target) => (
                 <option key={target} value={target}>
-                  {TARGET_LABEL[target]}
+                  {targetLabel[target]}
                 </option>
               ))}
             </select>
@@ -222,11 +242,11 @@ export function PlanUpgradePanel({
         </label>
 
         <div className="mt-4 flex items-center gap-3">
-          <AppButton onClick={submitUpgrade} disabled={loading || pendingExists}>
-            {loading ? "Submitting..." : pendingExists ? "Pending Review" : "Submit Request"}
+          <AppButton onClick={submitUpgrade} disabled={loading || pendingExists || selectableTargets.length === 0}>
+            {loading ? "Submitting..." : pendingExists ? "Pending Review" : selectableTargets.length === 0 ? "No Available Target" : "Submit Request"}
           </AppButton>
           <p className="text-sm text-white/65">
-            Target: {TARGET_LABEL[targetPlan]} • {targetCredits} AI credits
+            Target: {targetLabel[safeTargetPlan]} • {targetCredits} AI credits
           </p>
         </div>
         {result && <p className="mt-3 text-sm text-white/80">{result}</p>}
@@ -239,7 +259,7 @@ export function PlanUpgradePanel({
             <div key={req.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-white/80">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold text-white">
-                  {(req.target_plan === "credit_100" ? TARGET_LABEL.credit_100 : PLAN_LABEL[req.target_plan])} • {currencyFromCents(req.amount_cents)}
+                  {(req.target_plan === "credit_100" ? targetLabel.credit_100 : PLAN_LABEL[req.target_plan])} • {currencyFromCents(req.amount_cents)}
                 </p>
                 {statusBadge(req.status)}
               </div>

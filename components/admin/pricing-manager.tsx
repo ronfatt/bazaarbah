@@ -22,6 +22,13 @@ type Costs = {
   poster: number;
 };
 
+type Topup = {
+  label: string;
+  credits: number;
+  price_cents: number;
+  is_active: boolean;
+};
+
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -53,16 +60,19 @@ function rmInputToCents(value: string) {
 
 export function PricingManager({
   initialPrices,
+  initialTopup,
   initialCosts,
   lang = "en",
   hideAiCosts = false,
 }: {
   initialPrices: Price[];
+  initialTopup: Topup;
   initialCosts: Costs;
   lang?: Lang;
   hideAiCosts?: boolean;
 }) {
   const [prices, setPrices] = useState<Price[]>(initialPrices);
+  const [topup, setTopup] = useState<Topup>(initialTopup);
   const [costs, setCosts] = useState<Costs>(initialCosts);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -109,6 +119,30 @@ export function PricingManager({
         copyCost: costs.copy,
         imageCost: costs.image,
         posterCost: costs.poster,
+      }),
+    });
+    const json = await res.json();
+    setBusy(null);
+    if (!res.ok) {
+      setStatus(json.error ?? "Failed");
+      return;
+    }
+    setStatus("OK");
+    window.location.reload();
+  }
+
+  async function saveTopup() {
+    setBusy("topup");
+    setStatus(null);
+    const res = await fetch("/api/admin/pricing", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update_topup",
+        label: topup.label,
+        credits: topup.credits,
+        priceCents: topup.price_cents,
+        isActive: topup.is_active,
       }),
     });
     const json = await res.json();
@@ -202,6 +236,55 @@ export function PricingManager({
           </div>
         </div>
       ))}
+
+      <div className="rounded-2xl border border-white/10 bg-[#163C33] p-5">
+        <h3 className="text-lg font-semibold text-white">Credit Top-up Package</h3>
+        <p className="mt-1 text-sm text-white/65">Configure credit top-up amount and price shown in seller billing.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="text-sm text-white/70">
+            Label
+            <input
+              type="text"
+              value={topup.label}
+              onChange={(e) => setTopup((prev) => ({ ...prev, label: e.target.value }))}
+              className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+            />
+          </label>
+          <label className="text-sm text-white/70">
+            Price (RM)
+            <input
+              type="text"
+              inputMode="decimal"
+              value={centsToRmInput(topup.price_cents)}
+              onChange={(e) => setTopup((prev) => ({ ...prev, price_cents: rmInputToCents(e.target.value) }))}
+              className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+            />
+          </label>
+          <label className="text-sm text-white/70">
+            Credits
+            <input
+              type="number"
+              min={1}
+              value={topup.credits}
+              onChange={(e) => setTopup((prev) => ({ ...prev, credits: Number(e.target.value || 1) }))}
+              className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+            />
+          </label>
+          <label className="inline-flex items-center gap-2 self-end pb-2 text-sm text-white/80">
+            <input
+              type="checkbox"
+              checked={topup.is_active}
+              onChange={(e) => setTopup((prev) => ({ ...prev, is_active: e.target.checked }))}
+            />
+            Active
+          </label>
+        </div>
+        <div className="mt-4">
+          <AppButton onClick={saveTopup} disabled={busy === "topup"}>
+            {busy === "topup" ? "..." : "Save Top-up"}
+          </AppButton>
+        </div>
+      </div>
 
       {!hideAiCosts ? (
         <div className="rounded-2xl border border-white/10 bg-[#163C33] p-5">

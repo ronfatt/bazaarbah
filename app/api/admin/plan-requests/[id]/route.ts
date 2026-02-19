@@ -50,13 +50,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (payload.action === "approve") {
     if (request.target_plan === "credit_100") {
+      const { data: topup } = await admin
+        .from("credit_topup_configs")
+        .select("credits")
+        .eq("target_plan", "credit_100")
+        .maybeSingle();
+      const topupCredits = Math.max(1, Number(topup?.credits ?? 100));
       const { data: owner } = await admin.from("profiles").select("id,ai_credits").eq("id", request.user_id).maybeSingle();
       if (!owner) {
         return NextResponse.json({ error: "Profile not found" }, { status: 404 });
       }
       const { error: topupErr } = await admin
         .from("profiles")
-        .update({ ai_credits: Number(owner.ai_credits ?? 0) + 100 })
+        .update({ ai_credits: Number(owner.ai_credits ?? 0) + topupCredits })
         .eq("id", request.user_id);
       if (topupErr) {
         return NextResponse.json({ error: topupErr.message }, { status: 400 });
