@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertUnlockedByUserId } from "@/lib/auth";
 import { enhanceProductPhoto } from "@/lib/ai";
-import { consumeAiCredit } from "@/lib/credits";
+import { consumeAiCredit, getAiCreditCost } from "@/lib/credits";
 import { ensurePublicBucket } from "@/lib/storage";
 
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -35,11 +35,12 @@ export async function POST(req: NextRequest) {
     const body = schema.parse(await req.json());
     const admin = createAdminClient();
 
-    const { data: profile } = await admin.from("profiles").select("id,image_credits").eq("id", user.id).maybeSingle();
+    const cost = await getAiCreditCost("product_image");
+    const { data: profile } = await admin.from("profiles").select("id,ai_credits").eq("id", user.id).maybeSingle();
     if (!profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
-    if ((profile.image_credits ?? 0) < 1) {
+    if ((profile.ai_credits ?? 0) < cost) {
       return NextResponse.json({ error: "INSUFFICIENT_CREDITS" }, { status: 402 });
     }
 
@@ -151,19 +152,18 @@ export async function POST(req: NextRequest) {
       if (updateErr) {
         await admin
           .from("profiles")
-          .update({ image_credits: credits.remaining + 1 })
+          .update({ ai_credits: credits.remaining + credits.cost })
           .eq("id", user.id)
-          .eq("image_credits", credits.remaining);
+          .eq("ai_credits", credits.remaining);
         return NextResponse.json({ error: "Failed to update product" }, { status: 400 });
       }
     }
 
-    return NextResponse.json({ imageEnhancedUrl, remainingImageCredits: credits.remaining });
+    return NextResponse.json({ imageEnhancedUrl, remainingAiCredits: credits.remaining, cost: credits.cost });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI enhancement failed";
     const lower = message.toLowerCase();
-    const status =
-      lower.includes("upgrade required") ? 403 : lower.includes("no image_credits") ? 402 : 400;
-    return NextResponse.json({ error: message === "No image_credits left." ? "INSUFFICIENT_CREDITS" : message }, { status });
+    const status = lower.includes("upgrade required") ? 403 : lower.includes("no ai_credits") ? 402 : 400;
+    return NextResponse.json({ error: message === "No ai_credits left." ? "INSUFFICIENT_CREDITS" : message }, { status });
   }
 }

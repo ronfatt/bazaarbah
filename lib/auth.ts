@@ -22,6 +22,7 @@ export async function requireSeller(options?: { loginPath?: string }) {
       id: user.id,
       display_name: user.email ?? "Seller",
       plan: "basic",
+      ai_credits: 0,
       copy_credits: 0,
       image_credits: 0,
       poster_credits: 0,

@@ -10,6 +10,7 @@ type MemberRow = {
   display_name: string | null;
   role: "seller" | "admin";
   plan_tier: "free" | "pro_88" | "pro_128";
+  ai_credits: number;
   copy_credits: number;
   image_credits: number;
   poster_credits: number;
@@ -25,6 +26,7 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
   const [warningTitle, setWarningTitle] = useState<Record<string, string>>({});
   const [warningBody, setWarningBody] = useState<Record<string, string>>({});
   const [banReason, setBanReason] = useState<Record<string, string>>({});
+  const [creditDelta, setCreditDelta] = useState<Record<string, string>>({});
 
   async function run(memberId: string, payload: Record<string, unknown>) {
     setBusy(memberId);
@@ -80,9 +82,33 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                   </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-white/65">
+                  <p className="text-white font-semibold">AI {row.ai_credits}</p>
                   <p>Copy {row.copy_credits}</p>
                   <p>Image {row.image_credits}</p>
                   <p>Poster {row.poster_credits}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      value={creditDelta[row.id] ?? ""}
+                      onChange={(e) => setCreditDelta((prev) => ({ ...prev, [row.id]: e.target.value }))}
+                      placeholder="+10 / -5"
+                      className="h-8 w-24 rounded-lg border border-white/10 bg-[#0B241F] px-2 text-xs text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
+                    />
+                    <AppButton
+                      className="h-8 px-2 text-[11px]"
+                      variant="ai"
+                      onClick={() => {
+                        const amount = Number(creditDelta[row.id] ?? 0);
+                        if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount === 0) {
+                          setStatus("Credit amount must be a non-zero integer.");
+                          return;
+                        }
+                        run(row.id, { action: "adjust_ai_credits", amount });
+                      }}
+                      disabled={busy === row.id}
+                    >
+                      Adjust
+                    </AppButton>
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   {row.is_banned ? <Badge variant="cancelled">Banned</Badge> : <Badge variant="paid">{t(lang, "plan.active")}</Badge>}

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("profiles")
-    .select("id,display_name,role,plan_tier,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
+    .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -41,4 +41,3 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ members: rows });
 }
-

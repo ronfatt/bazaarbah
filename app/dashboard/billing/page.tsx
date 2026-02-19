@@ -2,7 +2,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { Badge } from "@/components/ui/Badge";
 import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizePlanTier, PLAN_AI_CREDITS, PLAN_LABEL, type PlanPriceRow } from "@/lib/plan";
+import { normalizePlanTier, PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, type PlanPriceRow } from "@/lib/plan";
 import { PlanUpgradePanel } from "@/components/dashboard/plan-upgrade-panel";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
@@ -12,9 +12,8 @@ export default async function BillingPage() {
   const { user, profile } = await requireSeller();
   const tier = normalizePlanTier(profile);
   const included = PLAN_AI_CREDITS[tier];
-  const effectiveCopy = tier === "free" ? 0 : profile.copy_credits;
-  const effectiveImage = tier === "free" ? 0 : profile.image_credits;
-  const effectivePoster = tier === "free" ? 0 : profile.poster_credits;
+  const includedTotal = PLAN_AI_TOTAL_CREDITS[tier];
+  const effectiveAiCredits = tier === "free" ? 0 : Number(profile.ai_credits ?? 0);
   const admin = createAdminClient();
 
   const [reqRes, priceRes, referralRes] = await Promise.all([
@@ -53,9 +52,11 @@ export default async function BillingPage() {
 
         <div className="mt-4 rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm text-white/80">
           <p>{t(lang, "billing.plan_credits")}</p>
+          <p className="mt-1">AI total {includedTotal}</p>
           <p className="mt-1">
             Copy {included.copy} • Image {included.image} • Poster {included.poster}
           </p>
+          <p className="mt-1">Current balance: {effectiveAiCredits}</p>
         </div>
       </AppCard>
 
@@ -80,9 +81,7 @@ export default async function BillingPage() {
 
       <PlanUpgradePanel
         currentTier={tier}
-        copyCredits={effectiveCopy}
-        imageCredits={effectiveImage}
-        posterCredits={effectivePoster}
+        aiCredits={effectiveAiCredits}
         prices={prices}
         requests={(reqRes.data ?? [])}
         lang={lang}

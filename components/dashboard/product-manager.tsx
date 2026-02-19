@@ -13,7 +13,7 @@ import { AIEnhancePanel } from "@/components/ui/ai-enhance-panel";
 type Props = {
   shops: Shop[];
   products: Product[];
-  imageCredits: number;
+  aiCredits: number;
 };
 
 type EnhanceStyle = "studio" | "raya" | "premium";
@@ -24,7 +24,7 @@ function activeImage(product: Product) {
   return product.image_original_url ?? product.image_url ?? product.image_enhanced_url ?? null;
 }
 
-export function ProductManager({ shops, products, imageCredits: initialImageCredits, lang = "en" }: Props & { lang?: Lang }) {
+export function ProductManager({ shops, products, aiCredits: initialAiCredits, lang = "en" }: Props & { lang?: Lang }) {
   const [shopId, setShopId] = useState(shops[0]?.id ?? "");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -34,7 +34,7 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
   const [imageEnhancedUrl, setImageEnhancedUrl] = useState("");
   const [imageSource, setImageSource] = useState<"original" | "enhanced">("original");
   const [enhanceStyle, setEnhanceStyle] = useState<EnhanceStyle>("studio");
-  const [imageCredits, setImageCredits] = useState(initialImageCredits);
+  const [aiCredits, setAiCredits] = useState(initialAiCredits);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [enhancingImage, setEnhancingImage] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
@@ -115,8 +115,8 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
       setStatus("Upload product photo first.");
       return;
     }
-    if (imageCredits < 1) {
-      setStatus("Not enough image credits. Upgrade in Billing.");
+    if (aiCredits < 1) {
+      setStatus("Not enough AI credits. Upgrade in Billing.");
       return;
     }
     setEnhancingImage(true);
@@ -140,8 +140,8 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
 
     if (!res.ok) {
       if (json.error === "INSUFFICIENT_CREDITS") {
-        setImageCredits(0);
-        setStatus("You have 0 image credits. Upgrade or top-up in Billing.");
+        setAiCredits(0);
+        setStatus("You have 0 AI credits. Upgrade or top-up in Billing.");
       } else {
         setStatus(json.error ?? "AI enhancement failed");
       }
@@ -149,8 +149,8 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
     }
 
     setImageEnhancedUrl(json.imageEnhancedUrl);
-    setImageCredits(Number(json.remainingImageCredits ?? imageCredits));
-    setStatus(`Enhanced photo ready. Image credits left: ${json.remainingImageCredits ?? "-"}`);
+    setAiCredits(Number(json.remainingAiCredits ?? aiCredits));
+    setStatus(`Enhanced photo ready. AI credits left: ${json.remainingAiCredits ?? "-"}`);
   }
 
   async function generateDescription() {
@@ -178,7 +178,7 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
       return;
     }
     setDescription(json.description);
-    setStatus(`AI description ready. Copy credits left: ${json.credits?.remaining ?? "-"}`);
+    setStatus(`AI description ready. AI credits left: ${json.credits?.remaining ?? "-"}`);
   }
 
   async function toggleAvailability(productId: string, next: boolean) {
@@ -226,7 +226,7 @@ export function ProductManager({ shops, products, imageCredits: initialImageCred
             imageOriginalUrl={imageOriginalUrl}
             imageEnhancedUrl={imageEnhancedUrl}
             imageSource={imageSource}
-            imageCredits={imageCredits}
+            imageCredits={aiCredits}
             style={enhanceStyle}
             generating={enhancingImage}
             status={status}

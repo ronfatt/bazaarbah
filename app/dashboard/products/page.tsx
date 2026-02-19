@@ -11,7 +11,7 @@ export default async function ProductsPage() {
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
-  const { data: profile } = await admin.from("profiles").select("image_credits").eq("id", user.id).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("ai_credits").eq("id", user.id).maybeSingle();
   const { data: shops } = await admin.from("shops").select("*").eq("owner_id", user.id).order("created_at", { ascending: true });
   const shopIds = shops?.map((s) => s.id) ?? [];
 
@@ -25,7 +25,7 @@ export default async function ProductsPage() {
         <h1 className="text-2xl font-bold text-[#F3F4F6]">{t(lang, "products.title")}</h1>
         <p className="mt-2 text-sm text-[#9CA3AF]">{t(lang, "products.desc")}</p>
       </Card>
-      <ProductManager shops={(shops ?? []) as Shop[]} products={(products ?? []) as Product[]} imageCredits={profile?.image_credits ?? 0} lang={lang} />
+      <ProductManager shops={(shops ?? []) as Shop[]} products={(products ?? []) as Product[]} aiCredits={profile?.ai_credits ?? 0} lang={lang} />
     </section>
   );
 }

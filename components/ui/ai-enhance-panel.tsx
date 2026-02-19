@@ -39,7 +39,7 @@ export function AIEnhancePanel({
             Remove messy background and generate a clean, professional product photo. Uses 1 image credit.
           </p>
         </div>
-        <CreditBadge label="Image credits" value={imageCredits} />
+        <CreditBadge label="AI credits" value={imageCredits} />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -75,7 +75,7 @@ export function AIEnhancePanel({
         </Button>
         {noCredits ? (
           <p className="text-xs text-amber-300">
-            Not enough image credits.{" "}
+            Not enough AI credits.{" "}
             <Link href="/dashboard/billing" className="underline underline-offset-2">
               Go to Billing
             </Link>

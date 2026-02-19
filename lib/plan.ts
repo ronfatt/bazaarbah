@@ -14,6 +14,7 @@ export const REFERRAL_BONUS: Record<Exclude<PlanTier, "free">, { copy: number; i
 export type PlanPriceRow = {
   plan_tier: "pro_88" | "pro_128";
   list_price_cents: number;
+  ai_total_credits?: number;
   promo_price_cents: number | null;
   promo_active: boolean;
   promo_start_at: string | null;
@@ -43,9 +44,16 @@ export const PLAN_AI_CREDITS: Record<PlanTier, { copy: number; image: number; po
   pro_128: { copy: 50, image: 15, poster: 6 },
 };
 
+export const PLAN_AI_TOTAL_CREDITS: Record<PlanTier, number> = {
+  free: 0,
+  pro_88: 29,
+  pro_128: 71,
+};
+
 type ProfileLike = {
   plan_tier?: string | null;
   plan?: string | null;
+  ai_credits?: number | null;
   copy_credits?: number | null;
   image_credits?: number | null;
   poster_credits?: number | null;
@@ -67,5 +75,6 @@ export function hasUnlockedFeatures(profile: ProfileLike) {
 }
 
 export function totalAiCredits(profile: ProfileLike) {
+  if (typeof profile.ai_credits === "number") return Number(profile.ai_credits ?? 0);
   return Number(profile.copy_credits ?? 0) + Number(profile.image_credits ?? 0) + Number(profile.poster_credits ?? 0);
 }

@@ -9,7 +9,7 @@ import { SalesChart } from "@/components/dashboard/sales-chart";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSeller } from "@/lib/auth";
 import { currencyFromCents, startOfTodayIso } from "@/lib/utils";
-import { hasUnlockedFeatures, normalizePlanTier, PLAN_AI_CREDITS, PLAN_LABEL } from "@/lib/plan";
+import { hasUnlockedFeatures, normalizePlanTier, PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL } from "@/lib/plan";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
@@ -73,6 +73,7 @@ export default async function DashboardPage() {
   const recentOrders = (orders ?? []).slice(0, 6);
   const hasShop = shopIds.length > 0;
   const includedCredits = PLAN_AI_CREDITS[tier];
+  const includedTotalCredits = PLAN_AI_TOTAL_CREDITS[tier];
 
   return (
     <div className="grid grid-cols-12 gap-6">
@@ -241,21 +242,15 @@ export default async function DashboardPage() {
           <p className="mt-2 text-sm text-white/65">{t(lang, "dashboard.current_plan")} {PLAN_LABEL[tier]}</p>
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
-              <span className="text-white/65">Copy</span>
+              <span className="text-white/65">AI Total</span>
               <span className="font-semibold">
-                {profile.copy_credits}/{includedCredits.copy}
+                {profile.ai_credits ?? 0}/{includedTotalCredits}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
-              <span className="text-white/65">Image</span>
+              <span className="text-white/65">Copy / Image / Poster</span>
               <span className="font-semibold">
-                {profile.image_credits}/{includedCredits.image}
-              </span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl bg-bb-surface2/60 p-3">
-              <span className="text-white/65">Poster</span>
-              <span className="font-semibold">
-                {profile.poster_credits}/{includedCredits.poster}
+                {includedCredits.copy} / {includedCredits.image} / {includedCredits.poster}
               </span>
             </div>
           </div>

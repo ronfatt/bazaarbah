@@ -15,8 +15,9 @@ export default async function AdminPricingPage() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("plan_prices")
-    .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at")
+    .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at,ai_total_credits")
     .order("plan_tier", { ascending: true });
+  const { data: costs } = await admin.from("ai_credit_costs").select("ai_type,cost");
 
   return (
     <main className="min-h-screen bg-bb-bg px-6 py-6 text-bb-text">
@@ -43,7 +44,15 @@ export default async function AdminPricingPage() {
           </div>
         </AppCard>
 
-        <PricingManager initialPrices={(data ?? []) as PlanPriceRow[]} lang={lang} />
+        <PricingManager
+          initialPrices={(data ?? []) as (PlanPriceRow & { ai_total_credits: number })[]}
+          initialCosts={{
+            copy: Number(costs?.find((c) => c.ai_type === "copy")?.cost ?? 1),
+            image: Number(costs?.find((c) => c.ai_type === "product_image")?.cost ?? 1),
+            poster: Number(costs?.find((c) => c.ai_type === "poster")?.cost ?? 1),
+          }}
+          lang={lang}
+        />
       </div>
     </main>
   );

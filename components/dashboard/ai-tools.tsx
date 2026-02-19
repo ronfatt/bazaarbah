@@ -57,12 +57,14 @@ export function AITools({
   lang = "en",
   products = [],
   history = [],
+  creditCosts = { copy: 1, product_image: 1, poster: 1 },
 }: {
   shopId?: string;
   initialTheme?: string;
   lang?: Lang;
   products?: ProductPick[];
   history?: AiHistoryItem[];
+  creditCosts?: { copy: number; product_image: number; poster: number };
 }) {
   const [theme, setTheme] = useState<ShopTheme>(normalizeTheme(initialTheme));
 
@@ -434,7 +436,11 @@ export function AITools({
               <p className="mt-2 text-xs text-white/45">{t(lang, "ai.photo_upload_hint")}</p>
             </div>
             <Button variant="ai" onClick={generateProductImage} disabled={imageLoading || !imageForm.productName} className="animate-pulse">
-              {imageLoading ? t(lang, "ai.generating") : uploadedImageUrl ? t(lang, "ai.enhance_photo_cta") : t(lang, "ai.generate_bg_cta")}
+              {imageLoading
+                ? t(lang, "ai.generating")
+                : uploadedImageUrl
+                  ? `${t(lang, "ai.enhance_photo_cta").replace("(1 image credit)", "")} (${creditCosts.product_image} credits)`
+                  : `${t(lang, "ai.generate_bg_cta").replace("(1 image credit)", "")} (${creditCosts.product_image} credits)`}
             </Button>
           </div>
 
@@ -555,7 +561,7 @@ export function AITools({
               <option value="9:16">9:16</option>
             </select>
             <Button variant="ai" onClick={generatePoster} disabled={posterLoading || !posterForm.productName} className="animate-pulse">
-              {posterLoading ? t(lang, "ai.rendering") : t(lang, "ai.generate_poster_cta")}
+              {posterLoading ? t(lang, "ai.rendering") : `${t(lang, "ai.generate_poster_cta").replace("(1 poster credit)", "")} (${creditCosts.poster} credits)`}
             </Button>
           </div>
 
@@ -584,7 +590,7 @@ export function AITools({
         <div className="mb-3 flex items-center gap-2 text-[#F3F4F6]">
           <Sparkles size={18} className="text-[#C9A227]" />
           <h3 className="text-lg font-semibold">{t(lang, "ai.copy_title")}</h3>
-          <span className={aiBadgeClass}>{t(lang, "ai.copy_credit_badge")}</span>
+          <span className={aiBadgeClass}>{`Cost ${creditCosts.copy}`}</span>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -633,7 +639,7 @@ export function AITools({
             onClick={generateCopy}
             disabled={copyLoading || !copyForm.productName || copyForm.keySellingPoints.length < 4}
           >
-            {copyLoading ? t(lang, "ai.generating") : t(lang, "ai.generate_copy_cta")}
+            {copyLoading ? t(lang, "ai.generating") : `${t(lang, "ai.generate_copy_cta").replace("(1 copy credit)", "")} (${creditCosts.copy} credits)`}
           </Button>
         </div>
 

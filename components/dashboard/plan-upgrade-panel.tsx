@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { currencyFromCents } from "@/lib/utils";
-import { PLAN_AI_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
+import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
 import { t, type Lang } from "@/lib/i18n";
 
 type PlanRequest = {
@@ -32,17 +32,13 @@ const PLAN_BENEFITS: Record<PlanTier, string[]> = {
 
 export function PlanUpgradePanel({
   currentTier,
-  copyCredits,
-  imageCredits,
-  posterCredits,
+  aiCredits,
   prices,
   requests,
   lang = "en",
 }: {
   currentTier: PlanTier;
-  copyCredits: number;
-  imageCredits: number;
-  posterCredits: number;
+  aiCredits: number;
   prices: Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>;
   requests: PlanRequest[];
   lang?: Lang;
@@ -92,6 +88,10 @@ export function PlanUpgradePanel({
         {plans.map((plan) => {
           const credits = PLAN_AI_CREDITS[plan];
           const isCurrent = currentTier === plan;
+          const priceRow = plan === "free" ? null : (prices[plan] ?? null);
+          const listPrice = priceRow?.list_price_cents ?? PLAN_PRICE_CENTS[plan];
+          const effectivePrice = resolveEffectivePrice(priceRow) ?? PLAN_PRICE_CENTS[plan];
+          const promoActuallyApplied = plan !== "free" && effectivePrice < listPrice;
           return (
             <div
               key={plan}
@@ -104,12 +104,15 @@ export function PlanUpgradePanel({
                 {isCurrent ? <Badge variant="paid">{t(lang, "plan.active")}</Badge> : null}
               </div>
               <p className="mt-1 text-sm text-white/70">
-                {plan === "free" ? "RM0" : currencyFromCents(resolveEffectivePrice(prices[plan] ?? null) ?? PLAN_PRICE_CENTS[plan])}
-                {plan !== "free" && prices[plan]?.promo_active && prices[plan]?.promo_price_cents ? (
-                  <span className="ml-2 text-xs text-white/45 line-through">{currencyFromCents(prices[plan]?.list_price_cents ?? PLAN_PRICE_CENTS[plan])}</span>
+                {plan === "free" ? "RM0" : currencyFromCents(effectivePrice)}
+                {promoActuallyApplied ? (
+                  <span className="ml-2 text-xs text-white/45 line-through">{currencyFromCents(listPrice)}</span>
                 ) : null}
               </p>
               <p className="mt-3 text-xs text-white/60">
+                AI total {PLAN_AI_TOTAL_CREDITS[plan]}
+              </p>
+              <p className="mt-1 text-xs text-white/60">
                 AI credits: Copy {credits.copy} • Image {credits.image} • Poster {credits.poster}
               </p>
               <ul className="mt-3 space-y-1 text-xs text-white/75">
@@ -122,18 +125,10 @@ export function PlanUpgradePanel({
         })}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-1">
         <div className="rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm">
-          <p className="text-white/65">Current copy credits</p>
-          <p className="mt-1 text-lg font-semibold text-white">{copyCredits}</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm">
-          <p className="text-white/65">Current image credits</p>
-          <p className="mt-1 text-lg font-semibold text-white">{imageCredits}</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-[#163C33] p-4 text-sm">
-          <p className="text-white/65">Current poster credits</p>
-          <p className="mt-1 text-lg font-semibold text-white">{posterCredits}</p>
+          <p className="text-white/65">Current AI credits</p>
+          <p className="mt-1 text-lg font-semibold text-white">{aiCredits}</p>
         </div>
       </div>
 

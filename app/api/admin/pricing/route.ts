@@ -4,14 +4,24 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdminByUserId } from "@/lib/auth";
 
-const patchSchema = z.object({
-  planTier: z.enum(["pro_88", "pro_128"]),
-  listPriceCents: z.number().int().positive(),
-  promoPriceCents: z.number().int().positive().nullable().optional(),
-  promoActive: z.boolean(),
-  promoStartAt: z.string().trim().min(1).nullable().optional(),
-  promoEndAt: z.string().trim().min(1).nullable().optional(),
-});
+const patchSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("update_plan"),
+    planTier: z.enum(["pro_88", "pro_128"]),
+    listPriceCents: z.number().int().positive(),
+    promoPriceCents: z.number().int().positive().nullable().optional(),
+    promoActive: z.boolean(),
+    promoStartAt: z.string().trim().min(1).nullable().optional(),
+    promoEndAt: z.string().trim().min(1).nullable().optional(),
+    aiTotalCredits: z.number().int().min(0).max(100000),
+  }),
+  z.object({
+    action: z.literal("update_costs"),
+    copyCost: z.number().int().min(1).max(1000),
+    imageCost: z.number().int().min(1).max(1000),
+    posterCost: z.number().int().min(1).max(1000),
+  }),
+]);
 
 function parseDateInput(value: string | null | undefined) {
   if (!value) return null;
@@ -50,9 +60,12 @@ export async function GET() {
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin.from("plan_prices").select("*").order("plan_tier", { ascending: true });
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ prices: data ?? [] });
+  const [{ data: prices, error: priceErr }, { data: costs, error: costErr }] = await Promise.all([
+    admin.from("plan_prices").select("*").order("plan_tier", { ascending: true }),
+    admin.from("ai_credit_costs").select("ai_type,cost"),
+  ]);
+  if (priceErr || costErr) return NextResponse.json({ error: priceErr?.message ?? costErr?.message }, { status: 400 });
+  return NextResponse.json({ prices: prices ?? [], creditCosts: costs ?? [] });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -75,49 +88,75 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid payload" }, { status: 400 });
   }
 
-  if (payload.promoPriceCents && payload.promoPriceCents >= payload.listPriceCents) {
+  if (payload.action === "update_plan" && payload.promoPriceCents && payload.promoPriceCents >= payload.listPriceCents) {
     return NextResponse.json({ error: "Promo price must be lower than list price." }, { status: 400 });
   }
 
-  const promoStartAt = parseDateInput(payload.promoStartAt);
-  const promoEndAt = parseDateInput(payload.promoEndAt);
-  if (payload.promoStartAt && !promoStartAt) {
-    return NextResponse.json({ error: "Invalid promo start datetime format." }, { status: 400 });
-  }
-  if (payload.promoEndAt && !promoEndAt) {
-    return NextResponse.json({ error: "Invalid promo end datetime format." }, { status: 400 });
-  }
-  if (promoStartAt && promoEndAt && new Date(promoEndAt).getTime() <= new Date(promoStartAt).getTime()) {
-    return NextResponse.json({ error: "Promo end must be later than promo start." }, { status: 400 });
+  const promoStartAt = payload.action === "update_plan" ? parseDateInput(payload.promoStartAt) : null;
+  const promoEndAt = payload.action === "update_plan" ? parseDateInput(payload.promoEndAt) : null;
+  if (payload.action === "update_plan") {
+    if (payload.promoStartAt && !promoStartAt) {
+      return NextResponse.json({ error: "Invalid promo start datetime format." }, { status: 400 });
+    }
+    if (payload.promoEndAt && !promoEndAt) {
+      return NextResponse.json({ error: "Invalid promo end datetime format." }, { status: 400 });
+    }
+    if (promoStartAt && promoEndAt && new Date(promoEndAt).getTime() <= new Date(promoStartAt).getTime()) {
+      return NextResponse.json({ error: "Promo end must be later than promo start." }, { status: 400 });
+    }
   }
 
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("plan_prices")
-    .upsert({
-      plan_tier: payload.planTier,
-      list_price_cents: payload.listPriceCents,
-      promo_price_cents: payload.promoPriceCents ?? null,
-      promo_active: payload.promoActive,
-      promo_start_at: promoStartAt,
-      promo_end_at: promoEndAt,
-      updated_by: user.id,
-      updated_at: new Date().toISOString(),
+  if (payload.action === "update_plan") {
+    const { error } = await admin
+      .from("plan_prices")
+      .upsert({
+        plan_tier: payload.planTier,
+        list_price_cents: payload.listPriceCents,
+        promo_price_cents: payload.promoPriceCents ?? null,
+        promo_active: payload.promoActive,
+        promo_start_at: promoStartAt,
+        promo_end_at: promoEndAt,
+        ai_total_credits: payload.aiTotalCredits,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    await admin.from("admin_audit_logs").insert({
+      action: "plan_price_updated",
+      actor_id: user.id,
+      target_user_id: user.id,
+      note: payload.planTier,
+      meta: {
+        list_price_cents: payload.listPriceCents,
+        promo_price_cents: payload.promoPriceCents ?? null,
+        promo_active: payload.promoActive,
+        ai_total_credits: payload.aiTotalCredits,
+      },
     });
+  } else {
+    const now = new Date().toISOString();
+    const upserts = [
+      { ai_type: "copy", cost: payload.copyCost, updated_at: now, updated_by: user.id },
+      { ai_type: "product_image", cost: payload.imageCost, updated_at: now, updated_by: user.id },
+      { ai_type: "poster", cost: payload.posterCost, updated_at: now, updated_by: user.id },
+    ];
+    const { error } = await admin.from("ai_credit_costs").upsert(upserts);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-  await admin.from("admin_audit_logs").insert({
-    action: "plan_price_updated",
-    actor_id: user.id,
-    target_user_id: user.id,
-    note: payload.planTier,
-    meta: {
-      list_price_cents: payload.listPriceCents,
-      promo_price_cents: payload.promoPriceCents ?? null,
-      promo_active: payload.promoActive,
-    },
-  });
+    await admin.from("admin_audit_logs").insert({
+      action: "ai_credit_cost_updated",
+      actor_id: user.id,
+      target_user_id: user.id,
+      meta: {
+        copy_cost: payload.copyCost,
+        image_cost: payload.imageCost,
+        poster_cost: payload.posterCost,
+      },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

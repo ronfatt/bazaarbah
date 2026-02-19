@@ -38,6 +38,12 @@ export default async function AIPage() {
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(30);
+  const { data: costs } = await admin.from("ai_credit_costs").select("ai_type,cost");
+  const creditCosts = {
+    copy: Number(costs?.find((c) => c.ai_type === "copy")?.cost ?? 1),
+    product_image: Number(costs?.find((c) => c.ai_type === "product_image")?.cost ?? 1),
+    poster: Number(costs?.find((c) => c.ai_type === "poster")?.cost ?? 1),
+  } as const;
 
   const history = (jobs ?? []).map((job) => {
     const parsed = parseHistory(job.result_url);
@@ -56,14 +62,15 @@ export default async function AIPage() {
         <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#00C2A8]/10 text-[#00C2A8] text-xs font-medium">{t(lang, "ai.ops")}</span>
         <h1 className="mt-3 text-2xl font-bold text-[#F3F4F6]">{t(lang, "ai.bundle")}</h1>
         <p className="mt-2 text-sm text-[#9CA3AF]">{t(lang, "ai.bundle_desc")}</p>
-        <div className="mt-4 grid gap-2 text-sm md:grid-cols-3">
-          <p className="rounded-lg border border-white/10 bg-[#112E27] px-3 py-2 text-[#F3F4F6]">{t(lang, "ai.copy_credits")} {profile.copy_credits}</p>
-          <p className="rounded-lg border border-white/10 bg-[#112E27] px-3 py-2 text-[#F3F4F6]">{t(lang, "ai.image_credits")} {profile.image_credits}</p>
-          <p className="rounded-lg border border-white/10 bg-[#112E27] px-3 py-2 text-[#F3F4F6]">{t(lang, "ai.poster_credits")} {profile.poster_credits}</p>
+        <div className="mt-4 grid gap-2 text-sm md:grid-cols-2">
+          <p className="rounded-lg border border-white/10 bg-[#112E27] px-3 py-2 text-[#F3F4F6]">{t(lang, "topbar.ai_credits")} {profile.ai_credits ?? 0}</p>
+          <p className="rounded-lg border border-white/10 bg-[#112E27] px-3 py-2 text-[#F3F4F6]">
+            Cost per use: Copy {creditCosts.copy} • Image {creditCosts.product_image} • Poster {creditCosts.poster}
+          </p>
         </div>
       </Card>
 
-      <AITools shopId={shop?.id} initialTheme={shop?.theme ?? "gold"} lang={lang} products={products ?? []} history={history} />
+      <AITools shopId={shop?.id} initialTheme={shop?.theme ?? "gold"} lang={lang} products={products ?? []} history={history} creditCosts={creditCosts} />
     </section>
   );
 }

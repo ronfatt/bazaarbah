@@ -3,10 +3,11 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdminByUserId } from "@/lib/auth";
-import { PLAN_AI_CREDITS } from "@/lib/plan";
+import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS } from "@/lib/plan";
 
 const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("set_plan"), targetPlan: z.enum(["free", "pro_88", "pro_128"]) }),
+  z.object({ action: z.literal("adjust_ai_credits"), amount: z.number().int().min(-100000).max(100000).refine((v) => v !== 0) }),
   z.object({ action: z.literal("ban"), reason: z.string().max(200).optional() }),
   z.object({ action: z.literal("unban") }),
   z.object({ action: z.literal("warn"), title: z.string().min(2).max(100), body: z.string().min(4).max(500) }),
@@ -36,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const admin = createAdminClient();
-  const { data: member } = await admin.from("profiles").select("id,plan_tier,is_banned").eq("id", id).maybeSingle();
+  const { data: member } = await admin.from("profiles").select("id,plan_tier,is_banned,ai_credits").eq("id", id).maybeSingle();
   if (!member) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 });
   }
@@ -44,10 +45,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (payload.action === "set_plan") {
     const targetPlan = payload.targetPlan;
     const credits = PLAN_AI_CREDITS[targetPlan];
+    let totalCredits = PLAN_AI_TOTAL_CREDITS[targetPlan];
+    if (targetPlan !== "free") {
+      const { data: planPrice } = await admin.from("plan_prices").select("ai_total_credits").eq("plan_tier", targetPlan).maybeSingle();
+      totalCredits = Number(planPrice?.ai_total_credits ?? totalCredits);
+    }
     const update =
       targetPlan === "free"
-        ? { plan: "basic", plan_tier: "free", copy_credits: 0, image_credits: 0, poster_credits: 0 }
-        : { plan: "pro", plan_tier: targetPlan, copy_credits: credits.copy, image_credits: credits.image, poster_credits: credits.poster };
+        ? { plan: "basic", plan_tier: "free", ai_credits: 0, copy_credits: 0, image_credits: 0, poster_credits: 0 }
+        : { plan: "pro", plan_tier: targetPlan, ai_credits: totalCredits, copy_credits: credits.copy, image_credits: credits.image, poster_credits: credits.poster };
 
     const { error } = await admin.from("profiles").update(update).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -61,6 +67,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
 
     return NextResponse.json({ ok: true });
+  }
+
+  if (payload.action === "adjust_ai_credits") {
+    const nextCredits = Math.max(0, Number(member.ai_credits ?? 0) + payload.amount);
+    const { error } = await admin.from("profiles").update({ ai_credits: nextCredits }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    await admin.from("admin_audit_logs").insert({
+      action: "member_ai_credits_adjusted",
+      actor_id: user.id,
+      target_user_id: id,
+      target_plan: null,
+      note: `${payload.amount > 0 ? "+" : ""}${payload.amount}`,
+      meta: { from_ai_credits: member.ai_credits ?? 0, to_ai_credits: nextCredits },
+    });
+
+    return NextResponse.json({ ok: true, ai_credits: nextCredits });
   }
 
   if (payload.action === "ban") {
@@ -133,4 +156,3 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
 }
-

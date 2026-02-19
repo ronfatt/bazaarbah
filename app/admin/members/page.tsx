@@ -14,6 +14,7 @@ type MemberRow = {
   display_name: string | null;
   role: "seller" | "admin";
   plan_tier: "free" | "pro_88" | "pro_128";
+  ai_credits: number;
   copy_credits: number;
   image_credits: number;
   poster_credits: number;
@@ -37,7 +38,7 @@ export default async function AdminMembersPage({
   const admin = createAdminClient();
   const { data } = await admin
     .from("profiles")
-    .select("id,display_name,role,plan_tier,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
+    .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
     .order("created_at", { ascending: false });
 
   const rows = ((data ?? []) as MemberRow[]).filter((row) => {

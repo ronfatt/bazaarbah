@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdminByUserId } from "@/lib/auth";
-import { PLAN_AI_CREDITS, REFERRAL_BONUS } from "@/lib/plan";
+import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, REFERRAL_BONUS } from "@/lib/plan";
 
 const bodySchema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -51,12 +51,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (payload.action === "approve") {
     const target = request.target_plan as "pro_88" | "pro_128";
     const credits = PLAN_AI_CREDITS[target];
+    const { data: planPrice } = await admin.from("plan_prices").select("ai_total_credits").eq("plan_tier", target).maybeSingle();
+    const totalCredits = Number(planPrice?.ai_total_credits ?? PLAN_AI_TOTAL_CREDITS[target]);
 
     const { error: profileErr } = await admin
       .from("profiles")
       .update({
         plan: "pro",
         plan_tier: target,
+        ai_credits: totalCredits,
         copy_credits: credits.copy,
         image_credits: credits.image,
         poster_credits: credits.poster,
@@ -76,18 +79,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const bonus = REFERRAL_BONUS[target];
       const { data: referrer } = await admin
         .from("profiles")
-        .select("id,copy_credits,image_credits,poster_credits,referral_bonus_total")
+        .select("id,ai_credits,copy_credits,image_credits,poster_credits,referral_bonus_total")
         .eq("id", upgradedUser.referred_by)
         .maybeSingle();
 
       if (referrer) {
+        const bonusTotal = bonus.copy + bonus.image + bonus.poster;
         await admin
           .from("profiles")
           .update({
+            ai_credits: Number(referrer.ai_credits ?? 0) + bonusTotal,
             copy_credits: Number(referrer.copy_credits ?? 0) + bonus.copy,
             image_credits: Number(referrer.image_credits ?? 0) + bonus.image,
             poster_credits: Number(referrer.poster_credits ?? 0) + bonus.poster,
-            referral_bonus_total: Number(referrer.referral_bonus_total ?? 0) + bonus.copy + bonus.image + bonus.poster,
+            referral_bonus_total: Number(referrer.referral_bonus_total ?? 0) + bonusTotal,
           })
           .eq("id", referrer.id);
 

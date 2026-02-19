@@ -3,11 +3,11 @@ import { hasUnlockedFeatures } from "@/lib/plan";
 
 type AiType = "copy" | "poster" | "product_image";
 
-const creditColumnByType: Record<AiType, "copy_credits" | "poster_credits" | "image_credits"> = {
-  copy: "copy_credits",
-  poster: "poster_credits",
-  product_image: "image_credits",
-};
+export async function getAiCreditCost(type: AiType) {
+  const admin = createAdminClient();
+  const { data } = await admin.from("ai_credit_costs").select("cost").eq("ai_type", type).maybeSingle();
+  return Number(data?.cost ?? 1);
+}
 
 export async function consumeAiCredit(input: {
   ownerId: string;
@@ -17,9 +17,10 @@ export async function consumeAiCredit(input: {
   resultUrl?: string | null;
 }) {
   const admin = createAdminClient();
+  const cost = await getAiCreditCost(input.type);
 
   const [profileRes, recentRes] = await Promise.all([
-    admin.from("profiles").select("id,plan,plan_tier,copy_credits,poster_credits,image_credits").eq("id", input.ownerId).maybeSingle(),
+    admin.from("profiles").select("id,plan,plan_tier,ai_credits").eq("id", input.ownerId).maybeSingle(),
     admin
       .from("ai_jobs")
       .select("id")
@@ -41,17 +42,16 @@ export async function consumeAiCredit(input: {
     throw new Error("Too many requests. Please wait 3 seconds.");
   }
 
-  const creditColumn = creditColumnByType[input.type];
-  const creditsLeft = Number(profileRes.data[creditColumn]);
-  if (creditsLeft <= 0) {
-    throw new Error(`No ${creditColumn} left.`);
+  const creditsLeft = Number(profileRes.data.ai_credits ?? 0);
+  if (creditsLeft < cost) {
+    throw new Error("No ai_credits left.");
   }
 
   const { error: profileErr } = await admin
     .from("profiles")
-    .update({ [creditColumn]: creditsLeft - 1 })
+    .update({ ai_credits: creditsLeft - cost })
     .eq("id", input.ownerId)
-    .eq(creditColumn, creditsLeft);
+    .eq("ai_credits", creditsLeft);
 
   if (profileErr) {
     throw new Error("Credit update failed, please retry.");
@@ -63,10 +63,11 @@ export async function consumeAiCredit(input: {
     type: input.type,
     prompt: input.prompt,
     result_url: input.resultUrl ?? null,
-    credits_used: 1,
+    credits_used: cost,
   });
 
   return {
-    remaining: creditsLeft - 1,
+    remaining: creditsLeft - cost,
+    cost,
   };
 }

@@ -4,6 +4,7 @@ export type Profile = {
   role: "seller" | "admin";
   plan_tier: "free" | "pro_88" | "pro_128";
   plan: "basic" | "pro";
+  ai_credits: number;
   poster_credits: number;
   image_credits: number;
   copy_credits: number;
