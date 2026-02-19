@@ -6,10 +6,12 @@ import { consumeAiCredit } from "@/lib/credits";
 import { assertUnlockedByUserId } from "@/lib/auth";
 
 const schema = z.object({
+  mode: z.enum(["full_bundle", "poster_fields"]).default("full_bundle"),
   productName: z.string().min(2),
-  keySellingPoints: z.string().min(4),
+  keySellingPoints: z.string().min(4).optional(),
   price: z.string().min(1),
-  platform: z.enum(["FB", "IG", "TikTok", "WhatsApp"]),
+  platform: z.enum(["FB", "IG", "TikTok", "WhatsApp"]).optional(),
+  toneStyle: z.enum(["flash_sale", "raya_premium", "elegant_luxury", "bazaar_santai", "hard_selling"]).optional(),
   lang: z.enum(["en", "zh", "ms"]).default("en"),
   shopId: z.string().uuid().optional(),
 });
@@ -27,18 +29,20 @@ export async function POST(req: NextRequest) {
   try {
     await assertUnlockedByUserId(user.id);
     const body = schema.parse(await req.json());
-    const bundle = await generateMarketingCopy(body);
-    const prompt = `${body.productName}|${body.keySellingPoints}|${body.price}|${body.platform}`;
+    const result = await generateMarketingCopy(body);
+    const prompt = `${body.mode}|${body.productName}|${body.keySellingPoints ?? "-"}|${body.price}|${body.platform ?? "-"}|${body.toneStyle ?? "-"}`;
     const historyPayload = JSON.stringify({
       kind: "copy",
       input: {
+        mode: body.mode,
         productName: body.productName,
-        keySellingPoints: body.keySellingPoints,
+        keySellingPoints: body.keySellingPoints ?? "",
         price: body.price,
-        platform: body.platform,
+        platform: body.platform ?? "FB",
+        toneStyle: body.toneStyle ?? null,
         lang: body.lang,
       },
-      bundle,
+      ...(body.mode === "poster_fields" ? { posterFields: result } : { bundle: result }),
     });
     const credits = await consumeAiCredit({
       ownerId: user.id,
@@ -48,7 +52,10 @@ export async function POST(req: NextRequest) {
       resultUrl: historyPayload,
     });
 
-    return NextResponse.json({ bundle, credits });
+    if (body.mode === "poster_fields") {
+      return NextResponse.json({ posterFields: result, credits });
+    }
+    return NextResponse.json({ bundle: result, credits });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate copy";
     const status = message.toLowerCase().includes("upgrade required") ? 403 : 400;

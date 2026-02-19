@@ -13,10 +13,12 @@ function getClient() {
 
 export async function generateMarketingCopy(input: {
   productName: string;
-  keySellingPoints: string;
+  keySellingPoints?: string;
   price: string;
-  platform: "FB" | "IG" | "TikTok" | "WhatsApp";
+  platform?: "FB" | "IG" | "TikTok" | "WhatsApp";
   lang?: "en" | "zh" | "ms";
+  mode?: "full_bundle" | "poster_fields";
+  toneStyle?: "flash_sale" | "raya_premium" | "elegant_luxury" | "bazaar_santai" | "hard_selling";
 }) {
   const client = getClient();
 
@@ -26,6 +28,35 @@ export async function generateMarketingCopy(input: {
       : input.lang === "ms"
         ? "Write in Bahasa Melayu only."
         : "Write in English only.";
+
+  const toneInstruction =
+    input.toneStyle === "flash_sale"
+      ? "Tone: fast urgency, promo-heavy."
+      : input.toneStyle === "raya_premium"
+        ? "Tone: warm festive premium Raya."
+        : input.toneStyle === "elegant_luxury"
+          ? "Tone: elegant and premium."
+          : input.toneStyle === "bazaar_santai"
+            ? "Tone: friendly bazaar casual."
+            : input.toneStyle === "hard_selling"
+              ? "Tone: direct hard-sell CTA."
+              : "Tone: balanced and sales-friendly.";
+
+  const mode = input.mode ?? "full_bundle";
+  const userPrompt =
+    mode === "poster_fields"
+      ? `Generate poster marketing fields for:
+Product: ${input.productName}
+Price: ${input.price}
+Selling points: ${input.keySellingPoints ?? "-"}
+${toneInstruction}
+Output JSON shape: {"title":"...","subtitle":"...","cta":"...","promoLine":"...","bullets":["...","...","..."]}`
+      : `Generate marketing bundle for: ${input.productName}
+Selling points: ${input.keySellingPoints ?? "-"}
+Price: ${input.price}
+Target platform: ${input.platform ?? "FB"}
+${toneInstruction}
+Output JSON shape: {"fbCaptions":[{"tone":"friendly"|"urgent"|"premium","text":"..."}],"whatsappBroadcasts":["...","...","..."],"hooks":["...","...","...","...","..."]}`;
 
   const response = await client.responses.create({
     model: "gpt-4.1-mini",
@@ -37,17 +68,26 @@ export async function generateMarketingCopy(input: {
       },
       {
         role: "user",
-        content: `Generate marketing bundle for: ${input.productName}\nSelling points: ${input.keySellingPoints}\nPrice: ${input.price}\nTarget platform: ${input.platform}\nOutput JSON shape: {\"fbCaptions\":[{\"tone\":\"friendly\"|\"urgent\"|\"premium\",\"text\":\"...\"}],\"whatsappBroadcasts\":[\"...\",\"...\",\"...\"],\"hooks\":[\"...\",\"...\",\"...\",\"...\",\"...\"]}`,
+        content: userPrompt,
       },
     ],
   });
 
-  const raw = response.output_text;
-  return JSON.parse(raw) as {
-    fbCaptions: Array<{ tone: "friendly" | "urgent" | "premium"; text: string }>;
-    whatsappBroadcasts: string[];
-    hooks: string[];
-  };
+  const raw = response.output_text.trim();
+  const normalized = raw.startsWith("```") ? raw.replace(/^```json\s*|^```\s*|```$/g, "").trim() : raw;
+  return JSON.parse(normalized) as
+    | {
+        fbCaptions: Array<{ tone: "friendly" | "urgent" | "premium"; text: string }>;
+        whatsappBroadcasts: string[];
+        hooks: string[];
+      }
+    | {
+        title: string;
+        subtitle: string;
+        cta: string;
+        promoLine: string;
+        bullets: string[];
+      };
 }
 
 export async function generateBackgroundImage(input: {

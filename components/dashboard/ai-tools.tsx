@@ -16,6 +16,13 @@ type CopyBundle = {
   whatsappBroadcasts: string[];
   hooks: string[];
 };
+type PosterCopyFields = {
+  title: string;
+  subtitle: string;
+  cta: string;
+  promoLine?: string;
+  bullets?: string[];
+};
 
 type ProductPick = {
   id: string;
@@ -96,8 +103,10 @@ export function AITools({
   });
   const [posterImage, setPosterImage] = useState<string>("");
   const [posterLoading, setPosterLoading] = useState(false);
+  const [posterCopyLoading, setPosterCopyLoading] = useState(false);
   const [posterProgress, setPosterProgress] = useState(0);
   const [posterError, setPosterError] = useState<string | null>(null);
+  const [posterTone, setPosterTone] = useState<"flash_sale" | "raya_premium" | "elegant_luxury" | "bazaar_santai" | "hard_selling">("raya_premium");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [enforcePhotoForPoster, setEnforcePhotoForPoster] = useState(true);
   const [historyItems, setHistoryItems] = useState<AiHistoryItem[]>(history);
@@ -133,6 +142,7 @@ export function AITools({
     }
     const input = (payload.input as Record<string, string> | undefined) ?? {};
     const bundle = payload.bundle as CopyBundle | undefined;
+    const posterFields = payload.posterFields as PosterCopyFields | undefined;
     setCopyForm((prev) => ({
       ...prev,
       productName: input.productName ?? prev.productName,
@@ -144,6 +154,14 @@ export function AITools({
       setCopyLang(input.lang);
     }
     if (bundle) setCopyBundle(bundle);
+    if (posterFields) {
+      setPosterForm((prev) => ({
+        ...prev,
+        productName: posterFields.title || prev.productName,
+        sellingPoint: posterFields.subtitle || prev.sellingPoint,
+        cta: posterFields.cta || prev.cta,
+      }));
+    }
   }
 
   function appendHistory(item: AiHistoryItem) {
@@ -153,11 +171,16 @@ export function AITools({
   function previewCopyText(item: AiHistoryItem) {
     const payload = item.payload ?? {};
     const bundle = payload.bundle as CopyBundle | undefined;
-    if (!bundle) return null;
-    const firstCaption = bundle.fbCaptions?.[0]?.text ?? "";
-    const firstWa = bundle.whatsappBroadcasts?.[0] ?? "";
-    const firstHook = bundle.hooks?.[0] ?? "";
-    const joined = [firstCaption, firstWa, firstHook].filter(Boolean).join(" | ");
+    const posterFields = payload.posterFields as PosterCopyFields | undefined;
+    let joined = "";
+    if (bundle) {
+      const firstCaption = bundle.fbCaptions?.[0]?.text ?? "";
+      const firstWa = bundle.whatsappBroadcasts?.[0] ?? "";
+      const firstHook = bundle.hooks?.[0] ?? "";
+      joined = [firstCaption, firstWa, firstHook].filter(Boolean).join(" | ");
+    } else if (posterFields) {
+      joined = [posterFields.title, posterFields.subtitle, posterFields.cta].filter(Boolean).join(" | ");
+    }
     if (!joined) return null;
     const expanded = Boolean(expandedHistory[item.id]);
     return {
@@ -396,6 +419,62 @@ export function AITools({
     }
   }
 
+  async function generatePosterCopyWithAi() {
+    setPosterCopyLoading(true);
+    setPosterError(null);
+    try {
+      const res = await fetch("/api/ai/copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "poster_fields",
+          productName: posterForm.productName || copyForm.productName,
+          keySellingPoints: posterForm.sellingPoint || copyForm.keySellingPoints || undefined,
+          price: posterForm.priceLabel,
+          toneStyle: posterTone,
+          lang: copyLang,
+          shopId,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed");
+      const fields = json.posterFields as PosterCopyFields;
+      setPosterForm((s) => ({
+        ...s,
+        productName: fields.title || s.productName,
+        sellingPoint: fields.subtitle || s.sellingPoint,
+        cta: fields.cta || s.cta,
+      }));
+      setCopyForm((s) => ({
+        ...s,
+        productName: s.productName || fields.title || posterForm.productName,
+        keySellingPoints: s.keySellingPoints || fields.subtitle || posterForm.sellingPoint,
+        price: formatMoney(posterForm.priceLabel.replace("MYR ", "")),
+      }));
+      appendHistory({
+        id: `tmp-copy-poster-${Date.now()}`,
+        type: "copy",
+        createdAt: new Date().toISOString(),
+        imageUrl: null,
+        payload: {
+          input: {
+            mode: "poster_fields",
+            productName: posterForm.productName,
+            keySellingPoints: posterForm.sellingPoint,
+            price: posterForm.priceLabel,
+            toneStyle: posterTone,
+            lang: copyLang,
+          },
+          posterFields: fields,
+        },
+      });
+    } catch (error) {
+      setPosterError(error instanceof Error ? error.message : "Failed");
+    } finally {
+      setPosterCopyLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className={`relative overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-br ${heroTone} p-6`}>
@@ -536,6 +615,29 @@ export function AITools({
                 }}
               >
                 {t(lang, "ai.use_copy_data")}
+              </Button>
+            </div>
+            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+              <select
+                value={posterTone}
+                onChange={(e) =>
+                  setPosterTone(e.target.value as "flash_sale" | "raya_premium" | "elegant_luxury" | "bazaar_santai" | "hard_selling")
+                }
+                className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
+              >
+                <option value="flash_sale">Flash Sale</option>
+                <option value="raya_premium">Raya Premium</option>
+                <option value="elegant_luxury">Elegant Luxury</option>
+                <option value="bazaar_santai">Bazaar Santai</option>
+                <option value="hard_selling">Hard Selling</option>
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={generatePosterCopyWithAi}
+                disabled={posterCopyLoading || !(posterForm.productName || copyForm.productName)}
+              >
+                {posterCopyLoading ? "Generating..." : "Generate Copy with AI"}
               </Button>
             </div>
             <Input placeholder={t(lang, "ai.poster_product_placeholder")} value={posterForm.productName} onChange={(e) => setPosterForm((s) => ({ ...s, productName: e.target.value }))} />
