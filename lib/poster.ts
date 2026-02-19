@@ -40,12 +40,14 @@ export async function composePoster(input: OverlayInput) {
   const palette = posterPalette(theme);
 
   const fontDir = path.join(process.cwd(), "public", "fonts");
-  const regularFont = path.join(fontDir, "NotoSansSC-Regular.otf");
-  const boldFont = path.join(fontDir, "NotoSansSC-Bold.otf");
-  if (fs.existsSync(regularFont)) {
+  const regularCandidates = ["noto-sans-sc.otf", "NotoSansSC-Regular.otf"];
+  const boldCandidates = ["noto-sans-sc-bold.otf", "NotoSansSC-Bold.otf"];
+  const regularFont = regularCandidates.map((name) => path.join(fontDir, name)).find((p) => fs.existsSync(p));
+  const boldFont = boldCandidates.map((name) => path.join(fontDir, name)).find((p) => fs.existsSync(p));
+  if (regularFont) {
     registerFont(regularFont, { family: "Noto Sans SC" });
   }
-  if (fs.existsSync(boldFont)) {
+  if (boldFont) {
     registerFont(boldFont, { family: "Noto Sans SC", weight: "bold" });
   }
   const fontFamily = '"Noto Sans SC","Noto Sans","Arial Unicode MS","Segoe UI",sans-serif';
