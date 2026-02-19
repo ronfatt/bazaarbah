@@ -28,7 +28,7 @@ function statusClass(status: string) {
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const lang = await getLangFromCookie();
   const { status } = await searchParams;
-  const selected = statuses.includes((status as (typeof statuses)[number]) ?? "all") ? (status as string) : "all";
+  const selected = statuses.includes((status ?? "all") as (typeof statuses)[number]) ? (status ?? "all") : "all";
 
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
