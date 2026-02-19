@@ -34,7 +34,7 @@ export default async function StorePage({
 
   const { data: shop } = await admin
     .from("shops")
-    .select("id,shop_name,slug,theme,is_active,phone_whatsapp,address_text")
+    .select("id,shop_name,slug,theme,is_active,phone_whatsapp,address_text,logo_url")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
@@ -82,7 +82,16 @@ export default async function StorePage({
     <main className="min-h-screen bg-[#F8F6F1] text-neutral-900">
       <header className="bg-[#0E3B2E] text-white">
         <div className="mx-auto max-w-6xl px-6 py-8">
-          <h1 className="text-3xl font-bold">{shop.shop_name}</h1>
+          <div className="flex items-center gap-4">
+            {shop.logo_url ? (
+              <img
+                src={shop.logo_url}
+                alt={`${shop.shop_name} logo`}
+                className="h-14 w-14 rounded-xl border border-white/20 bg-white/10 object-cover"
+              />
+            ) : null}
+            <h1 className="text-3xl font-bold">{shop.shop_name}</h1>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2 text-sm text-white/90">
             <span className="rounded-full bg-white/15 px-3 py-1">⭐ 4.8 rating</span>
             {shop.address_text ? <span className="rounded-full bg-white/15 px-3 py-1">📍 {shop.address_text}</span> : null}
