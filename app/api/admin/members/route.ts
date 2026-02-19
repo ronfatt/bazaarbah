@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdminByUserId } from "@/lib/auth";
+import { syncProfilesFromAuthUsers } from "@/lib/supabase/sync-auth-profiles";
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get("status") ?? "all";
 
   const admin = createAdminClient();
+  await syncProfilesFromAuthUsers(admin);
   const { data, error } = await admin
     .from("profiles")
     .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")

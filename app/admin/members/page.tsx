@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
 import { requireAdminPortalUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncProfilesFromAuthUsers } from "@/lib/supabase/sync-auth-profiles";
 import { MemberManagementTable } from "@/components/admin/member-management-table";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
@@ -36,6 +37,7 @@ export default async function AdminMembersPage({
   const status = params.status ?? "all";
 
   const admin = createAdminClient();
+  await syncProfilesFromAuthUsers(admin);
   const { data } = await admin
     .from("profiles")
     .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
