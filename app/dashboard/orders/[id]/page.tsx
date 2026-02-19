@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { OrderActions } from "@/components/dashboard/order-actions";
 import { requireUnlockedSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { currencyFromCents } from "@/lib/utils";
+import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
@@ -70,7 +70,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <p>{t(lang, "dashboard.buyer")}: {order.buyer_name ?? t(lang, "common.guest")}</p>
           <p>Phone: {order.buyer_phone ?? "-"}</p>
           <p>{t(lang, "buyer.total")} {currencyFromCents(order.subtotal_cents)}</p>
-          <p>Created: {new Date(order.created_at).toLocaleString("en-MY")}</p>
+          <p>Created: {formatDateTimeMY(order.created_at)}</p>
         </div>
 
         <div className="mt-5">
@@ -104,8 +104,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {(payments ?? []).map((p) => (
             <div key={p.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3">
               <p>{t(lang, "buyer.reference_text")}: {p.reference_text ?? "-"}</p>
-              <p>Submitted: {new Date(p.submitted_at).toLocaleString("en-MY")}</p>
-              <p>Confirmed: {p.confirmed_at ? new Date(p.confirmed_at).toLocaleString("en-MY") : "No"}</p>
+              <p>Submitted: {formatDateTimeMY(p.submitted_at)}</p>
+              <p>Confirmed: {p.confirmed_at ? formatDateTimeMY(p.confirmed_at) : "No"}</p>
               {p.proof_image_url && (
                 <a href={p.proof_image_url} className="text-[#C9A227]" target="_blank" rel="noreferrer">
                   Open proof image

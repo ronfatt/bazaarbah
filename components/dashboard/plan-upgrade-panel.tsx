@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
-import { currencyFromCents } from "@/lib/utils";
+import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
 import { t, type Lang } from "@/lib/i18n";
 
@@ -243,7 +243,7 @@ export function PlanUpgradePanel({
                 </p>
                 {statusBadge(req.status)}
               </div>
-              <p className="mt-1 text-white/65">Submitted: {new Date(req.submitted_at).toLocaleString("en-MY")}</p>
+              <p className="mt-1 text-white/65">Submitted: {formatDateTimeMY(req.submitted_at)}</p>
               {req.reference_text && <p className="mt-1 text-white/65">Reference: {req.reference_text}</p>}
               {req.proof_image_url && (
                 <a href={req.proof_image_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-bb-gold hover:underline">

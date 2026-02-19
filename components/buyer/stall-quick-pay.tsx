@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { currencyFromCents } from "@/lib/utils";
+import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { t, type Lang } from "@/lib/i18n";
 
 type StallOrderItem = {
@@ -96,12 +96,7 @@ export function StallQuickPay({
     }
   }
 
-  const paidAtLabel = paidAt
-    ? new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : lang === "ms" ? "ms-MY" : "en-MY", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(paidAt))
-    : "-";
+  const paidAtLabel = paidAt ? formatDateTimeMY(paidAt, lang === "zh" ? "zh-CN" : lang === "ms" ? "ms-MY" : "en-MY") : "-";
 
   return (
     <>

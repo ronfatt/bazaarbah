@@ -8,7 +8,7 @@ import { AppTable, AppTableWrap } from "@/components/ui/AppTable";
 import { SalesChart } from "@/components/dashboard/sales-chart";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSeller } from "@/lib/auth";
-import { currencyFromCents, startOfTodayIso } from "@/lib/utils";
+import { currencyFromCents, formatMonthDayGMT8, startOfDayIsoOffset, startOfTodayIso } from "@/lib/utils";
 import { hasUnlockedFeatures, normalizePlanTier, PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL } from "@/lib/plan";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
@@ -53,21 +53,15 @@ export default async function DashboardPage() {
   const pending = orders?.filter((o) => o.status === "pending_payment" || o.status === "proof_submitted").length ?? 0;
   const paid = orders?.filter((o) => o.status === "paid").length ?? 0;
 
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-
-  const weekly = days.map((day) => {
-    const next = new Date(day);
-    next.setDate(next.getDate() + 1);
+  const weekly = Array.from({ length: 7 }, (_, i) => {
+    const offset = -(6 - i);
+    const startIso = startOfDayIsoOffset(offset);
+    const nextIso = startOfDayIsoOffset(offset + 1);
     const sales =
       orders
-        ?.filter((o) => o.status === "paid" && o.created_at >= day.toISOString() && o.created_at < next.toISOString())
+        ?.filter((o) => o.status === "paid" && o.created_at >= startIso && o.created_at < nextIso)
         .reduce((acc, o) => acc + o.subtotal_cents, 0) ?? 0;
-    return { day: `${day.getMonth() + 1}/${day.getDate()}`, sales };
+    return { day: formatMonthDayGMT8(startIso), sales };
   });
 
   const recentOrders = (orders ?? []).slice(0, 6);

@@ -5,7 +5,7 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { PlanReviewTable } from "@/components/dashboard/plan-review-table";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminPortalUser } from "@/lib/auth";
-import { currencyFromCents } from "@/lib/utils";
+import { currencyFromCents, formatDateTimeMY, startOfTodayIso } from "@/lib/utils";
 import { PLAN_LABEL } from "@/lib/plan";
 import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
 import Link from "next/link";
@@ -84,7 +84,7 @@ export default async function AdminPlanRequestsPortalPage({
     return haystack.includes(query);
   });
 
-  const todayIso = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+  const todayIso = startOfTodayIso();
   const pendingCount = allRows.filter((r) => r.status === "pending_review").length;
   const approvedToday = allRows.filter((r) => r.status === "approved" && (r.reviewed_at ?? "") >= todayIso).length;
   const avgMins = averageReviewMinutes(allRows);
@@ -189,7 +189,7 @@ export default async function AdminPlanRequestsPortalPage({
                     <p className="font-semibold text-white">{log.action === "plan_request_approved" ? t(lang, "admin.approved") : t(lang, "admin.rejected")}</p>
                     <p className="mt-1">{t(lang, "admin.user")} {log.target_user_id.slice(0, 8)}...</p>
                     <p>{t(lang, "admin.plan")} {log.target_plan ? PLAN_LABEL[log.target_plan] : "-"}</p>
-                    <p>{t(lang, "admin.at")} {new Date(log.created_at).toLocaleString("en-MY")}</p>
+                    <p>{t(lang, "admin.at")} {formatDateTimeMY(log.created_at)}</p>
                     {log.note ? <p className="mt-1 text-rose-300">{t(lang, "admin.note")} {log.note}</p> : null}
                   </div>
                 ))}

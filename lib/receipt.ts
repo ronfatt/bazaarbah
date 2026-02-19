@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { formatDateTimeMY } from "@/lib/utils";
 import { currencyFromCents } from "@/lib/utils";
 
 type ReceiptInput = {
@@ -32,7 +33,7 @@ export async function buildReceiptPdf(input: ReceiptInput) {
     `Product: ${input.productName}`,
     `Quantity: ${input.qty}`,
     `Total: ${currencyFromCents(input.totalCents)}`,
-    `Created At: ${new Date(input.createdAt).toLocaleString("en-MY")}`,
+    `Created At: ${formatDateTimeMY(input.createdAt)}`,
   ];
 
   lines.forEach((line, i) => {

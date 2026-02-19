@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { t, type Lang } from "@/lib/i18n";
+import { formatDateMY } from "@/lib/utils";
 
 type MemberRow = {
   id: string;
@@ -65,7 +66,7 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                 <td className="px-4 py-3">
                   <p className="font-semibold text-white">{row.display_name ?? t(lang, "admin.members")}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.id.slice(0, 10)}...</p>
-                  <p className="mt-0.5 text-[11px] text-white/45">Joined {new Date(row.created_at).toLocaleDateString("en-MY")}</p>
+                  <p className="mt-0.5 text-[11px] text-white/45">Joined {formatDateMY(row.created_at)}</p>
                 </td>
                 <td className="px-4 py-3">
                   <p>{row.plan_tier}</p>

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { normalizeTheme, type ShopTheme } from "@/lib/theme";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { t, type Lang } from "@/lib/i18n";
+import { formatDateTimeMY } from "@/lib/utils";
 
 type CopyBundle = {
   fbCaptions: Array<{ tone: "friendly" | "urgent" | "premium"; text: string }>;
@@ -719,7 +720,7 @@ export function AITools({
                     {item.type === "product_image" ? "Product Background" : item.type === "poster" ? "Poster" : "Copy Bundle"}
                   </p>
                   <div className="flex items-center gap-2">
-                    <p className="text-xs text-white/50">{new Date(item.createdAt).toLocaleString()}</p>
+                    <p className="text-xs text-white/50">{formatDateTimeMY(item.createdAt)}</p>
                     <Button
                       type="button"
                       variant="danger"

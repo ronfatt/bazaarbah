@@ -1,6 +1,9 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+export const APP_TIME_ZONE = "Asia/Kuala_Lumpur";
+const GMT8_OFFSET_MS = 8 * 60 * 60 * 1000;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -26,9 +29,43 @@ export function generateReceiptNo() {
 }
 
 export function startOfTodayIso() {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return now.toISOString();
+  return startOfDayIsoOffset(0);
+}
+
+export function startOfDayIsoOffset(daysFromToday: number) {
+  const utcNowMs = Date.now();
+  const klClock = new Date(utcNowMs + GMT8_OFFSET_MS);
+  klClock.setUTCDate(klClock.getUTCDate() + daysFromToday);
+  klClock.setUTCHours(0, 0, 0, 0);
+  return new Date(klClock.getTime() - GMT8_OFFSET_MS).toISOString();
+}
+
+export function formatDateTimeMY(value: string | Date, locale = "en-MY") {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+export function formatDateMY(value: string | Date, locale = "en-MY") {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+export function formatMonthDayGMT8(iso: string) {
+  const klClock = new Date(new Date(iso).getTime() + GMT8_OFFSET_MS);
+  return `${klClock.getUTCMonth() + 1}/${klClock.getUTCDate()}`;
 }
 
 export function slugify(input: string) {

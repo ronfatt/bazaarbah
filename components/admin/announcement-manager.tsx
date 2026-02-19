@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { t, type Lang } from "@/lib/i18n";
+import { formatDateTimeMY } from "@/lib/utils";
 
 type Announcement = {
   id: string;
@@ -83,7 +84,7 @@ export function AnnouncementManager({ announcements, lang = "en" }: { announceme
               <Badge variant={a.is_active ? "paid" : "neutral"}>{a.is_active ? t(lang, "plan.active") : "Inactive"}</Badge>
             </div>
             <p className="mt-2 text-sm text-white/75">{a.body}</p>
-            <p className="mt-2 text-xs text-white/45">{new Date(a.created_at).toLocaleString("en-MY")}</p>
+            <p className="mt-2 text-xs text-white/45">{formatDateTimeMY(a.created_at)}</p>
             <div className="mt-3">
               {a.is_active ? (
                 <AppButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => toggleActive(a.id, false)} disabled={busy}>

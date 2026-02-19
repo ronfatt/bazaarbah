@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { Badge } from "@/components/ui/Badge";
 import { PLAN_LABEL } from "@/lib/plan";
-import { currencyFromCents } from "@/lib/utils";
+import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { t, type Lang } from "@/lib/i18n";
 
 type ReviewRow = {
@@ -83,7 +83,7 @@ export function PlanReviewTable({ rows, lang = "en" }: { rows: ReviewRow[]; lang
                   </td>
                   <td className="px-4 py-3">{targetLabel(row.target_plan)}</td>
                   <td className="px-4 py-3">{currencyFromCents(row.amount_cents)}</td>
-                  <td className="px-4 py-3 text-white/65">{new Date(row.submitted_at).toLocaleString("en-MY")}</td>
+                  <td className="px-4 py-3 text-white/65">{formatDateTimeMY(row.submitted_at)}</td>
                   <td className="px-4 py-3 text-white/65">{row.reference_text || "-"}</td>
                   <td className="px-4 py-3">
                     {row.proof_image_url ? (
