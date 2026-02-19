@@ -28,14 +28,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
-  const { data: shops } = await admin.from("shops").select("id").eq("owner_id", user.id);
-  const shopIds = shops?.map((s) => s.id) ?? [];
-
   const { data: order } = await admin
     .from("orders")
-    .select("id,order_code,status,buyer_name,buyer_phone,subtotal_cents,created_at")
+    .select("id,order_code,status,buyer_name,buyer_phone,subtotal_cents,created_at,shops!inner(owner_id)")
     .eq("id", id)
-    .in("shop_id", shopIds)
+    .eq("shops.owner_id", user.id)
     .maybeSingle();
 
   if (!order) notFound();

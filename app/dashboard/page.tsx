@@ -39,13 +39,11 @@ export default async function DashboardPage() {
   ]);
   const shopIds = shops?.map((s) => s.id) ?? [];
 
-  const { data: orders } = shopIds.length
-    ? await admin
-        .from("orders")
-        .select("id,order_code,status,buyer_name,subtotal_cents,created_at")
-        .in("shop_id", shopIds)
-        .order("created_at", { ascending: false })
-    : { data: [] as Array<{ id: string; order_code: string; status: string; buyer_name: string | null; subtotal_cents: number; created_at: string }> };
+  const { data: orders } = await admin
+    .from("orders")
+    .select("id,order_code,status,buyer_name,subtotal_cents,created_at,shops!inner(owner_id)")
+    .eq("shops.owner_id", user.id)
+    .order("created_at", { ascending: false });
 
   const todayIso = startOfTodayIso();
   const todayOrders = orders?.filter((o) => o.created_at >= todayIso).length ?? 0;

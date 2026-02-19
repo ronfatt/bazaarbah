@@ -22,13 +22,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
-  const { data: shops } = await admin.from("shops").select("id").eq("owner_id", user.id);
-  const shopIds = shops?.map((s) => s.id) ?? [];
 
   const query = admin
     .from("orders")
-    .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at")
-    .in("shop_id", shopIds)
+    .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at,shops!inner(owner_id)")
+    .eq("shops.owner_id", user.id)
     .order("created_at", { ascending: false });
 
   if (selected !== "all") {
