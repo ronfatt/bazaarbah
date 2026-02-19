@@ -27,7 +27,12 @@ export default async function AIPage() {
   const { user, profile } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
-  const { data: shop } = await admin.from("shops").select("id,theme").eq("owner_id", user.id).order("created_at", { ascending: true }).maybeSingle();
+  const { data: shop } = await admin
+    .from("shops")
+    .select("id,theme,shop_name,phone_whatsapp,slug")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: true })
+    .maybeSingle();
   const { data: products } = await admin
     .from("products")
     .select("id,name,description,price_cents,image_original_url,image_enhanced_url,image_source,image_url")
@@ -70,7 +75,19 @@ export default async function AIPage() {
         </div>
       </Card>
 
-      <AITools shopId={shop?.id} initialTheme={shop?.theme ?? "gold"} lang={lang} products={products ?? []} history={history} creditCosts={creditCosts} />
+      <AITools
+        shopId={shop?.id}
+        initialTheme={shop?.theme ?? "gold"}
+        lang={lang}
+        products={products ?? []}
+        history={history}
+        creditCosts={creditCosts}
+        shopProfile={{
+          shopName: shop?.shop_name ?? "",
+          whatsapp: shop?.phone_whatsapp ?? "",
+          shopSlug: shop?.slug ?? "",
+        }}
+      />
     </section>
   );
 }

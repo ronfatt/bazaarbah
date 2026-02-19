@@ -212,3 +212,111 @@ export async function enhanceProductPhoto(input: {
 
   return { base64, prompt, model: "gpt-image-1" as const };
 }
+
+export async function generatePosterCopyV3(input: {
+  productName: string;
+  priceText: string;
+  description?: string;
+  festival: "generic" | "ramadan" | "raya" | "cny" | "deepavali" | "christmas" | "valentine" | "birthday" | "none";
+  objective: "flash_sale" | "new_launch" | "preorder" | "limited" | "bundle" | "free_delivery" | "whatsapp";
+  style: "premium" | "festive" | "minimal" | "retail" | "cute";
+  locale: "en" | "ms" | "zh";
+  shopName?: string;
+  whatsapp?: string;
+  orderLink?: string;
+}) {
+  const client = getClient();
+  const response = await client.responses.create({
+    model: "gpt-4.1-mini",
+    input: [
+      {
+        role: "system",
+        content:
+          "You are a performance marketing copywriter for Malaysian F&B sellers. Return ONLY valid JSON. No markdown.",
+      },
+      {
+        role: "user",
+        content: `Generate marketing copy for a social media poster.
+Product: ${input.productName}
+Price: ${input.priceText}
+Description: ${input.description ?? "-"}
+Festival: ${input.festival}
+Objective: ${input.objective}
+Style: ${input.style}
+Locale: ${input.locale}
+Shop name: ${input.shopName ?? "-"}
+WhatsApp: ${input.whatsapp ?? "-"}
+Order link: ${input.orderLink ?? "-"}
+
+Constraints:
+- Headline: max 6 words
+- Subheadline: max 10 words
+- 3 bullets: each max 6 words
+- CTA: 2-3 words
+- Footer: short, include WhatsApp/order hint if provided
+- Mention price naturally
+- Language:
+  ms: Bahasa Melayu (simple)
+  en: English
+  zh: 简体中文（口语广告风）
+
+Return JSON:
+{
+  "headline":"...",
+  "subheadline":"...",
+  "bullets":["...","...","..."],
+  "cta":"...",
+  "priceText":"${input.priceText}",
+  "footer":"..."
+}`,
+      },
+    ],
+  });
+  const raw = response.output_text.trim();
+  const normalized = raw.startsWith("```") ? raw.replace(/^```json\s*|^```\s*|```$/g, "").trim() : raw;
+  return JSON.parse(normalized) as {
+    headline: string;
+    subheadline?: string;
+    bullets?: string[];
+    cta: string;
+    priceText: string;
+    footer?: string;
+  };
+}
+
+export async function generatePosterBackgroundV3(input: {
+  productName: string;
+  description?: string;
+  festival: string;
+  objective: string;
+  style: "premium" | "festive" | "minimal" | "retail" | "cute";
+  ratio: "9:16" | "1:1" | "4:5";
+}) {
+  const client = getClient();
+  const size = input.ratio === "1:1" ? "1024x1024" : "1024x1536";
+  const prompt = `Create a high-end marketing poster background for:
+Product: ${input.productName} (Kuih / dessert)
+Festival: ${input.festival}
+Style: ${input.style}
+Objective: ${input.objective}
+Ratio: ${input.ratio}
+Description: ${input.description ?? "-"}
+
+Rules:
+- NO text, NO typography, NO numbers, NO logo, NO watermark.
+- Create strong negative space at top for headline.
+- Create clean bottom area for price + CTA badge.
+- Product hero area should be center-right or center.
+- Background must feel like an advertisement.
+- Cinematic lighting, bokeh, festive props subtly.
+- Ensure readability: darker overlay areas for text zones.`;
+
+  const image = await client.images.generate({
+    model: "gpt-image-1",
+    prompt,
+    size,
+  });
+  const base64 = image.data?.[0]?.b64_json;
+  if (!base64) throw new Error("No image data returned from OpenAI");
+  return { base64, prompt, model: "gpt-image-1" as const };
+}

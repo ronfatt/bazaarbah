@@ -17,9 +17,11 @@ type CopyBundle = {
   hooks: string[];
 };
 type PosterCopyFields = {
-  title: string;
-  subtitle: string;
-  cta: string;
+  title?: string;
+  subtitle?: string;
+  cta?: string;
+  priceText?: string;
+  footer?: string;
   promoLine?: string;
   bullets?: string[];
 };
@@ -43,6 +45,12 @@ type AiHistoryItem = {
   payload?: Record<string, unknown> | null;
 };
 
+type FestivalMode = "generic" | "ramadan" | "raya" | "cny" | "deepavali" | "christmas" | "valentine" | "birthday" | "none";
+type CampaignObjective = "flash_sale" | "new_launch" | "preorder" | "limited" | "bundle" | "free_delivery" | "whatsapp";
+type PosterDesignStyle = "premium" | "festive" | "minimal" | "retail" | "cute";
+type PosterRatio = "9:16" | "1:1" | "4:5";
+type PosterPresetName = "retail_badge" | "hero_center" | "split_panel" | "premium_editorial" | "cta_stripe" | "diagonal_energy";
+
 function LoadingBlock({ label }: { label: string }) {
   return (
     <div className="rounded-xl border border-white/10 bg-[#163C33] p-4">
@@ -62,12 +70,6 @@ function formatMoney(value: string) {
   return numeric.toFixed(2);
 }
 
-function preferredProductImage(product?: ProductPick) {
-  if (!product) return null;
-  if (product.image_source === "enhanced" && product.image_enhanced_url) return product.image_enhanced_url;
-  return product.image_original_url ?? product.image_url ?? product.image_enhanced_url ?? null;
-}
-
 export function AITools({
   shopId,
   initialTheme = "gold",
@@ -75,6 +77,7 @@ export function AITools({
   products = [],
   history = [],
   creditCosts = { copy: 1, product_image: 1, poster: 1 },
+  shopProfile,
 }: {
   shopId?: string;
   initialTheme?: string;
@@ -82,6 +85,7 @@ export function AITools({
   products?: ProductPick[];
   history?: AiHistoryItem[];
   creditCosts?: { copy: number; product_image: number; poster: number };
+  shopProfile?: { shopName?: string; whatsapp?: string; shopSlug?: string };
 }) {
   const [theme, setTheme] = useState<ShopTheme>(normalizeTheme(initialTheme));
 
@@ -109,19 +113,29 @@ export function AITools({
 
   const [posterForm, setPosterForm] = useState({
     productName: "",
-    sellingPoint: "",
+    description: "",
+    headline: "",
+    subheadline: "",
+    bullet1: "",
+    bullet2: "",
+    bullet3: "",
     priceLabel: "MYR 0.00",
     cta: "Order Now",
-    aspect: "9:16" as "16:9" | "9:16",
+    footer: "",
+    ratio: "9:16" as PosterRatio,
+    festival: "generic" as FestivalMode,
+    objective: "flash_sale" as CampaignObjective,
+    designStyle: "retail" as PosterDesignStyle,
   });
+  const [posterJobId, setPosterJobId] = useState<string>("");
+  const [posterBackgroundUrl, setPosterBackgroundUrl] = useState<string>("");
+  const [posterPreset, setPosterPreset] = useState<PosterPresetName | "">("");
   const [posterImage, setPosterImage] = useState<string>("");
   const [posterLoading, setPosterLoading] = useState(false);
   const [posterCopyLoading, setPosterCopyLoading] = useState(false);
   const [posterProgress, setPosterProgress] = useState(0);
   const [posterError, setPosterError] = useState<string | null>(null);
-  const [posterTone, setPosterTone] = useState<"flash_sale" | "raya_premium" | "elegant_luxury" | "bazaar_santai" | "hard_selling">("raya_premium");
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [posterSourceMode, setPosterSourceMode] = useState<"a" | "product" | "fallback">("a");
   const [historyItems, setHistoryItems] = useState<AiHistoryItem[]>(history);
   const [historyFilter, setHistoryFilter] = useState<"all" | "product_image" | "poster" | "copy">("all");
   const [historyBusy, setHistoryBusy] = useState(false);
@@ -145,10 +159,19 @@ export function AITools({
       setPosterForm((prev) => ({
         ...prev,
         productName: input.productName ?? prev.productName,
-        sellingPoint: input.sellingPoint ?? prev.sellingPoint,
+        description: input.description ?? prev.description,
+        headline: input.headline ?? prev.headline,
+        subheadline: input.subheadline ?? prev.subheadline,
+        bullet1: input.bullet1 ?? prev.bullet1,
+        bullet2: input.bullet2 ?? prev.bullet2,
+        bullet3: input.bullet3 ?? prev.bullet3,
         priceLabel: input.priceLabel ?? prev.priceLabel,
         cta: input.cta ?? prev.cta,
-        aspect: (input.aspect as "16:9" | "9:16" | undefined) ?? prev.aspect,
+        footer: input.footer ?? prev.footer,
+        ratio: (input.ratio as PosterRatio | undefined) ?? prev.ratio,
+        festival: (input.festival as FestivalMode | undefined) ?? prev.festival,
+        objective: (input.objective as CampaignObjective | undefined) ?? prev.objective,
+        designStyle: (input.designStyle as PosterDesignStyle | undefined) ?? prev.designStyle,
       }));
       if (item.imageUrl) {
         setPosterImage(item.imageUrl);
@@ -173,7 +196,8 @@ export function AITools({
       setPosterForm((prev) => ({
         ...prev,
         productName: posterFields.title || prev.productName,
-        sellingPoint: posterFields.subtitle || prev.sellingPoint,
+        headline: posterFields.title || prev.headline,
+        subheadline: posterFields.subtitle || prev.subheadline,
         cta: posterFields.cta || prev.cta,
       }));
     }
@@ -248,17 +272,6 @@ export function AITools({
     if (theme === "cute") return "from-[#112E27] via-[#1d3f37] to-[#1d4b41]";
     return "from-[#112E27] via-[#163C33] to-[#0E3B2E]";
   }, [theme]);
-
-  const selectedProduct = products.find((p) => p.id === selectedProductId);
-  const aSourceImageUrl =
-    productImage.startsWith("http://") || productImage.startsWith("https://")
-      ? productImage
-      : uploadedImageUrl && (uploadedImageUrl.startsWith("http://") || uploadedImageUrl.startsWith("https://"))
-        ? uploadedImageUrl
-        : null;
-  const productSourceImageUrl = preferredProductImage(selectedProduct);
-  const posterSourceImageUrl =
-    posterSourceMode === "a" ? aSourceImageUrl : posterSourceMode === "product" ? productSourceImageUrl : null;
 
   async function generateCopy() {
     setCopyLoading(true);
@@ -393,46 +406,66 @@ export function AITools({
   }
 
   async function generatePoster() {
-    if (posterSourceMode !== "fallback" && !posterSourceImageUrl) {
-      setPosterError(posterSourceMode === "a" ? "Generate or upload a product photo in A first." : "Selected product has no image.");
+    if (!posterJobId) {
+      setPosterError("Generate Copy with AI first.");
       return;
     }
     setPosterLoading(true);
     setPosterError(null);
     setPosterProgress(12);
-    setPosterImage("");
 
     const tick = window.setInterval(() => {
       setPosterProgress((p) => (p < 88 ? p + 6 : p));
     }, 240);
 
     try {
-      const res = await fetch("/api/ai/poster", {
+      const bgRes = await fetch("/api/posters/v3/generate-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: posterJobId }),
+      });
+      const bgJson = await bgRes.json();
+      if (!bgRes.ok) throw new Error(bgJson.error ?? "Failed to generate background");
+      if (bgJson.backgroundUrl) setPosterBackgroundUrl(String(bgJson.backgroundUrl));
+
+      const renderRes = await fetch("/api/posters/v3/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...posterForm,
-          style: theme,
-          shopId,
-          sourceImageUrl: posterSourceImageUrl ?? undefined,
+          jobId: posterJobId,
+          headline: posterForm.headline,
+          subheadline: posterForm.subheadline,
+          bullets: [posterForm.bullet1, posterForm.bullet2, posterForm.bullet3].filter(Boolean),
+          cta: posterForm.cta,
+          priceText: posterForm.priceLabel,
+          footer: posterForm.footer,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Failed");
-      setPosterImage(json.posterUrl ? String(json.posterUrl) : `data:image/png;base64,${json.posterBase64}`);
+      const json = await renderRes.json();
+      if (!renderRes.ok) throw new Error(json.error ?? "Failed");
+      setPosterImage(String(json.finalPosterUrl));
+      setPosterPreset((json.preset as PosterPresetName) ?? "");
       appendHistory({
         id: `tmp-poster-${Date.now()}`,
         type: "poster",
         createdAt: new Date().toISOString(),
-        imageUrl: json.posterUrl ? String(json.posterUrl) : null,
+        imageUrl: String(json.finalPosterUrl),
         payload: {
           input: {
             productName: posterForm.productName,
-            sellingPoint: posterForm.sellingPoint,
+            description: posterForm.description,
+            headline: posterForm.headline,
+            subheadline: posterForm.subheadline,
+            bullet1: posterForm.bullet1,
+            bullet2: posterForm.bullet2,
+            bullet3: posterForm.bullet3,
             priceLabel: posterForm.priceLabel,
             cta: posterForm.cta,
-            aspect: posterForm.aspect,
-            style: theme,
+            footer: posterForm.footer,
+            ratio: posterForm.ratio,
+            festival: posterForm.festival,
+            objective: posterForm.objective,
+            designStyle: posterForm.designStyle,
           },
         },
       });
@@ -450,32 +483,66 @@ export function AITools({
     setPosterCopyLoading(true);
     setPosterError(null);
     try {
-      const res = await fetch("/api/ai/copy", {
+      const orderLink =
+        shopProfile?.shopSlug && typeof window !== "undefined"
+          ? `${window.location.origin}/s/${shopProfile.shopSlug}`
+          : undefined;
+
+      const res = await fetch("/api/posters/v3/generate-copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "poster_fields",
-          productName: posterForm.productName || copyForm.productName,
-          keySellingPoints: posterForm.sellingPoint || copyForm.keySellingPoints || undefined,
-          price: posterForm.priceLabel,
-          toneStyle: posterTone,
-          lang: copyLang,
+          jobId: posterJobId || undefined,
           shopId,
+          productId: selectedProductId || undefined,
+          productName: posterForm.productName || copyForm.productName,
+          priceText: posterForm.priceLabel,
+          description: posterForm.description || copyForm.keySellingPoints || undefined,
+          festival: posterForm.festival,
+          objective: posterForm.objective,
+          style: posterForm.designStyle,
+          ratio: posterForm.ratio,
+          locale: copyLang,
+          shopName: shopProfile?.shopName || undefined,
+          whatsapp: shopProfile?.whatsapp || undefined,
+          orderLink,
+          footer: posterForm.footer || undefined,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Failed");
-      const fields = json.posterFields as PosterCopyFields;
+      const copy = json.copy as {
+        headline?: string;
+        subheadline?: string;
+        bullets?: string[];
+        cta?: string;
+        priceText?: string;
+        footer?: string;
+      };
+      const fields: PosterCopyFields = {
+        title: copy.headline,
+        subtitle: copy.subheadline,
+        bullets: copy.bullets ?? [],
+        cta: copy.cta,
+        priceText: copy.priceText,
+        footer: copy.footer,
+      };
+      setPosterJobId(String(json.jobId));
       setPosterForm((s) => ({
         ...s,
-        productName: fields.title || s.productName,
-        sellingPoint: fields.subtitle || s.sellingPoint,
+        headline: fields.title || s.headline,
+        subheadline: fields.subtitle || s.subheadline,
+        bullet1: fields.bullets?.[0] || s.bullet1,
+        bullet2: fields.bullets?.[1] || s.bullet2,
+        bullet3: fields.bullets?.[2] || s.bullet3,
         cta: fields.cta || s.cta,
+        priceLabel: fields.priceText || s.priceLabel,
+        footer: fields.footer || s.footer,
       }));
       setCopyForm((s) => ({
         ...s,
-        productName: s.productName || fields.title || posterForm.productName,
-        keySellingPoints: s.keySellingPoints || fields.subtitle || posterForm.sellingPoint,
+        productName: s.productName || posterForm.productName,
+        keySellingPoints: s.keySellingPoints || posterForm.description,
         price: formatMoney(posterForm.priceLabel.replace("MYR ", "")),
       }));
       appendHistory({
@@ -487,9 +554,11 @@ export function AITools({
           input: {
             mode: "poster_fields",
             productName: posterForm.productName,
-            keySellingPoints: posterForm.sellingPoint,
-            price: posterForm.priceLabel,
-            toneStyle: posterTone,
+            keySellingPoints: posterForm.description,
+            priceText: posterForm.priceLabel,
+            festival: posterForm.festival,
+            objective: posterForm.objective,
+            style: posterForm.designStyle,
             lang: copyLang,
           },
           posterFields: fields,
@@ -499,6 +568,62 @@ export function AITools({
       setPosterError(error instanceof Error ? error.message : "Failed");
     } finally {
       setPosterCopyLoading(false);
+    }
+  }
+
+  async function regeneratePosterBackground() {
+    if (!posterJobId) {
+      setPosterError("Generate Copy with AI first.");
+      return;
+    }
+    setPosterLoading(true);
+    setPosterError(null);
+    try {
+      const bgRes = await fetch("/api/posters/v3/generate-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: posterJobId, force: true }),
+      });
+      const bgJson = await bgRes.json();
+      if (!bgRes.ok) throw new Error(bgJson.error ?? "Failed to regenerate background");
+      if (bgJson.backgroundUrl) setPosterBackgroundUrl(String(bgJson.backgroundUrl));
+    } catch (error) {
+      setPosterError(error instanceof Error ? error.message : "Failed");
+    } finally {
+      setPosterLoading(false);
+    }
+  }
+
+  async function shufflePosterTemplate() {
+    if (!posterJobId) {
+      setPosterError("Generate Copy + Poster first.");
+      return;
+    }
+    setPosterLoading(true);
+    setPosterError(null);
+    try {
+      const res = await fetch("/api/posters/v3/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: posterJobId,
+          headline: posterForm.headline,
+          subheadline: posterForm.subheadline,
+          bullets: [posterForm.bullet1, posterForm.bullet2, posterForm.bullet3].filter(Boolean),
+          cta: posterForm.cta,
+          priceText: posterForm.priceLabel,
+          footer: posterForm.footer,
+          shuffleTemplate: true,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to shuffle template");
+      setPosterImage(String(json.finalPosterUrl));
+      setPosterPreset((json.preset as PosterPresetName) ?? "");
+    } catch (error) {
+      setPosterError(error instanceof Error ? error.message : "Failed");
+    } finally {
+      setPosterLoading(false);
     }
   }
 
@@ -586,43 +711,7 @@ export function AITools({
             <h3 className="text-lg font-semibold">{t(lang, "ai.poster_title")}</h3>
           </div>
           <div className="grid gap-2">
-            <div className="rounded-xl border border-white/10 bg-[#163C33]/40 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-white/70">Poster image source</p>
-                <select
-                  value={posterSourceMode}
-                  onChange={(e) => setPosterSourceMode(e.target.value as "a" | "product" | "fallback")}
-                  className="h-8 rounded-lg border border-white/10 bg-[#163C33] px-2 text-xs text-[#F3F4F6]"
-                >
-                  <option value="a">From A (Beautifier)</option>
-                  <option value="product">From Product</option>
-                  <option value="fallback">AI Background Fallback</option>
-                </select>
-              </div>
-              <p className="mt-1 text-xs text-white/50">
-                {posterSourceMode === "a"
-                  ? posterSourceImageUrl
-                    ? "Using image from A) Product Photo Beautifier."
-                    : "No linked image from A yet."
-                  : posterSourceMode === "product"
-                    ? posterSourceImageUrl
-                      ? "Using selected product main image."
-                      : "Select a product with image."
-                    : "No source image required. Poster will use AI-generated background."}
-              </p>
-              <div className="mt-2 flex items-center gap-3">
-                <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-white/10 bg-[#112E27]">
-                  {posterSourceImageUrl ? (
-                    <Image src={posterSourceImageUrl} alt="Poster source preview" fill className="object-cover" unoptimized />
-                  ) : (
-                    <div className="grid h-full w-full place-items-center text-[10px] text-white/40">No image</div>
-                  )}
-                </div>
-                <p className="text-xs text-white/55">
-                  {posterSourceImageUrl ? "This thumbnail is the current background source for B." : "Current source has no image."}
-                </p>
-              </div>
-            </div>
+            <p className="text-xs text-white/55">AI will design full poster scene (no weird AI text). Text is rendered by system for clarity.</p>
             <div className="grid gap-2 md:grid-cols-[1fr_auto]">
               <select
                 value={selectedProductId}
@@ -635,7 +724,8 @@ export function AITools({
                     setPosterForm((s) => ({
                       ...s,
                       productName: found.name,
-                      sellingPoint: found.description?.trim() ? found.description.slice(0, 120) : s.sellingPoint,
+                      description: found.description?.trim() ? found.description.slice(0, 140) : s.description,
+                      headline: s.headline || found.name,
                       priceLabel: `MYR ${price}`,
                     }));
                     setCopyForm((s) => ({
@@ -662,7 +752,8 @@ export function AITools({
                   setPosterForm((s) => ({
                     ...s,
                     productName: copyForm.productName || s.productName,
-                    sellingPoint: copyForm.keySellingPoints || s.sellingPoint,
+                    description: copyForm.keySellingPoints || s.description,
+                    headline: s.headline || copyForm.productName || s.productName,
                     priceLabel: `MYR ${formatMoney(copyForm.price)}`,
                   }));
                 }}
@@ -670,46 +761,48 @@ export function AITools({
                 {t(lang, "ai.use_copy_data")}
               </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                const found = products.find((p) => p.id === selectedProductId);
-                if (!found) return;
-                const price = found.price_cents ? (found.price_cents / 100).toFixed(2) : "0.00";
-                setPosterForm((s) => ({
-                  ...s,
-                  productName: found.name,
-                  sellingPoint: found.description?.trim() ? found.description.slice(0, 120) : s.sellingPoint,
-                  priceLabel: `MYR ${price}`,
-                }));
-                setCopyForm((s) => ({
-                  ...s,
-                  productName: found.name,
-                  keySellingPoints: found.description?.trim() ? found.description.slice(0, 180) : s.keySellingPoints,
-                  price,
-                }));
-                setPosterSourceMode("product");
-                setPosterError(null);
-              }}
-              disabled={!selectedProductId}
-            >
-              Use Product Data + Photo
-            </Button>
-            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+            <div className="grid gap-2 md:grid-cols-3">
               <select
-                value={posterTone}
-                onChange={(e) =>
-                  setPosterTone(e.target.value as "flash_sale" | "raya_premium" | "elegant_luxury" | "bazaar_santai" | "hard_selling")
-                }
+                value={posterForm.festival}
+                onChange={(e) => setPosterForm((s) => ({ ...s, festival: e.target.value as FestivalMode }))}
+                className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
+              >
+                <option value="generic">Generic Promo</option>
+                <option value="ramadan">Ramadan</option>
+                <option value="raya">Hari Raya</option>
+                <option value="cny">CNY</option>
+                <option value="deepavali">Deepavali</option>
+                <option value="christmas">Christmas</option>
+                <option value="valentine">Valentine</option>
+                <option value="birthday">Birthday / Event</option>
+                <option value="none">None (minimal)</option>
+              </select>
+              <select
+                value={posterForm.objective}
+                onChange={(e) => setPosterForm((s) => ({ ...s, objective: e.target.value as CampaignObjective }))}
                 className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
               >
                 <option value="flash_sale">Flash Sale</option>
-                <option value="raya_premium">Raya Premium</option>
-                <option value="elegant_luxury">Elegant Luxury</option>
-                <option value="bazaar_santai">Bazaar Santai</option>
-                <option value="hard_selling">Hard Selling</option>
+                <option value="new_launch">New Launch</option>
+                <option value="preorder">Pre-order</option>
+                <option value="limited">Limited Stock</option>
+                <option value="bundle">Bundle / Combo</option>
+                <option value="free_delivery">Free Delivery</option>
+                <option value="whatsapp">WhatsApp Order</option>
               </select>
+              <select
+                value={posterForm.designStyle}
+                onChange={(e) => setPosterForm((s) => ({ ...s, designStyle: e.target.value as PosterDesignStyle }))}
+                className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
+              >
+                <option value="premium">Premium Editorial</option>
+                <option value="festive">Festive Warm</option>
+                <option value="minimal">Minimal Modern</option>
+                <option value="retail">Bold Retail</option>
+                <option value="cute">Cute / Friendly</option>
+              </select>
+            </div>
+            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
               <Button
                 type="button"
                 variant="outline"
@@ -718,9 +811,19 @@ export function AITools({
               >
                 {posterCopyLoading ? "Generating..." : "Generate Copy with AI"}
               </Button>
+              <Button type="button" variant="outline" onClick={generatePosterCopyWithAi} disabled={posterCopyLoading || !(posterForm.productName || copyForm.productName)}>
+                Regenerate Copy
+              </Button>
             </div>
             <Input placeholder={t(lang, "ai.poster_product_placeholder")} value={posterForm.productName} onChange={(e) => setPosterForm((s) => ({ ...s, productName: e.target.value }))} />
-            <Input placeholder={t(lang, "ai.poster_subtitle_placeholder")} value={posterForm.sellingPoint} onChange={(e) => setPosterForm((s) => ({ ...s, sellingPoint: e.target.value }))} />
+            <Input placeholder="One-line product description" value={posterForm.description} onChange={(e) => setPosterForm((s) => ({ ...s, description: e.target.value }))} />
+            <Input placeholder="Headline" value={posterForm.headline} onChange={(e) => setPosterForm((s) => ({ ...s, headline: e.target.value }))} />
+            <Input placeholder="Subheadline" value={posterForm.subheadline} onChange={(e) => setPosterForm((s) => ({ ...s, subheadline: e.target.value }))} />
+            <div className="grid gap-2 md:grid-cols-3">
+              <Input placeholder="Benefit bullet 1" value={posterForm.bullet1} onChange={(e) => setPosterForm((s) => ({ ...s, bullet1: e.target.value }))} />
+              <Input placeholder="Benefit bullet 2" value={posterForm.bullet2} onChange={(e) => setPosterForm((s) => ({ ...s, bullet2: e.target.value }))} />
+              <Input placeholder="Benefit bullet 3" value={posterForm.bullet3} onChange={(e) => setPosterForm((s) => ({ ...s, bullet3: e.target.value }))} />
+            </div>
             <div className="grid gap-2 md:grid-cols-[90px_1fr]">
               <Input value="MYR" disabled className="text-center" />
               <Input
@@ -734,16 +837,43 @@ export function AITools({
               />
             </div>
             <Input placeholder={t(lang, "ai.poster_cta_placeholder")} value={posterForm.cta} onChange={(e) => setPosterForm((s) => ({ ...s, cta: e.target.value }))} />
+            <Input placeholder="Footer line (optional)" value={posterForm.footer} onChange={(e) => setPosterForm((s) => ({ ...s, footer: e.target.value }))} />
+            <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
+              <select
+                value={posterForm.ratio}
+                onChange={(e) => setPosterForm((s) => ({ ...s, ratio: e.target.value as PosterRatio }))}
+                className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
+              >
+                <option value="9:16">9:16</option>
+                <option value="1:1">1:1</option>
+                <option value="4:5">4:5</option>
+              </select>
+              <Button type="button" variant="outline" onClick={regeneratePosterBackground} disabled={posterLoading || !posterJobId}>
+                Regenerate Background
+              </Button>
+              <Button type="button" variant="outline" onClick={shufflePosterTemplate} disabled={posterLoading || !posterJobId}>
+                Shuffle Template
+              </Button>
+            </div>
             <select
-              value={posterForm.aspect}
-              onChange={(e) => setPosterForm((s) => ({ ...s, aspect: e.target.value as "16:9" | "9:16" }))}
+              value={copyLang}
+              onChange={(e) => setCopyLang(e.target.value as Lang)}
               className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
             >
-              <option value="16:9">16:9</option>
-              <option value="9:16">9:16</option>
+              <option value="en">English</option>
+              <option value="ms">Bahasa Melayu</option>
+              <option value="zh">中文</option>
             </select>
-            <Button variant="ai" onClick={generatePoster} disabled={posterLoading || !posterForm.productName} className="animate-pulse">
-              {posterLoading ? t(lang, "ai.rendering") : `${t(lang, "ai.generate_poster_cta").replace("(1 poster credit)", "")} (${creditCosts.poster} credits)`}
+            <div className="rounded-xl border border-white/10 bg-[#163C33]/40 p-3 text-xs text-white/65">
+              <p>Brand block</p>
+              <p>Shop: {shopProfile?.shopName || "-"}</p>
+              <p>WhatsApp: {shopProfile?.whatsapp || "-"}</p>
+              <p>Link: {shopProfile?.shopSlug ? `/s/${shopProfile.shopSlug}` : "-"}</p>
+              {posterJobId ? <p className="mt-1 text-[#00C2A8]">Job: {posterJobId.slice(0, 8)}...</p> : null}
+              {posterPreset ? <p className="text-[#00C2A8]">Preset: {posterPreset}</p> : null}
+            </div>
+            <Button variant="ai" onClick={generatePoster} disabled={posterLoading || !posterForm.headline || !posterJobId} className="animate-pulse">
+              {posterLoading ? t(lang, "ai.rendering") : "Generate Poster (2 background + 2 render credits)"}
             </Button>
           </div>
 
