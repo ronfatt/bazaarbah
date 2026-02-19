@@ -108,8 +108,9 @@ export async function generateBackgroundImage(input: {
         : "clean modern minimal product staging";
 
   const prompt = [
-    "Create an ultra-clean product-photo background with NO text, NO letters, NO logo.",
-    "Leave central negative space for later typography overlay.",
+    "Create an ultra-clean product-photo background only with NO text, NO letters, NO logo.",
+    "This is background-only output: do NOT render any food, dessert, plate, packaging, or product object.",
+    "Leave clear negative space for later product placement and typography overlay.",
     `${styleHint}.`,
     `Subject: ${input.title}.`,
     input.description ? `Details: ${input.description}.` : "",
@@ -182,11 +183,12 @@ export async function enhanceProductPhoto(input: {
         : "Clean white/cream studio background, minimal props, premium catalog style.";
 
   const prompt = [
-    "Professional food product photography of the SAME dessert shown in the reference image.",
-    "Keep the dessert's shape, texture, and colors accurate.",
-    "Remove messy background and distractions.",
-    "Place the dessert on a clean plate or minimal surface.",
-    "Soft diffused studio lighting, natural shadows, high-end commercial food photo, sharp focus on dessert, realistic, no text, no watermark, no logo.",
+    "Professional food product photography edit of the SAME exact dessert shown in the reference image.",
+    "Identity lock: preserve exact product identity, exact shape silhouette, exact texture pattern, and original color tones.",
+    "Quantity lock: preserve the same number of pieces as the reference. Do not add or remove pieces.",
+    "Composition lock: keep similar camera angle and scale. Do not morph or redesign the dessert form.",
+    "Only clean the environment: remove messy background/distractions and restage with clean surface and better lighting.",
+    "Soft diffused studio lighting, natural shadows, high-end commercial food photo, realistic, sharp focus on dessert, no text, no watermark, no logo.",
     styleAddon,
     input.description ? `Product notes: ${input.description}.` : "",
     `Product name: ${input.productName}.`,

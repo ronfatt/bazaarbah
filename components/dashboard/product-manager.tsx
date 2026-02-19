@@ -39,6 +39,10 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   const [uploadingImage, setUploadingImage] = useState(false);
   const [enhancingImage, setEnhancingImage] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("0.00");
+  const [savingEdit, setSavingEdit] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   const grouped = useMemo(() => products.filter((p) => !shopId || p.shop_id === shopId), [products, shopId]);
@@ -205,6 +209,50 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     window.location.reload();
   }
 
+  function startEdit(product: Product) {
+    setEditingId(product.id);
+    setEditName(product.name);
+    setEditPrice((product.price_cents / 100).toFixed(2));
+    setStatus(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditName("");
+    setEditPrice("0.00");
+  }
+
+  async function saveEdit(productId: string) {
+    const trimmedName = editName.trim();
+    const parsedPrice = Number(editPrice);
+    if (trimmedName.length < 2) {
+      setStatus("Product name must be at least 2 characters.");
+      return;
+    }
+    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+      setStatus("Price must be a valid number.");
+      return;
+    }
+
+    setSavingEdit(true);
+    setStatus(null);
+    const res = await fetch(`/api/products/${productId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: trimmedName,
+        priceCents: Math.round(parsedPrice * 100),
+      }),
+    });
+    const json = await res.json();
+    setSavingEdit(false);
+    if (!res.ok) {
+      setStatus(json.error ?? "Failed to save product.");
+      return;
+    }
+    window.location.reload();
+  }
+
   return (
     <div className="space-y-6">
       <form onSubmit={createProduct} className="space-y-4 rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
@@ -295,8 +343,25 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                     <span className="text-xs text-white/40">No image</span>
                   )}
                 </td>
-                <td className="px-4 py-3">{p.name}</td>
-                <td className="px-4 py-3">{currencyFromCents(p.price_cents)}</td>
+                <td className="px-4 py-3">
+                  {editingId === p.id ? (
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-9" />
+                  ) : (
+                    p.name
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {editingId === p.id ? (
+                    <Input
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+                      onBlur={() => setEditPrice((prev) => Number(prev || 0).toFixed(2))}
+                      className="h-9 w-28"
+                    />
+                  ) : (
+                    currencyFromCents(p.price_cents)
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-white/70">{p.image_source === "enhanced" ? "Enhanced" : "Original"}</span>
                   {p.image_enhanced_url ? (
@@ -313,9 +378,25 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                   </Button>
                 </td>
                 <td className="px-4 py-3">
-                  <Button variant="danger" onClick={() => remove(p.id)}>
-                    Delete
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {editingId === p.id ? (
+                      <>
+                        <Button onClick={() => saveEdit(p.id)} disabled={savingEdit}>
+                          {savingEdit ? "Saving..." : "Save"}
+                        </Button>
+                        <Button variant="outline" onClick={cancelEdit} disabled={savingEdit}>
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="outline" onClick={() => startEdit(p)}>
+                        Edit
+                      </Button>
+                    )}
+                    <Button variant="danger" onClick={() => remove(p.id)} disabled={savingEdit && editingId === p.id}>
+                      Delete
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
