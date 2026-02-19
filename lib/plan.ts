@@ -3,7 +3,7 @@ export type PlanTier = "free" | "pro_88" | "pro_128";
 export const PLAN_PRICE_CENTS: Record<PlanTier, number> = {
   free: 0,
   pro_88: 8800,
-  pro_128: 12800,
+  pro_128: 16800,
 };
 
 export const REFERRAL_BONUS: Record<Exclude<PlanTier, "free">, { copy: number; image: number; poster: number }> = {
@@ -35,19 +35,19 @@ export function resolveEffectivePrice(price: PlanPriceRow | null | undefined) {
 export const PLAN_LABEL: Record<PlanTier, string> = {
   free: "Free",
   pro_88: "RM88",
-  pro_128: "RM128",
+  pro_128: "RM168",
 };
 
 export const PLAN_AI_CREDITS: Record<PlanTier, { copy: number; image: number; poster: number }> = {
   free: { copy: 0, image: 0, poster: 0 },
-  pro_88: { copy: 20, image: 6, poster: 3 },
-  pro_128: { copy: 50, image: 15, poster: 6 },
+  pro_88: { copy: 35, image: 10, poster: 5 },
+  pro_128: { copy: 100, image: 30, poster: 20 },
 };
 
 export const PLAN_AI_TOTAL_CREDITS: Record<PlanTier, number> = {
   free: 0,
-  pro_88: 29,
-  pro_128: 71,
+  pro_88: 50,
+  pro_128: 150,
 };
 
 type ProfileLike = {

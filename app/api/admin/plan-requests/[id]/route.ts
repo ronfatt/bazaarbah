@@ -49,78 +49,92 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (payload.action === "approve") {
-    const target = request.target_plan as "pro_88" | "pro_128";
-    const credits = PLAN_AI_CREDITS[target];
-    const { data: planPrice } = await admin.from("plan_prices").select("ai_total_credits").eq("plan_tier", target).maybeSingle();
-    const totalCredits = Number(planPrice?.ai_total_credits ?? PLAN_AI_TOTAL_CREDITS[target]);
-
-    const { error: profileErr } = await admin
-      .from("profiles")
-      .update({
-        plan: "pro",
-        plan_tier: target,
-        ai_credits: totalCredits,
-        copy_credits: credits.copy,
-        image_credits: credits.image,
-        poster_credits: credits.poster,
-      })
-      .eq("id", request.user_id);
-    if (profileErr) {
-      return NextResponse.json({ error: profileErr.message }, { status: 400 });
-    }
-
-    const { data: upgradedUser } = await admin
-      .from("profiles")
-      .select("id,referred_by,referral_rewarded_at")
-      .eq("id", request.user_id)
-      .maybeSingle();
-
-    if (upgradedUser?.referred_by && !upgradedUser.referral_rewarded_at) {
-      const bonus = REFERRAL_BONUS[target];
-      const { data: referrer } = await admin
+    if (request.target_plan === "credit_100") {
+      const { data: owner } = await admin.from("profiles").select("id,ai_credits").eq("id", request.user_id).maybeSingle();
+      if (!owner) {
+        return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+      }
+      const { error: topupErr } = await admin
         .from("profiles")
-        .select("id,ai_credits,copy_credits,image_credits,poster_credits,referral_bonus_total")
-        .eq("id", upgradedUser.referred_by)
+        .update({ ai_credits: Number(owner.ai_credits ?? 0) + 100 })
+        .eq("id", request.user_id);
+      if (topupErr) {
+        return NextResponse.json({ error: topupErr.message }, { status: 400 });
+      }
+    } else {
+      const target = request.target_plan as "pro_88" | "pro_128";
+      const credits = PLAN_AI_CREDITS[target];
+      const { data: planPrice } = await admin.from("plan_prices").select("ai_total_credits").eq("plan_tier", target).maybeSingle();
+      const totalCredits = Number(planPrice?.ai_total_credits ?? PLAN_AI_TOTAL_CREDITS[target]);
+
+      const { error: profileErr } = await admin
+        .from("profiles")
+        .update({
+          plan: "pro",
+          plan_tier: target,
+          ai_credits: totalCredits,
+          copy_credits: credits.copy,
+          image_credits: credits.image,
+          poster_credits: credits.poster,
+        })
+        .eq("id", request.user_id);
+      if (profileErr) {
+        return NextResponse.json({ error: profileErr.message }, { status: 400 });
+      }
+
+      const { data: upgradedUser } = await admin
+        .from("profiles")
+        .select("id,referred_by,referral_rewarded_at")
+        .eq("id", request.user_id)
         .maybeSingle();
 
-      if (referrer) {
-        const bonusTotal = bonus.copy + bonus.image + bonus.poster;
-        await admin
+      if (upgradedUser?.referred_by && !upgradedUser.referral_rewarded_at) {
+        const bonus = REFERRAL_BONUS[target];
+        const { data: referrer } = await admin
           .from("profiles")
-          .update({
-            ai_credits: Number(referrer.ai_credits ?? 0) + bonusTotal,
-            copy_credits: Number(referrer.copy_credits ?? 0) + bonus.copy,
-            image_credits: Number(referrer.image_credits ?? 0) + bonus.image,
-            poster_credits: Number(referrer.poster_credits ?? 0) + bonus.poster,
-            referral_bonus_total: Number(referrer.referral_bonus_total ?? 0) + bonusTotal,
-          })
-          .eq("id", referrer.id);
+          .select("id,ai_credits,copy_credits,image_credits,poster_credits,referral_bonus_total")
+          .eq("id", upgradedUser.referred_by)
+          .maybeSingle();
 
-        await admin.from("profiles").update({ referral_rewarded_at: new Date().toISOString() }).eq("id", upgradedUser.id);
+        if (referrer) {
+          const bonusTotal = bonus.copy + bonus.image + bonus.poster;
+          await admin
+            .from("profiles")
+            .update({
+              ai_credits: Number(referrer.ai_credits ?? 0) + bonusTotal,
+              copy_credits: Number(referrer.copy_credits ?? 0) + bonus.copy,
+              image_credits: Number(referrer.image_credits ?? 0) + bonus.image,
+              poster_credits: Number(referrer.poster_credits ?? 0) + bonus.poster,
+              referral_bonus_total: Number(referrer.referral_bonus_total ?? 0) + bonusTotal,
+            })
+            .eq("id", referrer.id);
 
-        await admin.from("referral_rewards").insert({
-          referrer_id: referrer.id,
-          referred_user_id: upgradedUser.id,
-          plan_tier: target,
-          copy_bonus: bonus.copy,
-          image_bonus: bonus.image,
-          poster_bonus: bonus.poster,
-        });
+          await admin.from("profiles").update({ referral_rewarded_at: new Date().toISOString() }).eq("id", upgradedUser.id);
 
-        await admin.from("admin_audit_logs").insert({
-          action: "referral_reward_issued",
-          actor_id: user.id,
-          target_user_id: referrer.id,
-          plan_request_id: request.id,
-          target_plan: target,
-          note: `Referral bonus for ${upgradedUser.id}`,
-          meta: {
+          await admin.from("referral_rewards").insert({
+            referrer_id: referrer.id,
             referred_user_id: upgradedUser.id,
+            plan_tier: target,
             copy_bonus: bonus.copy,
             image_bonus: bonus.image,
             poster_bonus: bonus.poster,
-          },
-        });
+          });
+
+          await admin.from("admin_audit_logs").insert({
+            action: "referral_reward_issued",
+            actor_id: user.id,
+            target_user_id: referrer.id,
+            plan_request_id: request.id,
+            target_plan: target,
+            note: `Referral bonus for ${upgradedUser.id}`,
+            meta: {
+              referred_user_id: upgradedUser.id,
+              copy_bonus: bonus.copy,
+              image_bonus: bonus.image,
+              poster_bonus: bonus.poster,
+            },
+          });
+        }
       }
     }
   }
@@ -145,7 +159,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     actor_id: user.id,
     target_user_id: request.user_id,
     plan_request_id: request.id,
-    target_plan: request.target_plan,
+    target_plan: request.target_plan === "credit_100" ? null : request.target_plan,
     from_status: request.status,
     to_status: toStatus,
     note: payload.note ?? null,

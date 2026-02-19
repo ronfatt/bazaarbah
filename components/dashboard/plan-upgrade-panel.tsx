@@ -7,9 +7,11 @@ import { currencyFromCents } from "@/lib/utils";
 import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
 import { t, type Lang } from "@/lib/i18n";
 
+type UpgradeTarget = "pro_88" | "pro_128" | "credit_100";
+
 type PlanRequest = {
   id: string;
-  target_plan: "pro_88" | "pro_128";
+  target_plan: UpgradeTarget;
   amount_cents: number;
   status: "pending_review" | "approved" | "rejected";
   proof_image_url: string | null;
@@ -30,6 +32,15 @@ const PLAN_BENEFITS: Record<PlanTier, string[]> = {
   pro_128: ["All selling modules unlocked", "Higher AI quota for frequent posting", "Priority for heavy marketing usage"],
 };
 
+const TOPUP_100_PRICE_CENTS = 9800;
+const TOPUP_100_CREDITS = 100;
+
+const TARGET_LABEL: Record<UpgradeTarget, string> = {
+  pro_88: PLAN_LABEL.pro_88,
+  pro_128: PLAN_LABEL.pro_128,
+  credit_100: "Top-up 100 Credits",
+};
+
 export function PlanUpgradePanel({
   currentTier,
   aiCredits,
@@ -43,7 +54,8 @@ export function PlanUpgradePanel({
   requests: PlanRequest[];
   lang?: Lang;
 }) {
-  const [targetPlan, setTargetPlan] = useState<"pro_88" | "pro_128">(currentTier === "pro_88" ? "pro_128" : "pro_88");
+  const defaultTarget: UpgradeTarget = currentTier === "free" ? "pro_88" : currentTier === "pro_88" ? "pro_128" : "credit_100";
+  const [targetPlan, setTargetPlan] = useState<UpgradeTarget>(defaultTarget);
   const [referenceText, setReferenceText] = useState("");
   const [slipUrl, setSlipUrl] = useState("");
   const [slipFile, setSlipFile] = useState<File | null>(null);
@@ -52,10 +64,10 @@ export function PlanUpgradePanel({
 
   const pendingExists = requests.some((r) => r.status === "pending_review");
   const plans: PlanTier[] = ["free", "pro_88", "pro_128"];
-  const currentAmount =
-    targetPlan === "pro_88" || targetPlan === "pro_128"
-      ? resolveEffectivePrice(prices[targetPlan] ?? null) ?? PLAN_PRICE_CENTS[targetPlan]
-      : PLAN_PRICE_CENTS[targetPlan];
+  const currentAmount = targetPlan === "credit_100" ? TOPUP_100_PRICE_CENTS : resolveEffectivePrice(prices[targetPlan] ?? null) ?? PLAN_PRICE_CENTS[targetPlan];
+  const targetCredits = targetPlan === "credit_100" ? TOPUP_100_CREDITS : PLAN_AI_TOTAL_CREDITS[targetPlan];
+  const selectableTargets: UpgradeTarget[] =
+    currentTier === "free" ? ["pro_88", "pro_128", "credit_100"] : currentTier === "pro_88" ? ["pro_128", "credit_100"] : ["credit_100"];
 
   async function submitUpgrade() {
     setLoading(true);
@@ -109,9 +121,7 @@ export function PlanUpgradePanel({
                   <span className="ml-2 text-xs text-white/45 line-through">{currencyFromCents(listPrice)}</span>
                 ) : null}
               </p>
-              <p className="mt-3 text-xs text-white/60">
-                AI total {PLAN_AI_TOTAL_CREDITS[plan]}
-              </p>
+              <p className="mt-3 text-xs text-white/60">AI total {PLAN_AI_TOTAL_CREDITS[plan]}</p>
               <p className="mt-1 text-xs text-white/60">
                 AI credits: Copy {credits.copy} • Image {credits.image} • Poster {credits.poster}
               </p>
@@ -123,6 +133,18 @@ export function PlanUpgradePanel({
             </div>
           );
         })}
+        <div className="rounded-2xl border border-white/10 bg-[#163C33] p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-semibold text-white">Credit Top-up</p>
+          </div>
+          <p className="mt-1 text-sm text-white/70">{currencyFromCents(TOPUP_100_PRICE_CENTS)}</p>
+          <p className="mt-3 text-xs text-white/60">AI total +{TOPUP_100_CREDITS}</p>
+          <ul className="mt-3 space-y-1 text-xs text-white/75">
+            <li>• Add credits without changing current plan</li>
+            <li>• Manual bank transfer + admin approval</li>
+            <li>• Credits are added to current balance</li>
+          </ul>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-1">
@@ -132,71 +154,72 @@ export function PlanUpgradePanel({
         </div>
       </div>
 
-      {currentTier !== "pro_128" && (
-        <div className="rounded-2xl border border-[#C9A227]/25 bg-[#C9A227]/10 p-5">
-          <h3 className="text-lg font-semibold text-white">Upgrade Plan (Manual Bank Transfer)</h3>
-          <p className="mt-1 text-sm text-white/65">Transfer first, then upload your bank slip below. Admin will approve manually.</p>
-          <p className="mt-3 text-sm text-white/80">Bank: Maybank | Account: BazaarBah Sdn Bhd | A/C: 5140 8899 2211</p>
+      <div className="rounded-2xl border border-[#C9A227]/25 bg-[#C9A227]/10 p-5">
+        <h3 className="text-lg font-semibold text-white">Upgrade / Credit Top-up (Manual Bank Transfer)</h3>
+        <p className="mt-1 text-sm text-white/65">Transfer first, then upload your bank slip below. Admin will approve manually.</p>
+        <p className="mt-3 text-sm text-white/80">Bank: Maybank | Account: BazaarBah Sdn Bhd | A/C: 5140 8899 2211</p>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
-              Target plan
-              <select
-                value={targetPlan}
-                onChange={(e) => setTargetPlan(e.target.value as "pro_88" | "pro_128")}
-                className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
-                disabled={pendingExists}
-              >
-                {currentTier === "free" && <option value="pro_88">RM88</option>}
-                <option value="pro_128">RM128</option>
-              </select>
-            </label>
-
-            <label className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
-              Amount
-              <p className="mt-2 text-lg font-semibold text-white">{currencyFromCents(currentAmount)}</p>
-            </label>
-          </div>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <input
-              value={referenceText}
-              onChange={(e) => setReferenceText(e.target.value)}
-              placeholder="Bank reference text"
-              className="h-11 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
+            Target
+            <select
+              value={targetPlan}
+              onChange={(e) => setTargetPlan(e.target.value as UpgradeTarget)}
+              className="mt-2 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
               disabled={pendingExists}
-            />
-            <input
-              value={slipUrl}
-              onChange={(e) => setSlipUrl(e.target.value)}
-              placeholder="Slip image URL (optional if uploading file)"
-              className="h-11 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
-              disabled={pendingExists}
-            />
-          </div>
-
-          <label className="mt-3 block rounded-xl border border-dashed border-white/20 bg-[#0B241F] p-3 text-sm text-white/65">
-            Upload bank slip (jpg/png/webp, max 5MB)
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => setSlipFile(e.target.files?.[0] ?? null)}
-              className="mt-2 block w-full text-sm text-white/65"
-              disabled={pendingExists}
-            />
+            >
+              {selectableTargets.map((target) => (
+                <option key={target} value={target}>
+                  {TARGET_LABEL[target]}
+                </option>
+              ))}
+            </select>
           </label>
 
-          <div className="mt-4 flex items-center gap-3">
-            <AppButton onClick={submitUpgrade} disabled={loading || pendingExists}>
-              {loading ? "Submitting..." : pendingExists ? "Pending Review" : "Submit Upgrade Request"}
-            </AppButton>
-            <p className="text-sm text-white/65">
-              Target: {PLAN_LABEL[targetPlan]} ({PLAN_AI_CREDITS[targetPlan].copy}/{PLAN_AI_CREDITS[targetPlan].image}/{PLAN_AI_CREDITS[targetPlan].poster})
-            </p>
-          </div>
-          {result && <p className="mt-3 text-sm text-white/80">{result}</p>}
+          <label className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
+            Amount
+            <p className="mt-2 text-lg font-semibold text-white">{currencyFromCents(currentAmount)}</p>
+          </label>
         </div>
-      )}
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <input
+            value={referenceText}
+            onChange={(e) => setReferenceText(e.target.value)}
+            placeholder="Bank reference text"
+            className="h-11 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
+            disabled={pendingExists}
+          />
+          <input
+            value={slipUrl}
+            onChange={(e) => setSlipUrl(e.target.value)}
+            placeholder="Slip image URL (optional if uploading file)"
+            className="h-11 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
+            disabled={pendingExists}
+          />
+        </div>
+
+        <label className="mt-3 block rounded-xl border border-dashed border-white/20 bg-[#0B241F] p-3 text-sm text-white/65">
+          Upload bank slip (jpg/png/webp, max 5MB)
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => setSlipFile(e.target.files?.[0] ?? null)}
+            className="mt-2 block w-full text-sm text-white/65"
+            disabled={pendingExists}
+          />
+        </label>
+
+        <div className="mt-4 flex items-center gap-3">
+          <AppButton onClick={submitUpgrade} disabled={loading || pendingExists}>
+            {loading ? "Submitting..." : pendingExists ? "Pending Review" : "Submit Request"}
+          </AppButton>
+          <p className="text-sm text-white/65">
+            Target: {TARGET_LABEL[targetPlan]} • {targetCredits} AI credits
+          </p>
+        </div>
+        {result && <p className="mt-3 text-sm text-white/80">{result}</p>}
+      </div>
 
       <div className="rounded-2xl border border-white/10 bg-[#112E27] p-5">
         <h3 className="text-lg font-semibold text-white">Upgrade Requests</h3>
@@ -205,7 +228,7 @@ export function PlanUpgradePanel({
             <div key={req.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-white/80">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold text-white">
-                  {PLAN_LABEL[req.target_plan]} • {currencyFromCents(req.amount_cents)}
+                  {(req.target_plan === "credit_100" ? TARGET_LABEL.credit_100 : PLAN_LABEL[req.target_plan])} • {currencyFromCents(req.amount_cents)}
                 </p>
                 {statusBadge(req.status)}
               </div>

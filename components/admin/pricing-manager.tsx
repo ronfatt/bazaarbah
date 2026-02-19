@@ -129,7 +129,7 @@ export function PricingManager({
             const current = resolveEffectivePrice(plan as PlanPriceRow) ?? plan.list_price_cents;
             return (
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold text-white">{plan.plan_tier === "pro_88" ? "RM88 Plan" : "RM128 Plan"}</h3>
+            <h3 className="text-lg font-semibold text-white">{plan.plan_tier === "pro_88" ? "RM88 Plan" : "RM168 Plan"}</h3>
             <p className="text-sm text-white/70">
               Current shown: {currencyFromCents(current)}
             </p>

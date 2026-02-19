@@ -4,7 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePlanTier, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow } from "@/lib/plan";
 import { ensurePublicBucket } from "@/lib/storage";
 
-const allowedPlans = new Set(["pro_88", "pro_128"]);
+const allowedPlans = new Set(["pro_88", "pro_128", "credit_100"]);
+const TOPUP_100_PRICE_CENTS = 9800;
 
 export async function GET() {
   const supabase = await createClient();
@@ -45,9 +46,6 @@ export async function POST(req: NextRequest) {
   }
 
   const currentTier = normalizePlanTier(profile);
-  if (currentTier === "pro_128") {
-    return NextResponse.json({ error: "You are already on RM128 plan." }, { status: 400 });
-  }
 
   const form = await req.formData();
   const targetPlan = String(form.get("targetPlan") ?? "");
@@ -59,13 +57,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid target plan." }, { status: 400 });
   }
 
-  const { data: planPrice } = await admin
-    .from("plan_prices")
-    .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at")
-    .eq("plan_tier", targetPlan)
-    .maybeSingle();
-  const amountCents =
-    resolveEffectivePrice((planPrice as PlanPriceRow | null) ?? null) ?? PLAN_PRICE_CENTS[targetPlan as "pro_88" | "pro_128"];
+  if (currentTier === "pro_128" && targetPlan === "pro_128") {
+    return NextResponse.json({ error: "You are already on RM168 plan." }, { status: 400 });
+  }
+
+  let amountCents = TOPUP_100_PRICE_CENTS;
+  if (targetPlan === "pro_88" || targetPlan === "pro_128") {
+    const { data: planPrice } = await admin
+      .from("plan_prices")
+      .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at")
+      .eq("plan_tier", targetPlan)
+      .maybeSingle();
+    amountCents = resolveEffectivePrice((planPrice as PlanPriceRow | null) ?? null) ?? PLAN_PRICE_CENTS[targetPlan as "pro_88" | "pro_128"];
+  }
   const { data: pending } = await admin.from("plan_requests").select("id").eq("user_id", user.id).eq("status", "pending_review").limit(1);
   if ((pending?.length ?? 0) > 0) {
     return NextResponse.json({ error: "You already have a pending request." }, { status: 400 });

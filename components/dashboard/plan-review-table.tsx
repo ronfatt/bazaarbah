@@ -10,7 +10,7 @@ import { t, type Lang } from "@/lib/i18n";
 type ReviewRow = {
   id: string;
   user_id: string;
-  target_plan: "pro_88" | "pro_128";
+  target_plan: "pro_88" | "pro_128" | "credit_100";
   amount_cents: number;
   status: "pending_review" | "approved" | "rejected";
   proof_image_url: string | null;
@@ -20,6 +20,11 @@ type ReviewRow = {
   reviewed_at: string | null;
   profiles: { display_name: string | null } | { display_name: string | null }[] | null;
 };
+
+function targetLabel(target: ReviewRow["target_plan"]) {
+  if (target === "credit_100") return "Top-up 100 Credits";
+  return PLAN_LABEL[target];
+}
 
 function statusBadge(status: ReviewRow["status"]) {
   if (status === "approved") return <Badge variant="paid">approved</Badge>;
@@ -76,7 +81,7 @@ export function PlanReviewTable({ rows, lang = "en" }: { rows: ReviewRow[]; lang
                     <p className="font-semibold text-white">{profile?.display_name ?? t(lang, "common.seller")}</p>
                     <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.user_id.slice(0, 8)}...</p>
                   </td>
-                  <td className="px-4 py-3">{PLAN_LABEL[row.target_plan]}</td>
+                  <td className="px-4 py-3">{targetLabel(row.target_plan)}</td>
                   <td className="px-4 py-3">{currencyFromCents(row.amount_cents)}</td>
                   <td className="px-4 py-3 text-white/65">{new Date(row.submitted_at).toLocaleString("en-MY")}</td>
                   <td className="px-4 py-3 text-white/65">{row.reference_text || "-"}</td>

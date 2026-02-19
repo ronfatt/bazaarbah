@@ -15,7 +15,7 @@ import { getLangFromCookie } from "@/lib/i18n-server";
 type RequestRow = {
   id: string;
   user_id: string;
-  target_plan: "pro_88" | "pro_128";
+  target_plan: "pro_88" | "pro_128" | "credit_100";
   amount_cents: number;
   status: "pending_review" | "approved" | "rejected";
   proof_image_url: string | null;
