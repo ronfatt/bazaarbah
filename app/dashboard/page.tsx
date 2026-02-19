@@ -39,17 +39,33 @@ export default async function DashboardPage() {
   ]);
   const shopIds = shops?.map((s) => s.id) ?? [];
 
-  const { data: orders } = await admin
+  type DashboardOrder = { id: string; order_code: string; status: string; buyer_name: string | null; subtotal_cents: number; created_at: string };
+  let orders: DashboardOrder[] = [];
+  const primaryOrders = await admin
     .from("orders")
     .select("id,order_code,status,buyer_name,subtotal_cents,created_at,shops!inner(owner_id)")
     .eq("shops.owner_id", user.id)
     .order("created_at", { ascending: false });
+  if (primaryOrders.error) {
+    if (shopIds.length) {
+      const fallbackOrders = await admin
+        .from("orders")
+        .select("id,order_code,status,buyer_name,subtotal_cents,created_at")
+        .in("shop_id", shopIds)
+        .order("created_at", { ascending: false });
+      orders = (fallbackOrders.data as DashboardOrder[] | null) ?? [];
+    } else {
+      orders = [];
+    }
+  } else {
+    orders = (primaryOrders.data as unknown as DashboardOrder[] | null) ?? [];
+  }
 
   const todayIso = startOfTodayIso();
-  const todayOrders = orders?.filter((o) => o.created_at >= todayIso).length ?? 0;
-  const totalSales = orders?.filter((o) => o.status === "paid").reduce((acc, o) => acc + o.subtotal_cents, 0) ?? 0;
-  const pending = orders?.filter((o) => o.status === "pending_payment" || o.status === "proof_submitted").length ?? 0;
-  const paid = orders?.filter((o) => o.status === "paid").length ?? 0;
+  const todayOrders = orders.filter((o) => o.created_at >= todayIso).length;
+  const totalSales = orders.filter((o) => o.status === "paid").reduce((acc, o) => acc + o.subtotal_cents, 0);
+  const pending = orders.filter((o) => o.status === "pending_payment" || o.status === "proof_submitted").length;
+  const paid = orders.filter((o) => o.status === "paid").length;
 
   const weekly = Array.from({ length: 7 }, (_, i) => {
     const offset = -(6 - i);
@@ -57,12 +73,12 @@ export default async function DashboardPage() {
     const nextIso = startOfDayIsoOffset(offset + 1);
     const sales =
       orders
-        ?.filter((o) => o.status === "paid" && o.created_at >= startIso && o.created_at < nextIso)
-        .reduce((acc, o) => acc + o.subtotal_cents, 0) ?? 0;
+        .filter((o) => o.status === "paid" && o.created_at >= startIso && o.created_at < nextIso)
+        .reduce((acc, o) => acc + o.subtotal_cents, 0);
     return { day: formatMonthDayGMT8(startIso), sales };
   });
 
-  const recentOrders = (orders ?? []).slice(0, 6);
+  const recentOrders = orders.slice(0, 6);
   const hasShop = shopIds.length > 0;
   const includedCredits = PLAN_AI_CREDITS[tier];
   const includedTotalCredits = PLAN_AI_TOTAL_CREDITS[tier];

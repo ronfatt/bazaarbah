@@ -18,7 +18,7 @@ type ItemRow = {
   product_id: string;
   qty: number;
   line_total_cents: number;
-  products: { name: string }[] | null;
+  products: { name: string } | { name: string }[] | null;
 };
 
 export default async function OrderCodePage({ params }: { params: Promise<{ order_code: string }> }) {
@@ -49,7 +49,7 @@ export default async function OrderCodePage({ params }: { params: Promise<{ orde
     product_id: item.product_id,
     qty: item.qty,
     line_total_cents: item.line_total_cents,
-    product_name: item.products?.[0]?.name ?? "Product",
+    product_name: Array.isArray(item.products) ? item.products[0]?.name ?? "Product" : item.products?.name ?? "Product",
   }));
 
   return (

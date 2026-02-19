@@ -8,6 +8,16 @@ import { getLangFromCookie } from "@/lib/i18n-server";
 
 const statuses = ["all", "pending_payment", "proof_submitted", "paid", "cancelled"] as const;
 
+type OrderListRow = {
+  id: string;
+  order_code: string;
+  buyer_name: string | null;
+  buyer_phone: string | null;
+  status: string;
+  subtotal_cents: number;
+  created_at: string;
+};
+
 function statusClass(status: string) {
   if (status === "paid") return "bg-green-500/10 text-green-400";
   if (status === "cancelled") return "bg-red-500/10 text-red-400";
@@ -23,17 +33,46 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
-  const query = admin
+  const primaryQuery = admin
     .from("orders")
     .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at,shops!inner(owner_id)")
     .eq("shops.owner_id", user.id)
     .order("created_at", { ascending: false });
 
   if (selected !== "all") {
-    query.eq("status", selected);
+    primaryQuery.eq("status", selected);
   }
 
-  const { data: orders } = await query;
+  let orders: OrderListRow[] | null = null;
+  let loadError: string | null = null;
+
+  const primary = await primaryQuery;
+  if (primary.error) {
+    const shopsRes = await admin.from("shops").select("id").eq("owner_id", user.id);
+    if (shopsRes.error) {
+      loadError = shopsRes.error.message;
+    } else {
+      const shopIds = (shopsRes.data ?? []).map((s) => s.id);
+      if (shopIds.length) {
+        const fallbackQuery = admin
+          .from("orders")
+          .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at")
+          .in("shop_id", shopIds)
+          .order("created_at", { ascending: false });
+        if (selected !== "all") fallbackQuery.eq("status", selected);
+        const fallback = await fallbackQuery;
+        if (fallback.error) {
+          loadError = fallback.error.message;
+        } else {
+          orders = (fallback.data as OrderListRow[] | null) ?? [];
+        }
+      } else {
+        orders = [];
+      }
+    }
+  } else {
+    orders = (primary.data as unknown as OrderListRow[] | null) ?? [];
+  }
 
   return (
     <section className="space-y-4">
@@ -53,6 +92,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       </Card>
 
       <div className="overflow-hidden rounded-2xl border border-white/5 bg-[#112E27]">
+        {loadError ? <p className="px-4 py-3 text-xs text-rose-300">Orders query error: {loadError}</p> : null}
         <table className="w-full text-left text-sm">
           <thead className="border-b border-white/5 bg-[#163C33] text-[#9CA3AF]">
             <tr>

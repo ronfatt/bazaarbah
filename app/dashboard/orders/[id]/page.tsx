@@ -16,6 +16,16 @@ type ItemJoin = {
   products: { name: string } | { name: string }[];
 };
 
+type OrderView = {
+  id: string;
+  order_code: string;
+  status: string;
+  buyer_name: string | null;
+  buyer_phone: string | null;
+  subtotal_cents: number;
+  created_at: string;
+};
+
 function statusClass(status: string) {
   if (status === "paid") return "bg-green-500/10 text-green-400";
   if (status === "cancelled") return "bg-red-500/10 text-red-400";
@@ -28,35 +38,52 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { user } = await requireUnlockedSeller();
   const admin = createAdminClient();
 
-  const { data: order } = await admin
+  let order: OrderView | null = null;
+  const primary = await admin
     .from("orders")
     .select("id,order_code,status,buyer_name,buyer_phone,subtotal_cents,created_at,shops!inner(owner_id)")
     .eq("id", id)
     .eq("shops.owner_id", user.id)
     .maybeSingle();
+  if (primary.error) {
+    const shopsRes = await admin.from("shops").select("id").eq("owner_id", user.id);
+    const shopIds = (shopsRes.data ?? []).map((s) => s.id);
+    if (shopIds.length) {
+      const fallback = await admin
+        .from("orders")
+        .select("id,order_code,status,buyer_name,buyer_phone,subtotal_cents,created_at")
+        .eq("id", id)
+        .in("shop_id", shopIds)
+        .maybeSingle();
+      order = (fallback.data as OrderView | null) ?? null;
+    }
+  } else {
+    order = (primary.data as OrderView | null) ?? null;
+  }
 
   if (!order) notFound();
+  const resolvedOrder = order;
 
   const { data: items } = await admin
     .from("order_items")
     .select("id,qty,unit_price_cents,line_total_cents,products(name)")
-    .eq("order_id", order.id);
+    .eq("order_id", resolvedOrder.id);
 
   const { data: payments } = await admin
     .from("payments")
     .select("id,reference_text,proof_image_url,submitted_at,confirmed_at")
-    .eq("order_id", order.id)
+    .eq("order_id", resolvedOrder.id)
     .order("submitted_at", { ascending: false });
 
-  const { data: receipt } = await admin.from("receipts").select("receipt_no,issued_at").eq("order_id", order.id).maybeSingle();
+  const { data: receipt } = await admin.from("receipts").select("receipt_no,issued_at").eq("order_id", resolvedOrder.id).maybeSingle();
 
   return (
     <section className="space-y-4">
       <Card>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-[#F3F4F6]">{order.order_code}</h1>
-            <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClass(order.status)}`}>{order.status}</span>
+            <h1 className="text-2xl font-bold text-[#F3F4F6]">{resolvedOrder.order_code}</h1>
+            <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClass(resolvedOrder.status)}`}>{resolvedOrder.status}</span>
           </div>
           <Link href="/dashboard/orders" className="text-sm font-semibold text-[#C9A227]">
             {t(lang, "common.back")}
@@ -64,14 +91,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="mt-4 grid gap-2 text-sm text-[#9CA3AF] md:grid-cols-2">
-          <p>{t(lang, "dashboard.buyer")}: {order.buyer_name ?? t(lang, "common.guest")}</p>
-          <p>Phone: {order.buyer_phone ?? "-"}</p>
-          <p>{t(lang, "buyer.total")} {currencyFromCents(order.subtotal_cents)}</p>
-          <p>Created: {formatDateTimeMY(order.created_at)}</p>
+          <p>{t(lang, "dashboard.buyer")}: {resolvedOrder.buyer_name ?? t(lang, "common.guest")}</p>
+          <p>Phone: {resolvedOrder.buyer_phone ?? "-"}</p>
+          <p>{t(lang, "buyer.total")} {currencyFromCents(resolvedOrder.subtotal_cents)}</p>
+          <p>Created: {formatDateTimeMY(resolvedOrder.created_at)}</p>
         </div>
 
         <div className="mt-5">
-          <OrderActions orderId={order.id} canMarkPaid={order.status !== "paid"} lang={lang} />
+          <OrderActions orderId={resolvedOrder.id} canMarkPaid={resolvedOrder.status !== "paid"} lang={lang} />
         </div>
 
         {receipt && <p className="mt-4 text-sm text-emerald-400">Receipt: {receipt.receipt_no}</p>}
