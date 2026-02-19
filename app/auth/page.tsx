@@ -76,6 +76,10 @@ export default async function AuthPage({ searchParams }: { searchParams: Promise
                   created: t(lang, "form.created"),
                   failedLogin: t(lang, "form.failed_login"),
                   failedRegister: t(lang, "form.failed_register"),
+                  forgotPassword: t(lang, "form.forgot_password"),
+                  sendReset: t(lang, "form.send_reset"),
+                  resetSent: t(lang, "form.reset_sent"),
+                  emailRequired: t(lang, "form.email_required"),
                 }}
               />
             </div>

@@ -20,6 +20,10 @@ export function LoginForm({
     created: string;
     failedLogin: string;
     failedRegister: string;
+    forgotPassword: string;
+    sendReset: string;
+    resetSent: string;
+    emailRequired: string;
   };
 }) {
   const [email, setEmail] = useState("");
@@ -38,6 +42,10 @@ export function LoginForm({
       created: "Account created. If email confirmation is enabled, confirm email first.",
       failedLogin: "Login failed",
       failedRegister: "Register failed",
+      forgotPassword: "Forgot password?",
+      sendReset: "Send reset link",
+      resetSent: "Password reset email sent. Check your inbox.",
+      emailRequired: "Enter your email first.",
       ...i18n,
     }),
     [i18n],
@@ -82,6 +90,27 @@ export function LoginForm({
     }
   }
 
+  async function onForgotPassword() {
+    if (!email.trim()) {
+      setStatus(texts.emailRequired);
+      return;
+    }
+    setLoading(true);
+    setStatus(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      if (error) throw error;
+      setStatus(texts.resetSent);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : texts.failedLogin);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <form onSubmit={onLogin} className="space-y-3">
       <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={texts.emailPlaceholder} />
@@ -95,6 +124,17 @@ export function LoginForm({
         <AppButton type="button" variant="ghost" disabled={loading} className="w-full" onClick={onRegister}>
           {texts.register}
         </AppButton>
+      </div>
+
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          className="text-xs text-bb-ai hover:underline"
+          onClick={onForgotPassword}
+          disabled={loading}
+        >
+          {texts.forgotPassword} {texts.sendReset}
+        </button>
       </div>
 
       {status && <p className="text-sm text-bb-muted">{status}</p>}

@@ -59,6 +59,10 @@ const dict: Record<Lang, Record<string, string>> = {
     "form.created": "Account created. If email confirmation is enabled, confirm email first.",
     "form.failed_login": "Login failed",
     "form.failed_register": "Register failed",
+    "form.forgot_password": "Forgot password?",
+    "form.send_reset": "Send reset link",
+    "form.reset_sent": "Password reset email sent. Check your inbox.",
+    "form.email_required": "Enter your email first.",
   },
   zh: {
     "lang.en": "English",
@@ -115,6 +119,10 @@ const dict: Record<Lang, Record<string, string>> = {
     "form.created": "账号已创建。如启用邮箱验证，请先确认邮箱。",
     "form.failed_login": "登录失败",
     "form.failed_register": "注册失败",
+    "form.forgot_password": "忘记密码？",
+    "form.send_reset": "发送重设链接",
+    "form.reset_sent": "已发送重设邮件，请检查收件箱。",
+    "form.email_required": "请先输入邮箱。",
   },
   ms: {
     "lang.en": "English",
@@ -171,6 +179,10 @@ const dict: Record<Lang, Record<string, string>> = {
     "form.created": "Akaun berjaya dibuat. Jika pengesahan emel aktif, sahkan emel dahulu.",
     "form.failed_login": "Log masuk gagal",
     "form.failed_register": "Pendaftaran gagal",
+    "form.forgot_password": "Lupa kata laluan?",
+    "form.send_reset": "Hantar pautan reset",
+    "form.reset_sent": "Emel reset kata laluan telah dihantar. Semak peti masuk anda.",
+    "form.email_required": "Sila isi emel dahulu.",
   },
 };
 
