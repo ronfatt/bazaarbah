@@ -573,7 +573,7 @@ export function AITools({
 
           {posterImage && (
             <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
-              <Image src={`data:image/png;base64,${posterImage}`} alt="AI poster" width={1080} height={1920} className="h-auto w-full" unoptimized />
+              <Image src={posterImage} alt="AI poster" width={1080} height={1920} className="h-auto w-full" unoptimized />
             </div>
           )}
           {posterError && <p className="mt-3 text-sm text-rose-400">{posterError}</p>}
