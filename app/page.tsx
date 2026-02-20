@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
@@ -11,6 +11,7 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 export default async function Home() {
   const lang = await getLangFromCookie();
+  const isBm = lang === "ms";
   try {
     const supabase = await createClient();
     const {
@@ -32,10 +33,13 @@ export default async function Home() {
         <header className="flex items-center justify-between">
           <div className="w-full max-w-[220px]">
             <Image src="/logo-auth.png" alt="BazaarBah" width={720} height={360} className="h-auto w-full object-contain" priority />
-            <p className="mt-1 text-sm text-bb-muted">{t(lang, "home.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
-            <LanguageSwitcher current={lang} labels={{ en: t(lang, "lang.en"), zh: t(lang, "lang.zh"), ms: t(lang, "lang.ms") }} />
+            <LanguageSwitcher
+              current={lang}
+              labels={{ en: t(lang, "lang.en"), zh: t(lang, "lang.zh"), ms: t(lang, "lang.ms") }}
+              includeZh={false}
+            />
             <Link href="/auth">
               <AppButton variant="secondary">{t(lang, "home.login")}</AppButton>
             </Link>
@@ -45,24 +49,38 @@ export default async function Home() {
           </div>
         </header>
 
-        <section className="mx-auto mt-20 grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-6">
-            <p className="inline-flex items-center gap-2 rounded-full border border-bb-ai/20 bg-bb-ai/10 px-3 py-1 text-xs font-medium text-bb-ai">
+        <section className="mx-auto mt-20 grid max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-md lg:p-8">
+            <p className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200">
               <Sparkles size={13} /> {t(lang, "home.badge")}
             </p>
-            <h1 className="text-5xl font-bold leading-tight">{t(lang, "home.title")}</h1>
-            <p className="max-w-2xl text-lg text-bb-muted">{t(lang, "home.desc")}</p>
-            <div className="space-y-3 pt-2 text-sm text-bb-text">
-              <p className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-bb-ai" /> {t(lang, "home.b1")}</p>
-              <p className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-bb-ai" /> {t(lang, "home.b2")}</p>
-              <p className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-bb-ai" /> {t(lang, "home.b3")}</p>
-            </div>
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] text-white lg:text-6xl">{t(lang, "home.title")}</h1>
+            <p className="mt-4 max-w-xl text-base text-white/70 lg:text-lg">{t(lang, "home.desc")}</p>
+            <ul className="mt-6 space-y-3 text-sm text-white/75">
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 h-4 w-4 rounded-full border border-emerald-300/30 bg-emerald-400/20" />
+                <span>{t(lang, "home.b1")}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 h-4 w-4 rounded-full border border-emerald-300/30 bg-emerald-400/20" />
+                <span>{t(lang, "home.b2")}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 h-4 w-4 rounded-full border border-emerald-300/30 bg-emerald-400/20" />
+                <span>{t(lang, "home.b3")}</span>
+              </li>
+            </ul>
+            <p className="mt-4 text-xs text-white/50">
+              {isBm
+                ? "Nota: Bayaran guna QR bank/akaun peniaga sendiri (manual)."
+                : "Note: Payments use the seller’s own bank/QR (manual verification)."}
+            </p>
           </div>
 
-          <AppCard className="p-8 bg-bb-surface/55 border-bb-ai/10 shadow-glowAI">
-            <h2 className="text-2xl font-bold">{t(lang, "home.welcome")}</h2>
-            <p className="mt-2 text-sm text-bb-muted">{t(lang, "home.welcome_desc")}</p>
-            <div className="mt-6 flex gap-3">
+          <AppCard className="border-white/10 bg-white/5 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-md lg:p-8">
+            <h2 className="text-xl font-bold text-white">{t(lang, "home.welcome")}</h2>
+            <p className="mt-2 text-sm text-white/65">{t(lang, "home.welcome_desc")}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/auth">
                 <AppButton variant="primary" size="lg">{t(lang, "home.go_login")}</AppButton>
               </Link>

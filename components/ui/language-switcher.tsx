@@ -6,9 +6,11 @@ import type { Lang } from "@/lib/i18n";
 export function LanguageSwitcher({
   current,
   labels,
+  includeZh = true,
 }: {
   current: Lang;
   labels: { en: string; zh: string; ms: string };
+  includeZh?: boolean;
 }) {
   const [value, setValue] = useState<Lang>(current);
   const [loading, setLoading] = useState(false);
@@ -33,9 +35,8 @@ export function LanguageSwitcher({
       className="h-9 rounded-xl border border-bb-border/10 bg-bb-surface/60 px-2 text-xs text-bb-text"
     >
       <option value="en">{labels.en}</option>
-      <option value="zh">{labels.zh}</option>
+      {includeZh ? <option value="zh">{labels.zh}</option> : null}
       <option value="ms">{labels.ms}</option>
     </select>
   );
 }
-
