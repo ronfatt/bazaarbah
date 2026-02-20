@@ -59,6 +59,25 @@ export async function POST(req: NextRequest) {
     if (!bgRes.ok) return NextResponse.json({ error: "Failed to load background image" }, { status: 400 });
     const bgBuffer = Buffer.from(await bgRes.arrayBuffer());
 
+    let heroImageBuffer: Buffer | undefined;
+    if (job.product_id) {
+      const { data: product } = await admin
+        .from("products")
+        .select("image_source,image_original_url,image_enhanced_url,image_url")
+        .eq("id", job.product_id)
+        .maybeSingle();
+      const heroUrl =
+        product?.image_source === "enhanced"
+          ? product?.image_enhanced_url ?? product?.image_original_url ?? product?.image_url
+          : product?.image_original_url ?? product?.image_url ?? product?.image_enhanced_url;
+      if (heroUrl) {
+        const heroRes = await fetch(heroUrl);
+        if (heroRes.ok) {
+          heroImageBuffer = Buffer.from(await heroRes.arrayBuffer());
+        }
+      }
+    }
+
     let currentPreset: PosterPresetName | null = null;
     try {
       const parsed = JSON.parse(job.layout_json ?? "{}") as { preset?: PosterPresetName };
@@ -88,6 +107,7 @@ export async function POST(req: NextRequest) {
       footer: body.footer ?? job.footer ?? "",
       style: job.style as PosterStyle,
       festival: job.festival,
+      heroImageBuffer,
     });
 
     await ensurePublicBucket(admin, "ai-assets", 10 * 1024 * 1024);

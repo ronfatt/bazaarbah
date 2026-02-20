@@ -23,6 +23,7 @@ export type PosterRenderInput = {
   cta: string;
   footer?: string | null;
   style?: PosterStyle;
+  heroImageBuffer?: Buffer;
 };
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
@@ -153,6 +154,64 @@ export async function renderPosterV3(input: PosterRenderInput & { festival: stri
   overlay.addColorStop(1, layout.overlay.to);
   ctx.fillStyle = overlay;
   ctx.fillRect(0, 0, size.width, size.height);
+
+  if (input.heroImageBuffer) {
+    const hero = await loadImage(input.heroImageBuffer);
+    const srcRatioHero = hero.width / hero.height;
+    const dstRatioHero = layout.hero.w / layout.hero.h;
+    let hsx = 0;
+    let hsy = 0;
+    let hsw = hero.width;
+    let hsh = hero.height;
+    if (srcRatioHero > dstRatioHero) {
+      hsw = Math.floor(hero.height * dstRatioHero);
+      hsx = Math.floor((hero.width - hsw) / 2);
+    } else if (srcRatioHero < dstRatioHero) {
+      hsh = Math.floor(hero.width / dstRatioHero);
+      hsy = Math.floor((hero.height - hsh) / 2);
+    }
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.38)";
+    ctx.shadowBlur = 26;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = "rgba(10,20,17,0.28)";
+    drawRoundedRect(ctx, layout.hero.x, layout.hero.y, layout.hero.w, layout.hero.h, 28);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    const r = 28;
+    ctx.moveTo(layout.hero.x + r, layout.hero.y);
+    ctx.lineTo(layout.hero.x + layout.hero.w - r, layout.hero.y);
+    ctx.quadraticCurveTo(layout.hero.x + layout.hero.w, layout.hero.y, layout.hero.x + layout.hero.w, layout.hero.y + r);
+    ctx.lineTo(layout.hero.x + layout.hero.w, layout.hero.y + layout.hero.h - r);
+    ctx.quadraticCurveTo(layout.hero.x + layout.hero.w, layout.hero.y + layout.hero.h, layout.hero.x + layout.hero.w - r, layout.hero.y + layout.hero.h);
+    ctx.lineTo(layout.hero.x + r, layout.hero.y + layout.hero.h);
+    ctx.quadraticCurveTo(layout.hero.x, layout.hero.y + layout.hero.h, layout.hero.x, layout.hero.y + layout.hero.h - r);
+    ctx.lineTo(layout.hero.x, layout.hero.y + r);
+    ctx.quadraticCurveTo(layout.hero.x, layout.hero.y, layout.hero.x + r, layout.hero.y);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(hero, hsx, hsy, hsw, hsh, layout.hero.x, layout.hero.y, layout.hero.w, layout.hero.h);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const r2 = 28;
+    ctx.moveTo(layout.hero.x + r2, layout.hero.y);
+    ctx.lineTo(layout.hero.x + layout.hero.w - r2, layout.hero.y);
+    ctx.quadraticCurveTo(layout.hero.x + layout.hero.w, layout.hero.y, layout.hero.x + layout.hero.w, layout.hero.y + r2);
+    ctx.lineTo(layout.hero.x + layout.hero.w, layout.hero.y + layout.hero.h - r2);
+    ctx.quadraticCurveTo(layout.hero.x + layout.hero.w, layout.hero.y + layout.hero.h, layout.hero.x + layout.hero.w - r2, layout.hero.y + layout.hero.h);
+    ctx.lineTo(layout.hero.x + r2, layout.hero.y + layout.hero.h);
+    ctx.quadraticCurveTo(layout.hero.x, layout.hero.y + layout.hero.h, layout.hero.x, layout.hero.y + layout.hero.h - r2);
+    ctx.lineTo(layout.hero.x, layout.hero.y + r2);
+    ctx.quadraticCurveTo(layout.hero.x, layout.hero.y, layout.hero.x + r2, layout.hero.y);
+    ctx.closePath();
+    ctx.stroke();
+  }
 
   ctx.shadowColor = "rgba(0,0,0,0.35)";
   ctx.shadowBlur = 10;

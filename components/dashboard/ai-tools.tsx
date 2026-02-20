@@ -711,7 +711,7 @@ export function AITools({
             <h3 className="text-lg font-semibold">{t(lang, "ai.poster_title")}</h3>
           </div>
           <div className="grid gap-2">
-            <p className="text-xs text-white/55">AI will design full poster scene (no weird AI text). Text is rendered by system for clarity.</p>
+            <p className="text-xs text-white/55">{t(lang, "ai.poster_v3_hint")}</p>
             <div className="grid gap-2 md:grid-cols-[1fr_auto]">
               <select
                 value={selectedProductId}
@@ -767,39 +767,39 @@ export function AITools({
                 onChange={(e) => setPosterForm((s) => ({ ...s, festival: e.target.value as FestivalMode }))}
                 className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
               >
-                <option value="generic">Generic Promo</option>
-                <option value="ramadan">Ramadan</option>
-                <option value="raya">Hari Raya</option>
-                <option value="cny">CNY</option>
-                <option value="deepavali">Deepavali</option>
-                <option value="christmas">Christmas</option>
-                <option value="valentine">Valentine</option>
-                <option value="birthday">Birthday / Event</option>
-                <option value="none">None (minimal)</option>
+                <option value="generic">{t(lang, "ai.festival.generic")}</option>
+                <option value="ramadan">{t(lang, "ai.festival.ramadan")}</option>
+                <option value="raya">{t(lang, "ai.festival.raya")}</option>
+                <option value="cny">{t(lang, "ai.festival.cny")}</option>
+                <option value="deepavali">{t(lang, "ai.festival.deepavali")}</option>
+                <option value="christmas">{t(lang, "ai.festival.christmas")}</option>
+                <option value="valentine">{t(lang, "ai.festival.valentine")}</option>
+                <option value="birthday">{t(lang, "ai.festival.birthday")}</option>
+                <option value="none">{t(lang, "ai.festival.none")}</option>
               </select>
               <select
                 value={posterForm.objective}
                 onChange={(e) => setPosterForm((s) => ({ ...s, objective: e.target.value as CampaignObjective }))}
                 className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
               >
-                <option value="flash_sale">Flash Sale</option>
-                <option value="new_launch">New Launch</option>
-                <option value="preorder">Pre-order</option>
-                <option value="limited">Limited Stock</option>
-                <option value="bundle">Bundle / Combo</option>
-                <option value="free_delivery">Free Delivery</option>
-                <option value="whatsapp">WhatsApp Order</option>
+                <option value="flash_sale">{t(lang, "ai.objective.flash_sale")}</option>
+                <option value="new_launch">{t(lang, "ai.objective.new_launch")}</option>
+                <option value="preorder">{t(lang, "ai.objective.preorder")}</option>
+                <option value="limited">{t(lang, "ai.objective.limited")}</option>
+                <option value="bundle">{t(lang, "ai.objective.bundle")}</option>
+                <option value="free_delivery">{t(lang, "ai.objective.free_delivery")}</option>
+                <option value="whatsapp">{t(lang, "ai.objective.whatsapp")}</option>
               </select>
               <select
                 value={posterForm.designStyle}
                 onChange={(e) => setPosterForm((s) => ({ ...s, designStyle: e.target.value as PosterDesignStyle }))}
                 className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]"
               >
-                <option value="premium">Premium Editorial</option>
-                <option value="festive">Festive Warm</option>
-                <option value="minimal">Minimal Modern</option>
-                <option value="retail">Bold Retail</option>
-                <option value="cute">Cute / Friendly</option>
+                <option value="premium">{t(lang, "ai.style.premium")}</option>
+                <option value="festive">{t(lang, "ai.style.festive")}</option>
+                <option value="minimal">{t(lang, "ai.style.minimal")}</option>
+                <option value="retail">{t(lang, "ai.style.retail")}</option>
+                <option value="cute">{t(lang, "ai.style.cute")}</option>
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-[1fr_auto]">
@@ -809,20 +809,20 @@ export function AITools({
                 onClick={generatePosterCopyWithAi}
                 disabled={posterCopyLoading || !(posterForm.productName || copyForm.productName)}
               >
-                {posterCopyLoading ? "Generating..." : "Generate Copy with AI"}
+                {posterCopyLoading ? t(lang, "ai.generating") : t(lang, "ai.poster_generate_copy")}
               </Button>
               <Button type="button" variant="outline" onClick={generatePosterCopyWithAi} disabled={posterCopyLoading || !(posterForm.productName || copyForm.productName)}>
-                Regenerate Copy
+                {t(lang, "ai.poster_regen_copy")}
               </Button>
             </div>
             <Input placeholder={t(lang, "ai.poster_product_placeholder")} value={posterForm.productName} onChange={(e) => setPosterForm((s) => ({ ...s, productName: e.target.value }))} />
-            <Input placeholder="One-line product description" value={posterForm.description} onChange={(e) => setPosterForm((s) => ({ ...s, description: e.target.value }))} />
-            <Input placeholder="Headline" value={posterForm.headline} onChange={(e) => setPosterForm((s) => ({ ...s, headline: e.target.value }))} />
-            <Input placeholder="Subheadline" value={posterForm.subheadline} onChange={(e) => setPosterForm((s) => ({ ...s, subheadline: e.target.value }))} />
+            <Input placeholder={t(lang, "ai.poster_desc_oneline")} value={posterForm.description} onChange={(e) => setPosterForm((s) => ({ ...s, description: e.target.value }))} />
+            <Input placeholder={t(lang, "ai.poster_headline")} value={posterForm.headline} onChange={(e) => setPosterForm((s) => ({ ...s, headline: e.target.value }))} />
+            <Input placeholder={t(lang, "ai.poster_subheadline")} value={posterForm.subheadline} onChange={(e) => setPosterForm((s) => ({ ...s, subheadline: e.target.value }))} />
             <div className="grid gap-2 md:grid-cols-3">
-              <Input placeholder="Benefit bullet 1" value={posterForm.bullet1} onChange={(e) => setPosterForm((s) => ({ ...s, bullet1: e.target.value }))} />
-              <Input placeholder="Benefit bullet 2" value={posterForm.bullet2} onChange={(e) => setPosterForm((s) => ({ ...s, bullet2: e.target.value }))} />
-              <Input placeholder="Benefit bullet 3" value={posterForm.bullet3} onChange={(e) => setPosterForm((s) => ({ ...s, bullet3: e.target.value }))} />
+              <Input placeholder={t(lang, "ai.poster_bullet1")} value={posterForm.bullet1} onChange={(e) => setPosterForm((s) => ({ ...s, bullet1: e.target.value }))} />
+              <Input placeholder={t(lang, "ai.poster_bullet2")} value={posterForm.bullet2} onChange={(e) => setPosterForm((s) => ({ ...s, bullet2: e.target.value }))} />
+              <Input placeholder={t(lang, "ai.poster_bullet3")} value={posterForm.bullet3} onChange={(e) => setPosterForm((s) => ({ ...s, bullet3: e.target.value }))} />
             </div>
             <div className="grid gap-2 md:grid-cols-[90px_1fr]">
               <Input value="MYR" disabled className="text-center" />
@@ -837,7 +837,7 @@ export function AITools({
               />
             </div>
             <Input placeholder={t(lang, "ai.poster_cta_placeholder")} value={posterForm.cta} onChange={(e) => setPosterForm((s) => ({ ...s, cta: e.target.value }))} />
-            <Input placeholder="Footer line (optional)" value={posterForm.footer} onChange={(e) => setPosterForm((s) => ({ ...s, footer: e.target.value }))} />
+            <Input placeholder={t(lang, "ai.poster_footer_optional")} value={posterForm.footer} onChange={(e) => setPosterForm((s) => ({ ...s, footer: e.target.value }))} />
             <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
               <select
                 value={posterForm.ratio}
@@ -849,10 +849,10 @@ export function AITools({
                 <option value="4:5">4:5</option>
               </select>
               <Button type="button" variant="outline" onClick={regeneratePosterBackground} disabled={posterLoading || !posterJobId}>
-                Regenerate Background
+                {t(lang, "ai.poster_regen_bg")}
               </Button>
               <Button type="button" variant="outline" onClick={shufflePosterTemplate} disabled={posterLoading || !posterJobId}>
-                Shuffle Template
+                {t(lang, "ai.poster_shuffle")}
               </Button>
             </div>
             <select
@@ -865,15 +865,15 @@ export function AITools({
               <option value="zh">中文</option>
             </select>
             <div className="rounded-xl border border-white/10 bg-[#163C33]/40 p-3 text-xs text-white/65">
-              <p>Brand block</p>
-              <p>Shop: {shopProfile?.shopName || "-"}</p>
-              <p>WhatsApp: {shopProfile?.whatsapp || "-"}</p>
-              <p>Link: {shopProfile?.shopSlug ? `/s/${shopProfile.shopSlug}` : "-"}</p>
-              {posterJobId ? <p className="mt-1 text-[#00C2A8]">Job: {posterJobId.slice(0, 8)}...</p> : null}
-              {posterPreset ? <p className="text-[#00C2A8]">Preset: {posterPreset}</p> : null}
+              <p>{t(lang, "ai.poster_brand_block")}</p>
+              <p>{t(lang, "ai.poster_shop")}: {shopProfile?.shopName || "-"}</p>
+              <p>{t(lang, "ai.poster_whatsapp")}: {shopProfile?.whatsapp || "-"}</p>
+              <p>{t(lang, "ai.poster_link")}: {shopProfile?.shopSlug ? `/s/${shopProfile.shopSlug}` : "-"}</p>
+              {posterJobId ? <p className="mt-1 text-[#00C2A8]">{t(lang, "ai.poster_job")}: {posterJobId.slice(0, 8)}...</p> : null}
+              {posterPreset ? <p className="text-[#00C2A8]">{t(lang, "ai.poster_preset")}: {posterPreset}</p> : null}
             </div>
             <Button variant="ai" onClick={generatePoster} disabled={posterLoading || !posterForm.headline || !posterJobId} className="animate-pulse">
-              {posterLoading ? t(lang, "ai.rendering") : "Generate Poster (2 background + 2 render credits)"}
+              {posterLoading ? t(lang, "ai.rendering") : t(lang, "ai.poster_generate_final")}
             </Button>
           </div>
 
@@ -902,7 +902,7 @@ export function AITools({
         <div className="mb-3 flex items-center gap-2 text-[#F3F4F6]">
           <Sparkles size={18} className="text-[#C9A227]" />
           <h3 className="text-lg font-semibold">{t(lang, "ai.copy_title")}</h3>
-          <span className={aiBadgeClass}>{`Cost ${creditCosts.copy}`}</span>
+          <span className={aiBadgeClass}>{t(lang, "ai.cost_label")} {creditCosts.copy}</span>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -957,15 +957,15 @@ export function AITools({
 
         {copyLoading && (
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <LoadingBlock label="FB captions" />
-            <LoadingBlock label="WhatsApp + hooks" />
+            <LoadingBlock label={t(lang, "ai.copy_fb_caps")} />
+            <LoadingBlock label={t(lang, "ai.copy_wa_hooks")} />
           </div>
         )}
 
         {copyBundle && (
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <div className="rounded-xl border border-white/10 bg-[#163C33] p-3">
-              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">FB Captions</p>
+              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">{t(lang, "ai.copy_fb_caps")}</p>
               <ul className="mt-2 space-y-2 text-sm text-[#F3F4F6]">
                 {copyBundle.fbCaptions.map((c) => (
                   <li key={`${c.tone}-${c.text.slice(0, 12)}`}>
@@ -975,7 +975,7 @@ export function AITools({
               </ul>
             </div>
             <div className="rounded-xl border border-white/10 bg-[#163C33] p-3">
-              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">WhatsApp</p>
+              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">{t(lang, "ai.copy_whatsapp")}</p>
               <ul className="mt-2 space-y-2 text-sm text-[#F3F4F6]">
                 {copyBundle.whatsappBroadcasts.map((s, i) => (
                   <li key={`${i}-${s.slice(0, 10)}`}>{s}</li>
@@ -983,7 +983,7 @@ export function AITools({
               </ul>
             </div>
             <div className="rounded-xl border border-white/10 bg-[#163C33] p-3">
-              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">Hooks</p>
+              <p className="text-xs font-semibold uppercase text-[#9CA3AF]">{t(lang, "ai.copy_hooks")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {copyBundle.hooks.map((h, i) => (
                   <span key={`${i}-${h.slice(0, 10)}`} className="rounded-full bg-[#00C2A8]/10 px-3 py-1 text-xs font-medium text-[#00C2A8]">
@@ -1000,8 +1000,8 @@ export function AITools({
 
       <section className="rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-[#F3F4F6]">AI History</h3>
-          <span className="text-xs text-white/60">{historyItems.length} saved</span>
+          <h3 className="text-lg font-semibold text-[#F3F4F6]">{t(lang, "ai.history_title")}</h3>
+          <span className="text-xs text-white/60">{historyItems.length} {t(lang, "ai.history_saved")}</span>
         </div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <select
@@ -1009,17 +1009,17 @@ export function AITools({
             onChange={(e) => setHistoryFilter(e.target.value as "all" | "product_image" | "poster" | "copy")}
             className="h-9 rounded-lg border border-white/10 bg-[#163C33] px-3 text-xs text-[#F3F4F6]"
           >
-            <option value="all">All types</option>
-            <option value="product_image">Background</option>
-            <option value="poster">Poster</option>
-            <option value="copy">Copy</option>
+            <option value="all">{t(lang, "ai.history_all_types")}</option>
+            <option value="product_image">{t(lang, "ai.history_bg")}</option>
+            <option value="poster">{t(lang, "ai.history_poster")}</option>
+            <option value="copy">{t(lang, "ai.history_copy")}</option>
           </select>
           <Button type="button" variant="outline" disabled={historyBusy} onClick={clearOldHistory}>
-            {historyBusy ? "Cleaning..." : "Clear older than 30 days"}
+            {historyBusy ? t(lang, "ai.history_cleaning") : t(lang, "ai.history_clear_30d")}
           </Button>
         </div>
         {historyItems.filter((item) => historyFilter === "all" || item.type === historyFilter).length === 0 ? (
-          <p className="text-sm text-white/60">No history yet. Generate any background/poster/copy and it will appear here.</p>
+          <p className="text-sm text-white/60">{t(lang, "ai.history_empty")}</p>
         ) : (
           <div className="grid gap-3">
             {historyItems
@@ -1028,7 +1028,7 @@ export function AITools({
               <div key={item.id} className="rounded-xl border border-white/10 bg-[#163C33]/60 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-white">
-                    {item.type === "product_image" ? "Product Background" : item.type === "poster" ? "Poster" : "Copy Bundle"}
+                    {item.type === "product_image" ? t(lang, "ai.history_bg") : item.type === "poster" ? t(lang, "ai.history_poster") : t(lang, "ai.history_copy_bundle")}
                   </p>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-white/50">{formatDateTimeMY(item.createdAt)}</p>
@@ -1038,7 +1038,7 @@ export function AITools({
                       disabled={historyBusy}
                       onClick={() => deleteHistoryItem(item.id)}
                     >
-                      Delete
+                      {t(lang, "ai.delete")}
                     </Button>
                   </div>
                 </div>
@@ -1046,7 +1046,7 @@ export function AITools({
                   (() => {
                     const preview = previewCopyText(item);
                     if (!preview) {
-                      return <p className="mt-2 text-xs text-white/50">No text preview in this record.</p>;
+                      return <p className="mt-2 text-xs text-white/50">{t(lang, "ai.history_no_preview")}</p>;
                     }
                     return (
                       <div className="mt-2 rounded-lg border border-white/10 bg-[#112E27]/60 p-2">
@@ -1062,7 +1062,7 @@ export function AITools({
                               }))
                             }
                           >
-                            {preview.expanded ? "Show less" : "Show more"}
+                            {preview.expanded ? t(lang, "ai.show_less") : t(lang, "ai.show_more")}
                           </button>
                         ) : null}
                       </div>
@@ -1075,14 +1075,14 @@ export function AITools({
                       <Image src={item.imageUrl} alt={item.type} fill className="object-cover" unoptimized />
                     </div>
                     <a href={item.imageUrl} download className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10">
-                      Download
+                      {t(lang, "ai.download")}
                     </a>
                   </div>
                 ) : null}
                 <div className="mt-2">
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => applyHistory(item)}>
-                      Reuse
+                      {t(lang, "ai.reuse")}
                     </Button>
                   </div>
                 </div>
