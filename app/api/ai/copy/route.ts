@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateMarketingCopy } from "@/lib/ai";
 import { consumeAiCredit } from "@/lib/credits";
-import { assertUnlockedByUserId } from "@/lib/auth";
+import { assertActiveSellerByUserId } from "@/lib/auth";
 
 const schema = z.object({
   mode: z.enum(["full_bundle", "poster_fields"]).default("full_bundle"),
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await assertUnlockedByUserId(user.id);
+    await assertActiveSellerByUserId(user.id);
     const body = schema.parse(await req.json());
     const result = await generateMarketingCopy(body);
     const prompt = `${body.mode}|${body.productName}|${body.keySellingPoints ?? "-"}|${body.price}|${body.platform ?? "-"}|${body.toneStyle ?? "-"}`;

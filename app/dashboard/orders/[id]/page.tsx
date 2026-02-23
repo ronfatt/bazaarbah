@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { OrderActions } from "@/components/dashboard/order-actions";
-import { requireUnlockedSeller } from "@/lib/auth";
+import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { t } from "@/lib/i18n";
@@ -35,7 +35,7 @@ function statusClass(status: string) {
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const lang = await getLangFromCookie();
   const { id } = await params;
-  const { user } = await requireUnlockedSeller();
+  const { user } = await requireSeller();
   const admin = createAdminClient();
 
   let order: OrderView | null = null;

@@ -1,5 +1,4 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hasUnlockedFeatures } from "@/lib/plan";
 
 type AiType = "copy" | "poster" | "product_image";
 
@@ -32,10 +31,6 @@ export async function consumeAiCredit(input: {
 
   if (!profileRes.data) {
     throw new Error("Profile not found");
-  }
-
-  if (!hasUnlockedFeatures(profileRes.data)) {
-    throw new Error("Upgrade required. Free plan cannot use AI tools.");
   }
 
   if ((recentRes.data?.length ?? 0) > 0) {

@@ -45,7 +45,7 @@ export const PLAN_AI_CREDITS: Record<PlanTier, { copy: number; image: number; po
 };
 
 export const PLAN_AI_TOTAL_CREDITS: Record<PlanTier, number> = {
-  free: 0,
+  free: 10,
   pro_88: 50,
   pro_128: 150,
 };

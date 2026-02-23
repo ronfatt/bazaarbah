@@ -1,5 +1,5 @@
 import { ProductManager } from "@/components/dashboard/product-manager";
-import { requireUnlockedSeller } from "@/lib/auth";
+import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import type { Product, Shop } from "@/types";
@@ -8,7 +8,7 @@ import { getLangFromCookie } from "@/lib/i18n-server";
 
 export default async function ProductsPage() {
   const lang = await getLangFromCookie();
-  const { user } = await requireUnlockedSeller();
+  const { user } = await requireSeller();
   const admin = createAdminClient();
 
   const { data: profile } = await admin.from("profiles").select("ai_credits").eq("id", user.id).maybeSingle();

@@ -24,6 +24,7 @@ export default async function DashboardPage() {
   const lang = await getLangFromCookie();
   const { user, profile } = await requireSeller();
   const unlocked = hasUnlockedFeatures(profile);
+  const aiEnabled = true;
   const tier = normalizePlanTier(profile);
   const admin = createAdminClient();
 
@@ -132,7 +133,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {unlocked && !hasShop && (
+          {!hasShop && (
             <div className="mt-5 rounded-xl border border-bb-ai/15 bg-bb-surface2/40 p-4">
               <p className="text-sm font-semibold">{t(lang, "dashboard.setup_checklist")}</p>
               <ul className="mt-2 space-y-1 text-sm text-white/65">
@@ -151,7 +152,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {unlocked && hasShop && (
+          {hasShop && (
             <div className="mt-5">
               <p className="text-sm font-semibold">{t(lang, "dashboard.weekly_sales")}</p>
               <div className="mt-3">
@@ -214,10 +215,10 @@ export default async function DashboardPage() {
             <h3 className="text-lg font-semibold">{t(lang, "dashboard.ai_shortcuts")}</h3>
           </div>
           <p className="mt-2 text-sm text-white/65">
-            {unlocked ? t(lang, "dashboard.ai_shortcuts_desc_on") : t(lang, "dashboard.ai_shortcuts_desc_off")}
+            {aiEnabled ? t(lang, "dashboard.ai_shortcuts_desc_on") : t(lang, "dashboard.ai_shortcuts_desc_off")}
           </p>
           <div className="mt-4 space-y-2">
-            {unlocked ? (
+            {aiEnabled ? (
               <>
                 <Link href="/dashboard/ai" className="block">
                   <AppButton variant="ai" className="w-full justify-start">

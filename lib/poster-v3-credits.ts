@@ -1,5 +1,4 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { hasUnlockedFeatures } from "@/lib/plan";
 
 type LogType = "copy" | "product_image" | "poster";
 
@@ -24,7 +23,6 @@ export async function consumePosterV3Credits(input: {
   ]);
 
   if (!profileRes.data) throw new Error("Profile not found");
-  if (!hasUnlockedFeatures(profileRes.data)) throw new Error("Upgrade required. Free plan cannot use AI tools.");
   if ((recentRes.data?.length ?? 0) > 0) throw new Error("Too many requests. Please wait 3 seconds.");
 
   const creditsLeft = Number(profileRes.data.ai_credits ?? 0);

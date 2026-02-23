@@ -11,7 +11,7 @@ export default async function BillingPage() {
   const lang = await getLangFromCookie();
   const { user, profile } = await requireSeller();
   const tier = normalizePlanTier(profile);
-  const effectiveAiCredits = tier === "free" ? 0 : Number(profile.ai_credits ?? 0);
+  const effectiveAiCredits = Number(profile.ai_credits ?? 0);
   const admin = createAdminClient();
 
   const [reqRes, priceRes, referralRes, costRes] = await Promise.all([
@@ -41,7 +41,7 @@ export default async function BillingPage() {
     return acc;
   }, {});
   const aiTotals = {
-    free: 0,
+    free: PLAN_AI_TOTAL_CREDITS.free,
     pro_88: Number(prices.pro_88?.ai_total_credits ?? PLAN_AI_TOTAL_CREDITS.pro_88),
     pro_128: Number(prices.pro_128?.ai_total_credits ?? PLAN_AI_TOTAL_CREDITS.pro_128),
   };

@@ -1,11 +1,11 @@
 import { Card } from "@/components/ui/card";
-import { requireUnlockedSeller } from "@/lib/auth";
+import { requireSeller } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
 export default async function SettingsPage() {
   const lang = await getLangFromCookie();
-  await requireUnlockedSeller();
+  await requireSeller();
   return (
     <section className="space-y-4">
       <Card>

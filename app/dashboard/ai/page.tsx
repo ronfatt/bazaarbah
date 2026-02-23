@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { AITools } from "@/components/dashboard/ai-tools";
-import { requireUnlockedSeller } from "@/lib/auth";
+import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
@@ -24,7 +24,7 @@ function parseHistory(raw: string | null) {
 
 export default async function AIPage() {
   const lang = await getLangFromCookie();
-  const { user, profile } = await requireUnlockedSeller();
+  const { user, profile } = await requireSeller();
   const admin = createAdminClient();
 
   const { data: shop } = await admin

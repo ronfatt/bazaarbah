@@ -1,13 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { ShopForm } from "@/components/dashboard/shop-form";
-import { requireUnlockedSeller } from "@/lib/auth";
+import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
 export default async function ShopPage() {
   const lang = await getLangFromCookie();
-  const { user } = await requireUnlockedSeller();
+  const { user } = await requireSeller();
   const admin = createAdminClient();
 
   const { data: shops } = await admin.from("shops").select("*").eq("owner_id", user.id).order("created_at", { ascending: true });

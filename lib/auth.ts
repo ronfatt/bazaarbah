@@ -4,6 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasUnlockedFeatures, normalizePlanTier } from "@/lib/plan";
 
+type ProfileAccess = {
+  id: string;
+  plan: string | null;
+  plan_tier: string | null;
+  role: string | null;
+  is_banned: boolean | null;
+};
+
 export async function requireSeller(options?: { loginPath?: string }) {
   const supabase = await createClient();
   const {
@@ -22,7 +30,7 @@ export async function requireSeller(options?: { loginPath?: string }) {
       id: user.id,
       display_name: user.email ?? "Seller",
       plan: "basic",
-      ai_credits: 0,
+      ai_credits: 10,
       copy_credits: 0,
       image_credits: 0,
       poster_credits: 0,
@@ -81,16 +89,28 @@ export async function requireSeller(options?: { loginPath?: string }) {
 
 export function assertUnlocked(profile: { plan_tier?: string | null; plan?: string | null }) {
   if (!hasUnlockedFeatures(profile)) {
-    throw new Error("Plan upgrade required. Please submit your payment slip in Billing.");
+    throw new Error("Plan upgrade required. Free members are view-only for now. You can still use AI Marketing and Billing.");
+  }
+}
+
+async function getProfileAccessByUserId(userId: string): Promise<ProfileAccess> {
+  const admin = createAdminClient();
+  const { data: profile } = await admin.from("profiles").select("id,plan,plan_tier,role,is_banned").eq("id", userId).maybeSingle();
+  if (!profile) {
+    throw new Error("Profile not found");
+  }
+  return profile as ProfileAccess;
+}
+
+export async function assertActiveSellerByUserId(userId: string) {
+  const profile = await getProfileAccessByUserId(userId);
+  if (profile.is_banned) {
+    throw new Error("Account is banned. Contact support.");
   }
 }
 
 export async function assertUnlockedByUserId(userId: string) {
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id,plan,role,is_banned").eq("id", userId).maybeSingle();
-  if (!profile) {
-    throw new Error("Profile not found");
-  }
+  const profile = await getProfileAccessByUserId(userId);
   if (profile.is_banned) {
     throw new Error("Account is banned. Contact support.");
   }

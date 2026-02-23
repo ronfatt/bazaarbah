@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateProductDescription } from "@/lib/ai";
 import { consumeAiCredit } from "@/lib/credits";
-import { assertUnlockedByUserId } from "@/lib/auth";
+import { assertActiveSellerByUserId } from "@/lib/auth";
 
 const schema = z.object({
   productName: z.string().min(2),
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await assertUnlockedByUserId(user.id);
+    await assertActiveSellerByUserId(user.id);
     const body = schema.parse(await req.json());
     const description = await generateProductDescription({
       productName: body.productName,

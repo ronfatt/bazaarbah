@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertUnlockedByUserId } from "@/lib/auth";
+import { assertActiveSellerByUserId } from "@/lib/auth";
 import { consumePosterV3Credits } from "@/lib/poster-v3-credits";
 import { ensurePublicBucket } from "@/lib/storage";
 import { choosePosterPreset, renderPosterV3, type PosterStyle } from "@/lib/poster-v3";
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    await assertUnlockedByUserId(user.id);
+    await assertActiveSellerByUserId(user.id);
     const body = schema.parse(await req.json());
     const admin = createAdminClient();
 

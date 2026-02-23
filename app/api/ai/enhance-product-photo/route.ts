@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertUnlockedByUserId } from "@/lib/auth";
+import { assertActiveSellerByUserId } from "@/lib/auth";
 import { enhanceProductPhoto } from "@/lib/ai";
 import { consumeAiCredit, getAiCreditCost } from "@/lib/credits";
 import { ensurePublicBucket } from "@/lib/storage";
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await assertUnlockedByUserId(user.id);
+    await assertActiveSellerByUserId(user.id);
     const body = schema.parse(await req.json());
     const admin = createAdminClient();
 

@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { composePoster } from "@/lib/poster";
 import { generateBackgroundImage } from "@/lib/ai";
 import { consumeAiCredit } from "@/lib/credits";
-import { assertUnlockedByUserId } from "@/lib/auth";
+import { assertActiveSellerByUserId } from "@/lib/auth";
 import { ensurePublicBucket } from "@/lib/storage";
 
 const schema = z.object({
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await assertUnlockedByUserId(user.id);
+    await assertActiveSellerByUserId(user.id);
     const body = schema.parse(await req.json());
     const admin = createAdminClient();
 

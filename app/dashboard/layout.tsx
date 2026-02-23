@@ -36,7 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const credits = totalAiCredits(profile);
   const email = user.email ?? profile.display_name ?? "seller";
   const linkList = links(lang);
-  const baseNav = tier === "free" ? linkList.filter((link) => link.href === "/dashboard" || link.href === "/dashboard/billing") : linkList;
+  const baseNav = linkList;
   const navItems = profile.role === "admin" ? [...baseNav, ...adminLinks(lang)] : baseNav;
   const planLabel = tier === "free" ? t(lang, "plan.free") : `${PLAN_LABEL[tier]} • ${t(lang, "plan.active")}`;
 

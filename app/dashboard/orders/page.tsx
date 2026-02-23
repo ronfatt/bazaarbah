@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { requireUnlockedSeller } from "@/lib/auth";
+import { requireSeller } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents } from "@/lib/utils";
 import { t } from "@/lib/i18n";
@@ -30,7 +30,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const { status } = await searchParams;
   const selected = statuses.includes((status ?? "all") as (typeof statuses)[number]) ? (status ?? "all") : "all";
 
-  const { user } = await requireUnlockedSeller();
+  const { user } = await requireSeller();
   const admin = createAdminClient();
 
   const primaryQuery = admin
