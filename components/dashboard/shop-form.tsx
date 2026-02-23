@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { t, type Lang } from "@/lib/i18n";
 import type { Shop } from "@/types";
+import Link from "next/link";
 
-type Props = { initialShop: Shop | null };
+type Props = { initialShop: Shop | null; readOnly?: boolean };
 
-export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) {
+export function ShopForm({ initialShop, readOnly = false, lang = "en" }: Props & { lang?: Lang }) {
   const [shopName, setShopName] = useState(initialShop?.shop_name ?? "");
   const [slug, setSlug] = useState(initialShop?.slug ?? "");
   const [phoneWhatsapp, setPhoneWhatsapp] = useState(initialShop?.phone_whatsapp ?? "");
@@ -30,6 +31,10 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (readOnly) {
+      setStatus("Free plan is read-only. Upgrade in Billing to edit shop.");
+      return;
+    }
     setStatus("...");
 
     const method = initialShop ? "PATCH" : "POST";
@@ -85,13 +90,13 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
     <form onSubmit={onSubmit} className="space-y-5">
       <div>
         <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.name.label")}</label>
-        <Input value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Ain's Raya Cookies" required />
+        <Input value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Ain's Raya Cookies" required disabled={readOnly} />
         <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.name.helper")}</p>
       </div>
 
       <div>
         <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.slug.label")}</label>
-        <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="ains-raya" required />
+        <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="ains-raya" required disabled={readOnly} />
         <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.slug.helper")}</p>
         <p className="mt-2 text-xs text-white/70">
           {t(lang, "shop.field.slug.preview")} <span className="font-mono text-bb-gold">{shopLink}</span>
@@ -126,22 +131,22 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
 
       <div>
         <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.whatsapp.label")}</label>
-        <Input value={phoneWhatsapp} onChange={(e) => setPhoneWhatsapp(e.target.value)} placeholder="6012XXXXXXX" required />
+        <Input value={phoneWhatsapp} onChange={(e) => setPhoneWhatsapp(e.target.value)} placeholder="6012XXXXXXX" required disabled={readOnly} />
         <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.whatsapp.helper")}</p>
       </div>
 
       <div>
         <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.area.label")}</label>
-        <Textarea value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="Tawau town area" rows={2} />
+        <Textarea value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="Tawau town area" rows={2} disabled={readOnly} />
         <p className="mt-1 text-xs text-white/45">{t(lang, "shop.field.area.helper")}</p>
       </div>
 
       <div>
         <label className="mb-1 block text-sm font-semibold text-white">{t(lang, "shop.field.logo.label")}</label>
         <p className="mb-2 text-xs text-white/45">{t(lang, "shop.field.logo.helper")}</p>
-        <label className="inline-flex cursor-pointer items-center rounded-xl border border-white/10 bg-[#163C33] px-4 py-2 text-sm text-white hover:bg-[#1c4a40]">
+        <label className={`inline-flex items-center rounded-xl border border-white/10 bg-[#163C33] px-4 py-2 text-sm text-white ${readOnly ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-[#1c4a40]"}`}>
           {uploadingLogo ? t(lang, "shop.field.logo.uploading") : t(lang, "shop.field.logo.upload")}
-          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onLogoFileChange(e.target.files?.[0])} />
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onLogoFileChange(e.target.files?.[0])} disabled={readOnly} />
         </label>
         {logoUrl && (
           <div className="mt-3 flex items-center gap-3">
@@ -155,9 +160,9 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
       <div>
         <label className="mb-1 block text-sm font-semibold text-white">Payment QR Code (Manual Payment)</label>
         <p className="mb-2 text-xs text-white/45">Upload your payment QR. Buyers will scan this on order page.</p>
-        <label className="inline-flex cursor-pointer items-center rounded-xl border border-white/10 bg-[#163C33] px-4 py-2 text-sm text-white hover:bg-[#1c4a40]">
+        <label className={`inline-flex items-center rounded-xl border border-white/10 bg-[#163C33] px-4 py-2 text-sm text-white ${readOnly ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-[#1c4a40]"}`}>
           {uploadingLogo ? "Uploading..." : "Upload Payment QR"}
-          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onPaymentQrChange(e.target.files?.[0])} />
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onPaymentQrChange(e.target.files?.[0])} disabled={readOnly} />
         </label>
         {paymentQrUrl && (
           <div className="mt-3 flex items-center gap-3">
@@ -174,7 +179,8 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
         <div className="grid gap-2 md:grid-cols-3">
           <button
             type="button"
-            onClick={() => setTheme("gold")}
+            onClick={() => !readOnly && setTheme("gold")}
+            disabled={readOnly}
             className={`rounded-xl border p-3 text-left ${theme === "gold" ? "border-bb-gold bg-bb-gold/10" : "border-white/10 bg-[#163C33]"}`}
           >
             <div className="h-10 rounded-md bg-gradient-to-r from-[#0B3D2E] to-[#D4AF37]" />
@@ -183,7 +189,8 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
           </button>
           <button
             type="button"
-            onClick={() => setTheme("minimal")}
+            onClick={() => !readOnly && setTheme("minimal")}
+            disabled={readOnly}
             className={`rounded-xl border p-3 text-left ${theme === "minimal" ? "border-bb-ai bg-bb-ai/10" : "border-white/10 bg-[#163C33]"}`}
           >
             <div className="h-10 rounded-md bg-gradient-to-r from-[#f7f7f7] to-[#1f2937]" />
@@ -191,7 +198,8 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
           </button>
           <button
             type="button"
-            onClick={() => setTheme("cute")}
+            onClick={() => !readOnly && setTheme("cute")}
+            disabled={readOnly}
             className={`rounded-xl border p-3 text-left ${theme === "cute" ? "border-pink-300 bg-pink-500/10" : "border-white/10 bg-[#163C33]"}`}
           >
             <div className="h-10 rounded-md bg-gradient-to-r from-[#FFFBEB] to-[#FB7185]" />
@@ -200,7 +208,12 @@ export function ShopForm({ initialShop, lang = "en" }: Props & { lang?: Lang }) 
         </div>
       </div>
 
-      <Button type="submit">{t(lang, "shop.save_continue")}</Button>
+      {readOnly ? (
+        <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          Free plan is view-only for shop edits. <Link href="/dashboard/billing" className="underline">Upgrade in Billing</Link>.
+        </div>
+      ) : null}
+      <Button type="submit" disabled={readOnly}>{t(lang, "shop.save_continue")}</Button>
       <p className="text-xs text-white/45">{t(lang, "shop.next_product")}</p>
       {status && <p className="text-sm text-[#9CA3AF]">{status}</p>}
     </form>

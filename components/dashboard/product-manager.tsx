@@ -9,12 +9,14 @@ import { t, type Lang } from "@/lib/i18n";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { AIEnhancePanel } from "@/components/ui/ai-enhance-panel";
+import Link from "next/link";
 
 type Props = {
   shops: Shop[];
   products: Product[];
   aiCredits: number;
   imageCreditCost: number;
+  readOnly?: boolean;
 };
 
 type EnhanceStyle = "studio" | "raya" | "premium";
@@ -25,7 +27,7 @@ function activeImage(product: Product) {
   return product.image_original_url ?? product.image_url ?? product.image_enhanced_url ?? null;
 }
 
-export function ProductManager({ shops, products, aiCredits: initialAiCredits, imageCreditCost, lang = "en" }: Props & { lang?: Lang }) {
+export function ProductManager({ shops, products, aiCredits: initialAiCredits, imageCreditCost, readOnly = false, lang = "en" }: Props & { lang?: Lang }) {
   const [shopId, setShopId] = useState(shops[0]?.id ?? "");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -60,6 +62,10 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
 
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
+    if (readOnly) {
+      setStatus("Free plan is read-only. Upgrade in Billing to add products.");
+      return;
+    }
     setStatus("...");
     let finalOriginalUrl = imageOriginalUrl;
 
@@ -97,6 +103,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   }
 
   async function onProductImageChange(file?: File) {
+    if (readOnly) return;
     if (!file) return;
     setImageFile(file);
     setUploadingImage(true);
@@ -116,6 +123,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   }
 
   async function enhanceImage() {
+    if (readOnly) return;
     if (!imageOriginalUrl) {
       setStatus("Upload product photo first.");
       return;
@@ -159,6 +167,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   }
 
   async function generateDescription() {
+    if (readOnly) return;
     if (!name.trim()) {
       setStatus("Enter product name first.");
       return;
@@ -187,6 +196,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   }
 
   async function toggleAvailability(productId: string, next: boolean) {
+    if (readOnly) return;
     await fetch(`/api/products/${productId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -196,6 +206,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   }
 
   async function setMainSource(product: Product, source: "original" | "enhanced") {
+    if (readOnly) return;
     await fetch(`/api/products/${product.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -205,11 +216,13 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   }
 
   async function remove(productId: string) {
+    if (readOnly) return;
     await fetch(`/api/products/${productId}`, { method: "DELETE" });
     window.location.reload();
   }
 
   function startEdit(product: Product) {
+    if (readOnly) return;
     setEditingId(product.id);
     setEditName(product.name);
     setEditPrice((product.price_cents / 100).toFixed(2));
@@ -223,6 +236,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   }
 
   async function saveEdit(productId: string) {
+    if (readOnly) return;
     const trimmedName = editName.trim();
     const parsedPrice = Number(editPrice);
     if (trimmedName.length < 2) {
@@ -257,7 +271,12 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     <div className="space-y-6">
       <form onSubmit={createProduct} className="space-y-4 rounded-2xl border border-white/5 bg-[#112E27] p-6 shadow-xl">
         <h2 className="text-lg font-semibold text-[#F3F4F6]">{t(lang, "dashboard.add_product")}</h2>
-        <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]" required>
+        {readOnly ? (
+          <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            Free plan is view-only for products. <Link href="/dashboard/billing" className="underline">Upgrade in Billing</Link>.
+          </div>
+        ) : null}
+        <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]" required disabled={readOnly}>
           {shops.map((shop) => (
             <option key={shop.id} value={shop.id}>
               {shop.shop_name}
@@ -267,10 +286,14 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
 
         <div className="space-y-2">
           <p className="text-xs text-white/60">Product Photo</p>
-          <ImageUploader uploading={uploadingImage} onChange={onProductImageChange} previewUrl={imageOriginalUrl || undefined} label="Upload Image" />
+          {readOnly ? (
+            <p className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/60">Upload disabled on Free plan.</p>
+          ) : (
+            <ImageUploader uploading={uploadingImage} onChange={onProductImageChange} previewUrl={imageOriginalUrl || undefined} label="Upload Image" />
+          )}
         </div>
 
-        {imageOriginalUrl ? (
+        {imageOriginalUrl && !readOnly ? (
           <AIEnhancePanel
             imageOriginalUrl={imageOriginalUrl}
             imageEnhancedUrl={imageEnhancedUrl}
@@ -286,15 +309,15 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
           />
         ) : null}
 
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t(lang, "products.title")} required />
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t(lang, "products.title")} required disabled={readOnly} />
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs text-white/60">Description</p>
-            <Button type="button" variant="ai" onClick={generateDescription} disabled={generatingDesc || !name.trim()}>
+            <Button type="button" variant="ai" onClick={generateDescription} disabled={readOnly || generatingDesc || !name.trim()}>
               {generatingDesc ? "Generating..." : "AI Generate Description"}
             </Button>
           </div>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short product description" rows={3} />
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short product description" rows={3} disabled={readOnly} />
         </div>
         <Input
           value={price}
@@ -302,19 +325,20 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
           onBlur={() => setPrice((prev) => Number(prev || 0).toFixed(2))}
           placeholder="0.00"
           required
+          disabled={readOnly}
         />
 
         {imageEnhancedUrl ? (
           <div className="rounded-xl border border-white/10 bg-[#163C33]/60 p-3">
             <p className="text-xs text-white/60">Main photo source</p>
             <div className="mt-2 flex gap-2">
-              <Button type="button" variant={imageSource === "original" ? "default" : "outline"} onClick={() => setImageSource("original")}>Original</Button>
-              <Button type="button" variant={imageSource === "enhanced" ? "default" : "outline"} onClick={() => setImageSource("enhanced")}>Enhanced</Button>
+              <Button type="button" variant={imageSource === "original" ? "default" : "outline"} onClick={() => setImageSource("original")} disabled={readOnly}>Original</Button>
+              <Button type="button" variant={imageSource === "enhanced" ? "default" : "outline"} onClick={() => setImageSource("enhanced")} disabled={readOnly}>Enhanced</Button>
             </div>
           </div>
         ) : null}
 
-        <Button type="submit" disabled={uploadingImage || generatingDesc || enhancingImage}>
+        <Button type="submit" disabled={readOnly || uploadingImage || generatingDesc || enhancingImage}>
           {uploadingImage ? "Uploading image..." : t(lang, "dashboard.add_product")}
         </Button>
         {!imageOriginalUrl && status ? <p className="text-sm text-[#9CA3AF]">{status}</p> : null}
@@ -366,14 +390,14 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                   <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-white/70">{p.image_source === "enhanced" ? "Enhanced" : "Original"}</span>
                   {p.image_enhanced_url ? (
                     <div className="mt-2">
-                      <Button variant="outline" onClick={() => setMainSource(p, p.image_source === "enhanced" ? "original" : "enhanced")}>
+                      <Button variant="outline" onClick={() => setMainSource(p, p.image_source === "enhanced" ? "original" : "enhanced")} disabled={readOnly}>
                         {p.image_source === "enhanced" ? "Use Original" : "Use Enhanced"}
                       </Button>
                     </div>
                   ) : null}
                 </td>
                 <td className="px-4 py-3">
-                  <Button variant="outline" onClick={() => toggleAvailability(p.id, !p.is_available)}>
+                  <Button variant="outline" onClick={() => toggleAvailability(p.id, !p.is_available)} disabled={readOnly}>
                     {p.is_available ? "Yes" : "No"}
                   </Button>
                 </td>
@@ -381,19 +405,19 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                   <div className="flex flex-wrap gap-2">
                     {editingId === p.id ? (
                       <>
-                        <Button onClick={() => saveEdit(p.id)} disabled={savingEdit}>
+                        <Button onClick={() => saveEdit(p.id)} disabled={readOnly || savingEdit}>
                           {savingEdit ? "Saving..." : "Save"}
                         </Button>
-                        <Button variant="outline" onClick={cancelEdit} disabled={savingEdit}>
+                        <Button variant="outline" onClick={cancelEdit} disabled={readOnly || savingEdit}>
                           Cancel
                         </Button>
                       </>
                     ) : (
-                      <Button variant="outline" onClick={() => startEdit(p)}>
+                      <Button variant="outline" onClick={() => startEdit(p)} disabled={readOnly}>
                         Edit
                       </Button>
                     )}
-                    <Button variant="danger" onClick={() => remove(p.id)} disabled={savingEdit && editingId === p.id}>
+                    <Button variant="danger" onClick={() => remove(p.id)} disabled={readOnly || (savingEdit && editingId === p.id)}>
                       Delete
                     </Button>
                   </div>

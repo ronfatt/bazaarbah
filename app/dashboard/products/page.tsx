@@ -5,13 +5,15 @@ import { Card } from "@/components/ui/card";
 import type { Product, Shop } from "@/types";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
+import { hasUnlockedFeatures } from "@/lib/plan";
 
 export default async function ProductsPage() {
   const lang = await getLangFromCookie();
-  const { user } = await requireSeller();
+  const { user, profile } = await requireSeller();
   const admin = createAdminClient();
+  const readOnly = !hasUnlockedFeatures(profile);
 
-  const { data: profile } = await admin.from("profiles").select("ai_credits").eq("id", user.id).maybeSingle();
+  const { data: profileCredits } = await admin.from("profiles").select("ai_credits").eq("id", user.id).maybeSingle();
   const { data: costRows } = await admin.from("ai_credit_costs").select("ai_type,cost");
   const imageCreditCost = Number(costRows?.find((row) => row.ai_type === "product_image")?.cost ?? 1);
   const { data: shops } = await admin.from("shops").select("*").eq("owner_id", user.id).order("created_at", { ascending: true });
@@ -30,8 +32,9 @@ export default async function ProductsPage() {
       <ProductManager
         shops={(shops ?? []) as Shop[]}
         products={(products ?? []) as Product[]}
-        aiCredits={profile?.ai_credits ?? 0}
+        aiCredits={profileCredits?.ai_credits ?? 0}
         imageCreditCost={imageCreditCost}
+        readOnly={readOnly}
         lang={lang}
       />
     </section>

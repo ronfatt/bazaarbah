@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
+import { hasUnlockedFeatures } from "@/lib/plan";
 
 type ItemJoin = {
   id: string;
@@ -35,8 +36,9 @@ function statusClass(status: string) {
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const lang = await getLangFromCookie();
   const { id } = await params;
-  const { user } = await requireSeller();
+  const { user, profile } = await requireSeller();
   const admin = createAdminClient();
+  const readOnly = !hasUnlockedFeatures(profile);
 
   let order: OrderView | null = null;
   const primary = await admin
@@ -98,7 +100,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="mt-5">
-          <OrderActions orderId={resolvedOrder.id} canMarkPaid={resolvedOrder.status !== "paid"} lang={lang} />
+          <OrderActions orderId={resolvedOrder.id} canMarkPaid={resolvedOrder.status !== "paid"} readOnly={readOnly} lang={lang} />
         </div>
 
         {receipt && <p className="mt-4 text-sm text-emerald-400">Receipt: {receipt.receipt_no}</p>}
