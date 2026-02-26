@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertUnlockedByUserId } from "@/lib/auth";
+import { assertActiveSellerByUserId } from "@/lib/auth";
 import { ensurePublicBucket } from "@/lib/storage";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await assertUnlockedByUserId(user.id);
+    await assertActiveSellerByUserId(user.id);
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {

@@ -107,6 +107,8 @@ export function AITools({
   });
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [productImage, setProductImage] = useState<string>("");
+  const [imageUploadLoading, setImageUploadLoading] = useState(false);
+  const [imageUploadStatus, setImageUploadStatus] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageProgress, setImageProgress] = useState(0);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -316,17 +318,30 @@ export function AITools({
 
   async function uploadAiImage(file?: File) {
     if (!file) return;
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/products/upload", { method: "POST", body: form });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "Upload failed");
-    setUploadedImageUrl(json.imageUrl as string);
+    setImageUploadLoading(true);
+    setImageUploadStatus("Uploading image...");
+    setImageError(null);
+    setUploadedImageUrl("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/products/upload", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Upload failed");
+      setUploadedImageUrl(json.imageUrl as string);
+      setImageUploadStatus("Upload complete. Ready to enhance.");
+    } catch (error) {
+      setImageUploadStatus(null);
+      setImageError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setImageUploadLoading(false);
+    }
   }
 
   async function generateProductImage() {
     setImageLoading(true);
     setImageError(null);
+    setImageUploadStatus(null);
     setImageProgress(15);
     setProductImage("");
 
@@ -673,10 +688,10 @@ export function AITools({
             </select>
             <div className="rounded-xl border border-white/10 bg-[#0B241F] p-3">
               <p className="text-xs text-white/60">{t(lang, "ai.photo_upload_label")}</p>
-              <ImageUploader uploading={imageLoading} onChange={uploadAiImage} previewUrl={uploadedImageUrl || undefined} label={t(lang, "ai.photo_upload_cta")} />
+              <ImageUploader uploading={imageUploadLoading} onChange={uploadAiImage} previewUrl={uploadedImageUrl || undefined} label={t(lang, "ai.photo_upload_cta")} />
               <p className="mt-2 text-xs text-white/45">{t(lang, "ai.photo_upload_hint")}</p>
             </div>
-            <Button variant="ai" onClick={generateProductImage} disabled={imageLoading || !imageForm.productName} className="animate-pulse">
+            <Button variant="ai" onClick={generateProductImage} disabled={imageLoading || imageUploadLoading || !imageForm.productName} className="animate-pulse">
               {imageLoading
                 ? t(lang, "ai.generating")
                 : uploadedImageUrl
@@ -685,6 +700,7 @@ export function AITools({
             </Button>
           </div>
 
+          {imageUploadStatus && <p className="mt-3 text-sm text-emerald-300">{imageUploadStatus}</p>}
           {imageLoading && (
             <div className="mt-3">
               <div className="h-2 rounded-full bg-white/10">
