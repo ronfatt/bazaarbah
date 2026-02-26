@@ -9,6 +9,8 @@ import { formatDateMY } from "@/lib/utils";
 type MemberRow = {
   id: string;
   display_name: string | null;
+  email: string | null;
+  phone_whatsapp: string | null;
   role: "seller" | "admin";
   plan_tier: "free" | "pro_88" | "pro_128";
   ai_credits: number;
@@ -65,6 +67,8 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
               <tr key={row.id} className="border-t border-white/5 text-white/80 hover:bg-[#163C33]/60">
                 <td className="px-4 py-3">
                   <p className="font-semibold text-white">{row.display_name ?? t(lang, "admin.members")}</p>
+                  <p className="mt-0.5 text-[11px] text-white/60">{row.email ?? "No email"}</p>
+                  <p className="mt-0.5 text-[11px] text-white/45">WhatsApp: {row.phone_whatsapp ?? "-"}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.id.slice(0, 10)}...</p>
                   <p className="mt-0.5 text-[11px] text-white/45">Joined {formatDateMY(row.created_at)}</p>
                 </td>
