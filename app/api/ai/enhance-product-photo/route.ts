@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       productName = product.name;
       description = product.description ?? description;
     } else {
-      if (!shopId || !ownShopIds.includes(shopId)) {
+      if (shopId && !ownShopIds.includes(shopId)) {
         return NextResponse.json({ error: "Shop not found" }, { status: 404 });
       }
       if (!originalImageUrl) {
