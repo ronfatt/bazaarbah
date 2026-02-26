@@ -48,7 +48,7 @@ export async function syncProfilesFromAuthUsers(admin: SupabaseClient) {
       display_name: deriveDisplayName(u),
       plan: "basic",
       plan_tier: "free",
-      ai_credits: 0,
+      ai_credits: 10,
       copy_credits: 0,
       image_credits: 0,
       poster_credits: 0,
