@@ -42,10 +42,10 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
     const json = await res.json();
     setBusy(null);
     if (!res.ok) {
-      setStatus(json.error ?? "Failed");
+      setStatus(json.error ?? t(lang, "common.failed"));
       return;
     }
-    setStatus("OK");
+    setStatus(t(lang, "common.ok"));
     window.location.reload();
   }
 
@@ -56,10 +56,10 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
           <thead className="border-b border-white/10 bg-[#163C33] text-white/60">
             <tr>
               <th className="px-4 py-3">{t(lang, "admin.members")}</th>
-              <th className="px-4 py-3">Plan</th>
-              <th className="px-4 py-3">Credits</th>
+              <th className="px-4 py-3">{t(lang, "admin.plan_column")}</th>
+              <th className="px-4 py-3">{t(lang, "admin.credits")}</th>
               <th className="px-4 py-3">{t(lang, "dashboard.status")}</th>
-              <th className="px-4 py-3">Actions</th>
+              <th className="px-4 py-3">{t(lang, "common.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -67,16 +67,16 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
               <tr key={row.id} className="border-t border-white/5 text-white/80 hover:bg-[#163C33]/60">
                 <td className="px-4 py-3">
                   <p className="font-semibold text-white">{row.display_name ?? t(lang, "admin.members")}</p>
-                  <p className="mt-0.5 text-[11px] text-white/60">{row.email ?? "No email"}</p>
-                  <p className="mt-0.5 text-[11px] text-white/45">WhatsApp: {row.phone_whatsapp ?? "-"}</p>
+                  <p className="mt-0.5 text-[11px] text-white/60">{row.email ?? t(lang, "admin.no_email")}</p>
+                  <p className="mt-0.5 text-[11px] text-white/45">{t(lang, "admin.whatsapp")}: {row.phone_whatsapp ?? "-"}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.id.slice(0, 10)}...</p>
-                  <p className="mt-0.5 text-[11px] text-white/45">Joined {formatDateMY(row.created_at)}</p>
+                  <p className="mt-0.5 text-[11px] text-white/45">{t(lang, "admin.joined")} {formatDateMY(row.created_at)}</p>
                 </td>
                 <td className="px-4 py-3">
                   <p>{row.plan_tier}</p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     <AppButton className="h-7 px-2 text-[11px]" variant="secondary" onClick={() => run(row.id, { action: "set_plan", targetPlan: "free" })} disabled={busy === row.id}>
-                      Free
+                      {t(lang, "plan.free")}
                     </AppButton>
                     <AppButton className="h-7 px-2 text-[11px]" variant="secondary" onClick={() => run(row.id, { action: "set_plan", targetPlan: "pro_88" })} disabled={busy === row.id}>
                       RM88
@@ -104,33 +104,33 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                       onClick={() => {
                         const amount = Number(creditDelta[row.id] ?? 0);
                         if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount === 0) {
-                          setStatus("Credit amount must be a non-zero integer.");
+                          setStatus(t(lang, "admin.credit_amount_error"));
                           return;
                         }
                         run(row.id, { action: "adjust_ai_credits", amount });
                       }}
                       disabled={busy === row.id}
                     >
-                      Adjust
+                      {t(lang, "admin.adjust")}
                     </AppButton>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  {row.is_banned ? <Badge variant="cancelled">Banned</Badge> : <Badge variant="paid">{t(lang, "plan.active")}</Badge>}
+                  {row.is_banned ? <Badge variant="cancelled">{t(lang, "admin.banned_badge")}</Badge> : <Badge variant="paid">{t(lang, "plan.active")}</Badge>}
                   {row.ban_reason ? <p className="mt-1 text-xs text-rose-300">{row.ban_reason}</p> : null}
                 </td>
                 <td className="px-4 py-3">
                   <div className="space-y-2">
                     {row.is_banned ? (
                       <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => run(row.id, { action: "unban" })} disabled={busy === row.id}>
-                        Unban
+                        {t(lang, "admin.unban")}
                       </AppButton>
                     ) : (
                       <div className="space-y-1">
                         <input
                           value={banReason[row.id] ?? ""}
                           onChange={(e) => setBanReason((prev) => ({ ...prev, [row.id]: e.target.value }))}
-                          placeholder="Ban reason (optional)"
+                          placeholder={t(lang, "admin.ban_reason_optional")}
                           className="h-8 w-48 rounded-lg border border-white/10 bg-[#0B241F] px-2 text-xs text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
                         />
                         <AppButton
@@ -139,7 +139,7 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                           onClick={() => run(row.id, { action: "ban", reason: banReason[row.id] ?? "" })}
                           disabled={busy === row.id}
                         >
-                          Ban
+                          {t(lang, "admin.ban")}
                         </AppButton>
                       </div>
                     )}
@@ -148,22 +148,22 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                       <input
                         value={warningTitle[row.id] ?? ""}
                         onChange={(e) => setWarningTitle((prev) => ({ ...prev, [row.id]: e.target.value }))}
-                        placeholder="Warning title"
+                        placeholder={t(lang, "admin.warning_title")}
                         className="h-8 w-56 rounded-lg border border-white/10 bg-[#0B241F] px-2 text-xs text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
                       />
                       <textarea
                         value={warningBody[row.id] ?? ""}
                         onChange={(e) => setWarningBody((prev) => ({ ...prev, [row.id]: e.target.value }))}
-                        placeholder="Warning message"
+                        placeholder={t(lang, "admin.warning_message")}
                         className="h-16 w-56 rounded-lg border border-white/10 bg-[#0B241F] px-2 py-1 text-xs text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
                       />
                       <AppButton
                         className="h-8 px-3 text-xs"
                         variant="ai"
-                        onClick={() => run(row.id, { action: "warn", title: warningTitle[row.id] || "Account warning", body: warningBody[row.id] || "Please follow platform policy." })}
+                        onClick={() => run(row.id, { action: "warn", title: warningTitle[row.id] || t(lang, "admin.warning_default_title"), body: warningBody[row.id] || t(lang, "admin.warning_default_body") })}
                         disabled={busy === row.id}
                       >
-                        Send Warning
+                        {t(lang, "admin.send_warning")}
                       </AppButton>
                     </div>
                   </div>
@@ -173,7 +173,7 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-white/45">
-                  No members found.
+                  {t(lang, "admin.no_members_found")}
                 </td>
               </tr>
             ) : null}

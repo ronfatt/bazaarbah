@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { t, type Lang } from "@/lib/i18n";
 
 export const ORDER_STATUSES = ["all", "pending_payment", "proof_submitted", "paid", "cancelled"] as const;
 
@@ -129,10 +130,11 @@ export async function loadOrderItemSummaries(admin: AdminClient, orderIds: strin
   return itemSummaryByOrder;
 }
 
-export function orderPaymentStatusLabel(status: string) {
-  if (status === "pending_payment") return "Awaiting Payment";
-  if (status === "proof_submitted") return "Proof Submitted";
-  if (status === "paid") return "Paid";
-  if (status === "cancelled") return "Cancelled";
+export function orderPaymentStatusLabel(status: string, lang: Lang = "en") {
+  if (status === "pending_payment") return t(lang, "orders.status_pending_payment");
+  if (status === "proof_submitted") return t(lang, "orders.status_proof_submitted");
+  if (status === "paid") return t(lang, "orders.status_paid");
+  if (status === "cancelled") return t(lang, "orders.status_cancelled");
+  if (status === "all") return t(lang, "orders.status_all");
   return status;
 }

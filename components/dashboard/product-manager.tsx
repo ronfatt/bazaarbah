@@ -60,7 +60,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     const res = await fetch("/api/products/upload", { method: "POST", body: form });
     const json = await res.json();
     if (!res.ok) {
-      throw new Error(json.error ?? "Upload failed");
+      throw new Error(json.error ?? t(lang, "products.upload_failed"));
     }
     return json.imageUrl as string;
   }
@@ -68,7 +68,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
     if (readOnly) {
-      setStatus("Free plan is read-only. Upgrade in Billing to add products.");
+      setStatus(`${t(lang, "products.free_view_only")} ${t(lang, "products.add_upgrade_billing")}`);
       return;
     }
     setStatus("...");
@@ -81,7 +81,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
         setImageOriginalUrl(finalOriginalUrl);
       } catch (error) {
         setUploadingImage(false);
-        setStatus(error instanceof Error ? error.message : "Upload failed");
+        setStatus(error instanceof Error ? error.message : t(lang, "products.upload_failed"));
         return;
       } finally {
         setUploadingImage(false);
@@ -106,7 +106,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     });
 
     const json = await res.json();
-    setStatus(res.ok ? "OK" : json.error ?? "Failed");
+    setStatus(res.ok ? t(lang, "common.ok") : json.error ?? t(lang, "common.failed"));
     if (res.ok) window.location.reload();
   }
 
@@ -121,9 +121,9 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
       setImageOriginalUrl(uploadedUrl);
       setImageEnhancedUrl("");
       setImageSource("original");
-      setStatus("Image uploaded and ready.");
+      setStatus(t(lang, "products.image_ready"));
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Upload failed");
+      setStatus(error instanceof Error ? error.message : t(lang, "products.upload_failed"));
       return;
     } finally {
       setUploadingImage(false);
@@ -133,11 +133,11 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   async function enhanceImage() {
     if (readOnly) return;
     if (!imageOriginalUrl) {
-      setStatus("Upload product photo first.");
+      setStatus(t(lang, "products.upload_first"));
       return;
     }
     if (aiCredits < imageCreditCost) {
-      setStatus("Not enough AI credits. Upgrade in Billing.");
+      setStatus(t(lang, "products.not_enough_ai"));
       return;
     }
     setEnhancingImage(true);
@@ -149,7 +149,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
       body: JSON.stringify({
         shopId,
         originalImageUrl: imageOriginalUrl,
-        productName: name || "Raya Product",
+        productName: name || t(lang, "products.default_name"),
         description: description || undefined,
         style: enhanceStyle,
         outputSize: "1024x1024",
@@ -162,22 +162,22 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     if (!res.ok) {
       if (json.error === "INSUFFICIENT_CREDITS") {
         setAiCredits(0);
-        setStatus("You have 0 AI credits. Upgrade or top-up in Billing.");
+        setStatus(t(lang, "products.zero_ai"));
       } else {
-        setStatus(json.error ?? "AI enhancement failed");
+        setStatus(json.error ?? t(lang, "products.ai_enhance_failed"));
       }
       return;
     }
 
     setImageEnhancedUrl(json.imageEnhancedUrl);
     setAiCredits(Number(json.remainingAiCredits ?? aiCredits));
-    setStatus(`Enhanced photo ready. AI credits left: ${json.remainingAiCredits ?? "-"}`);
+    setStatus(`${t(lang, "products.enhanced_ready")} ${json.remainingAiCredits ?? "-"}`);
   }
 
   async function generateDescription() {
     if (readOnly) return;
     if (!name.trim()) {
-      setStatus("Enter product name first.");
+      setStatus(t(lang, "products.enter_name_first"));
       return;
     }
     setGeneratingDesc(true);
@@ -196,11 +196,11 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     const json = await res.json();
     setGeneratingDesc(false);
     if (!res.ok) {
-      setStatus(json.error ?? "AI generation failed");
+      setStatus(json.error ?? t(lang, "products.ai_generation_failed"));
       return;
     }
     setDescription(json.description);
-    setStatus(`AI description ready. AI credits left: ${json.credits?.remaining ?? "-"}`);
+    setStatus(`${t(lang, "products.ai_desc_ready")} ${json.credits?.remaining ?? "-"}`);
   }
 
   async function toggleAvailability(productId: string, next: boolean) {
@@ -255,15 +255,15 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     const parsedPrice = Number(editPrice);
     const parsedStockQty = Number(editStockQty);
     if (trimmedName.length < 2) {
-      setStatus("Product name must be at least 2 characters.");
+      setStatus(t(lang, "products.name_too_short"));
       return;
     }
     if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
-      setStatus("Price must be a valid number.");
+      setStatus(t(lang, "products.price_invalid"));
       return;
     }
     if (Number.isNaN(parsedStockQty) || parsedStockQty < 0) {
-      setStatus("Stock qty must be 0 or above.");
+      setStatus(t(lang, "products.stock_invalid"));
       return;
     }
 
@@ -283,7 +283,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     const json = await res.json();
     setSavingEdit(false);
     if (!res.ok) {
-      setStatus(json.error ?? "Failed to save product.");
+      setStatus(json.error ?? t(lang, "products.save_failed"));
       return;
     }
     window.location.reload();
@@ -295,7 +295,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
         <h2 className="text-lg font-semibold text-[#F3F4F6]">{t(lang, "dashboard.add_product")}</h2>
         {readOnly ? (
           <div className="rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-            Free plan is view-only for products. <Link href="/dashboard/billing" className="underline">Upgrade in Billing</Link>.
+            {t(lang, "products.free_view_only")} <Link href="/dashboard/billing" className="underline">{t(lang, "orders.upgrade_billing")}</Link>.
           </div>
         ) : null}
         <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="h-10 w-full rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-[#F3F4F6]" required disabled={readOnly}>
@@ -307,11 +307,11 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
         </select>
 
         <div className="space-y-2">
-          <p className="text-xs text-white/60">Product Photo</p>
+          <p className="text-xs text-white/60">{t(lang, "products.product_photo")}</p>
           {readOnly ? (
-            <p className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/60">Upload disabled on Free plan.</p>
+            <p className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/60">{t(lang, "products.upload_disabled_free")}</p>
           ) : (
-            <ImageUploader uploading={uploadingImage} onChange={onProductImageChange} previewUrl={imageOriginalUrl || undefined} label="Upload Image" />
+            <ImageUploader uploading={uploadingImage} onChange={onProductImageChange} previewUrl={imageOriginalUrl || undefined} label={t(lang, "ai.photo_upload_cta")} />
           )}
         </div>
 
@@ -325,6 +325,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
             generating={enhancingImage}
             status={status}
             costPerEnhance={imageCreditCost}
+            lang={lang}
             onStyleChange={setEnhanceStyle}
             onEnhance={enhanceImage}
             onUseSource={setImageSource}
@@ -334,12 +335,12 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t(lang, "products.title")} required disabled={readOnly} />
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-white/60">Description</p>
+            <p className="text-xs text-white/60">{t(lang, "products.description_label")}</p>
             <Button type="button" variant="ai" onClick={generateDescription} disabled={readOnly || generatingDesc || !name.trim()}>
-              {generatingDesc ? "Generating..." : "AI Generate Description"}
+              {generatingDesc ? t(lang, "ai.generating") : t(lang, "products.ai_generate_description")}
             </Button>
           </div>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short product description" rows={3} disabled={readOnly} />
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t(lang, "products.description_short")} rows={3} disabled={readOnly} />
         </div>
         <Input
           value={price}
@@ -352,7 +353,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
         <div className="rounded-xl border border-white/10 bg-[#163C33]/50 p-3">
           <label className="flex items-center gap-2 text-sm text-white">
             <input type="checkbox" checked={trackStock} onChange={(e) => setTrackStock(e.target.checked)} disabled={readOnly} />
-            Track stock
+            {t(lang, "products.track_stock")}
           </label>
           <Input
             value={stockQty}
@@ -365,16 +366,16 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
 
         {imageEnhancedUrl ? (
           <div className="rounded-xl border border-white/10 bg-[#163C33]/60 p-3">
-            <p className="text-xs text-white/60">Main photo source</p>
+            <p className="text-xs text-white/60">{t(lang, "products.main_photo_source")}</p>
             <div className="mt-2 flex gap-2">
-              <Button type="button" variant={imageSource === "original" ? "default" : "outline"} onClick={() => setImageSource("original")} disabled={readOnly}>Original</Button>
-              <Button type="button" variant={imageSource === "enhanced" ? "default" : "outline"} onClick={() => setImageSource("enhanced")} disabled={readOnly}>Enhanced</Button>
+              <Button type="button" variant={imageSource === "original" ? "default" : "outline"} onClick={() => setImageSource("original")} disabled={readOnly}>{t(lang, "products.original")}</Button>
+              <Button type="button" variant={imageSource === "enhanced" ? "default" : "outline"} onClick={() => setImageSource("enhanced")} disabled={readOnly}>{t(lang, "products.enhanced")}</Button>
             </div>
           </div>
         ) : null}
 
         <Button type="submit" disabled={readOnly || uploadingImage || generatingDesc || enhancingImage}>
-          {uploadingImage ? "Uploading image..." : t(lang, "dashboard.add_product")}
+          {uploadingImage ? t(lang, "products.uploading_image") : t(lang, "dashboard.add_product")}
         </Button>
         {!imageOriginalUrl && status ? <p className="text-sm text-[#9CA3AF]">{status}</p> : null}
       </form>
@@ -383,13 +384,13 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
         <table className="w-full text-left text-sm">
           <thead className="border-b border-white/5 bg-[#163C33] text-[#9CA3AF]">
             <tr>
-              <th className="px-4 py-3">Image</th>
+              <th className="px-4 py-3">{t(lang, "products.image")}</th>
               <th className="px-4 py-3">{t(lang, "products.title")}</th>
               <th className="px-4 py-3">{t(lang, "orders.subtotal")}</th>
-              <th className="px-4 py-3">Stock</th>
-              <th className="px-4 py-3">Source</th>
-              <th className="px-4 py-3">Available</th>
-              <th className="px-4 py-3">Action</th>
+              <th className="px-4 py-3">{t(lang, "products.stock")}</th>
+              <th className="px-4 py-3">{t(lang, "products.source")}</th>
+              <th className="px-4 py-3">{t(lang, "products.available")}</th>
+              <th className="px-4 py-3">{t(lang, "common.action")}</th>
             </tr>
           </thead>
           <tbody>
@@ -400,7 +401,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={activeImage(p)!} alt={p.name} className="h-10 w-10 rounded-md border border-white/10 object-cover" />
                   ) : (
-                    <span className="text-xs text-white/40">No image</span>
+                    <span className="text-xs text-white/40">{t(lang, "products.no_image")}</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -427,7 +428,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                     <div className="space-y-2">
                       <label className="flex items-center gap-2">
                         <input type="checkbox" checked={editTrackStock} onChange={(e) => setEditTrackStock(e.target.checked)} />
-                        <span>Track</span>
+                        <span>{t(lang, "products.track")}</span>
                       </label>
                       <Input
                         value={editStockQty}
@@ -437,31 +438,31 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                       />
                       <label className="flex items-center gap-2">
                         <input type="checkbox" checked={editSoldOut} onChange={(e) => setEditSoldOut(e.target.checked)} disabled={!editTrackStock} />
-                        <span>Sold out</span>
+                        <span>{t(lang, "products.sold_out")}</span>
                       </label>
                     </div>
                   ) : p.track_stock ? (
                     <>
                       <p>Qty {p.stock_qty ?? 0}</p>
-                      <p>{p.sold_out ? "Sold out" : "In stock"}</p>
+                      <p>{p.sold_out ? t(lang, "products.sold_out") : t(lang, "products.in_stock")}</p>
                     </>
                   ) : (
-                    <p>Not tracked</p>
+                    <p>{t(lang, "products.not_tracked")}</p>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-white/70">{p.image_source === "enhanced" ? "Enhanced" : "Original"}</span>
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-white/70">{p.image_source === "enhanced" ? t(lang, "products.enhanced") : t(lang, "products.original")}</span>
                   {p.image_enhanced_url ? (
                     <div className="mt-2">
                       <Button variant="outline" onClick={() => setMainSource(p, p.image_source === "enhanced" ? "original" : "enhanced")} disabled={readOnly}>
-                        {p.image_source === "enhanced" ? "Use Original" : "Use Enhanced"}
+                        {p.image_source === "enhanced" ? t(lang, "products.use_original") : t(lang, "products.use_enhanced")}
                       </Button>
                     </div>
                   ) : null}
                 </td>
                 <td className="px-4 py-3">
                   <Button variant="outline" onClick={() => toggleAvailability(p.id, !p.is_available)} disabled={readOnly}>
-                    {p.is_available ? "Yes" : "No"}
+                    {p.is_available ? t(lang, "common.yes") : t(lang, "common.no")}
                   </Button>
                 </td>
                 <td className="px-4 py-3">
@@ -469,19 +470,19 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                     {editingId === p.id ? (
                       <>
                         <Button onClick={() => saveEdit(p.id)} disabled={readOnly || savingEdit}>
-                          {savingEdit ? "Saving..." : "Save"}
+                          {savingEdit ? t(lang, "products.saving") : t(lang, "common.save")}
                         </Button>
                         <Button variant="outline" onClick={cancelEdit} disabled={readOnly || savingEdit}>
-                          Cancel
+                          {t(lang, "common.cancel")}
                         </Button>
                       </>
                     ) : (
                       <Button variant="outline" onClick={() => startEdit(p)} disabled={readOnly}>
-                        Edit
+                        {t(lang, "common.edit")}
                       </Button>
                     )}
                     <Button variant="danger" onClick={() => remove(p.id)} disabled={readOnly || (savingEdit && editingId === p.id)}>
-                      Delete
+                      {t(lang, "common.delete")}
                     </Button>
                   </div>
                 </td>

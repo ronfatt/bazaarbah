@@ -18,7 +18,7 @@ export function PaymentProofForm({ orderCode, lang = "en" }: { orderCode: string
       body: JSON.stringify({ proofImageUrl, referenceText }),
     });
     const json = await res.json();
-    setStatus(res.ok ? t(lang, "buyer.proof_ok") : json.error ?? "Failed");
+    setStatus(res.ok ? t(lang, "buyer.proof_ok") : json.error ?? t(lang, "buyer.proof_failed"));
     if (res.ok) window.location.reload();
   }
 
@@ -30,7 +30,7 @@ export function PaymentProofForm({ orderCode, lang = "en" }: { orderCode: string
       body: JSON.stringify({}),
     });
     const json = await res.json();
-    setStatus(res.ok ? t(lang, "buyer.proof_ok") : json.error ?? "Failed");
+    setStatus(res.ok ? t(lang, "buyer.proof_ok") : json.error ?? t(lang, "buyer.proof_failed"));
     if (res.ok) window.location.reload();
   }
 

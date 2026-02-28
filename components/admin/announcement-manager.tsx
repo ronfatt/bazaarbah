@@ -31,7 +31,7 @@ export function AnnouncementManager({ announcements, lang = "en" }: { announceme
     const json = await res.json();
     setBusy(false);
     if (!res.ok) {
-      setStatus(json.error ?? "Failed");
+      setStatus(json.error ?? t(lang, "common.failed"));
       return;
     }
     setStatus(t(lang, "admin.announcement_desc"));
@@ -58,13 +58,13 @@ export function AnnouncementManager({ announcements, lang = "en" }: { announceme
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Announcement title"
+            placeholder={t(lang, "admin.announcement_title")}
             className="h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
           />
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Announcement body"
+            placeholder={t(lang, "admin.announcement_body")}
             className="h-28 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
           />
         </div>
@@ -81,24 +81,24 @@ export function AnnouncementManager({ announcements, lang = "en" }: { announceme
           <div key={a.id} className="rounded-xl border border-white/10 bg-[#163C33] p-4">
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold text-white">{a.title}</p>
-              <Badge variant={a.is_active ? "paid" : "neutral"}>{a.is_active ? t(lang, "plan.active") : "Inactive"}</Badge>
+              <Badge variant={a.is_active ? "paid" : "neutral"}>{a.is_active ? t(lang, "plan.active") : t(lang, "admin.inactive")}</Badge>
             </div>
             <p className="mt-2 text-sm text-white/75">{a.body}</p>
             <p className="mt-2 text-xs text-white/45">{formatDateTimeMY(a.created_at)}</p>
             <div className="mt-3">
               {a.is_active ? (
                 <AppButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => toggleActive(a.id, false)} disabled={busy}>
-                  Archive
+                  {t(lang, "admin.archive")}
                 </AppButton>
               ) : (
                 <AppButton variant="secondary" className="h-8 px-3 text-xs" onClick={() => toggleActive(a.id, true)} disabled={busy}>
-                  Re-activate
+                  {t(lang, "admin.reactivate")}
                 </AppButton>
               )}
             </div>
           </div>
         ))}
-        {announcements.length === 0 ? <p className="text-sm text-white/45">No announcements yet.</p> : null}
+        {announcements.length === 0 ? <p className="text-sm text-white/45">{t(lang, "admin.no_announcements")}</p> : null}
       </div>
     </div>
   );

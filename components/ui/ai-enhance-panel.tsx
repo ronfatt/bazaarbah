@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BeforeAfterCompare } from "@/components/ui/before-after-compare";
 import { CreditBadge } from "@/components/ui/credit-badge";
+import { t, type Lang } from "@/lib/i18n";
 
 type EnhanceStyle = "studio" | "raya" | "premium";
 
@@ -14,6 +15,7 @@ export function AIEnhancePanel({
   generating,
   status,
   costPerEnhance,
+  lang = "en",
   onStyleChange,
   onEnhance,
   onUseSource,
@@ -26,6 +28,7 @@ export function AIEnhancePanel({
   generating: boolean;
   status: string | null;
   costPerEnhance: number;
+  lang?: Lang;
   onStyleChange: (style: EnhanceStyle) => void;
   onEnhance: () => void;
   onUseSource: (source: "original" | "enhanced") => void;
@@ -36,19 +39,19 @@ export function AIEnhancePanel({
     <div className="space-y-3 rounded-2xl border border-white/10 bg-[#163C33]/50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-[#F3F4F6]">✨ Improve Photo with AI</h3>
+          <h3 className="text-sm font-semibold text-[#F3F4F6]">✨ {t(lang, "products.ai_improve_title")}</h3>
           <p className="text-xs text-white/60">
-            Remove messy background and generate a clean, professional product photo. Uses {costPerEnhance} image credits.
+            {t(lang, "products.ai_improve_desc")} {t(lang, "products.ai_credits_uses")} {costPerEnhance}
           </p>
         </div>
-        <CreditBadge label="AI credits" value={imageCredits} />
+        <CreditBadge label={t(lang, "products.ai_credits_label")} value={imageCredits} />
       </div>
 
       <div className="flex flex-wrap gap-2">
         {([
-          ["studio", "Clean Studio"],
-          ["raya", "Raya Festive"],
-          ["premium", "Premium Dark"],
+          ["studio", t(lang, "products.style_studio")],
+          ["raya", t(lang, "products.style_raya")],
+          ["premium", t(lang, "products.style_premium")],
         ] as const).map(([id, label]) => (
           <button
             key={id}
@@ -73,13 +76,13 @@ export function AIEnhancePanel({
           disabled={generating || noCredits || !imageOriginalUrl}
           className="rounded-xl"
         >
-          {generating ? "Enhancing... (10-30s)" : `Enhance with AI (${costPerEnhance} image credits)`}
+          {generating ? t(lang, "products.enhancing") : `${t(lang, "products.enhance_with_ai")} (${costPerEnhance} ${t(lang, "products.ai_credits_label")})`}
         </Button>
         {noCredits ? (
           <p className="text-xs text-amber-300">
-            Not enough AI credits.{" "}
+            {t(lang, "products.not_enough_ai")}{" "}
             <Link href="/dashboard/billing" className="underline underline-offset-2">
-              Go to Billing
+              {t(lang, "products.go_billing")}
             </Link>
             .
           </p>
@@ -95,14 +98,14 @@ export function AIEnhancePanel({
               variant={imageSource === "enhanced" ? "default" : "outline"}
               onClick={() => onUseSource("enhanced")}
             >
-              Use Enhanced as Main Photo
+              {t(lang, "products.use_enhanced_main")}
             </Button>
             <Button
               type="button"
               variant={imageSource === "original" ? "default" : "outline"}
               onClick={() => onUseSource("original")}
             >
-              Keep Original
+              {t(lang, "products.keep_original")}
             </Button>
           </div>
         </>

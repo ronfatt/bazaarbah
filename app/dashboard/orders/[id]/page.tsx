@@ -8,6 +8,7 @@ import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 import { hasUnlockedFeatures } from "@/lib/plan";
+import { orderPaymentStatusLabel } from "@/lib/orders";
 
 type ItemJoin = {
   id: string;
@@ -85,7 +86,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-[#F3F4F6]">{resolvedOrder.order_code}</h1>
-            <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClass(resolvedOrder.status)}`}>{resolvedOrder.status}</span>
+            <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${statusClass(resolvedOrder.status)}`}>{orderPaymentStatusLabel(resolvedOrder.status, lang)}</span>
           </div>
           <Link href="/dashboard/orders" className="text-sm font-semibold text-[#C9A227]">
             {t(lang, "common.back")}
@@ -94,16 +95,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
         <div className="mt-4 grid gap-2 text-sm text-[#9CA3AF] md:grid-cols-2">
           <p>{t(lang, "dashboard.buyer")}: {resolvedOrder.buyer_name ?? t(lang, "common.guest")}</p>
-          <p>Phone: {resolvedOrder.buyer_phone ?? "-"}</p>
+          <p>{t(lang, "common.phone")}: {resolvedOrder.buyer_phone ?? "-"}</p>
           <p>{t(lang, "buyer.total")} {currencyFromCents(resolvedOrder.subtotal_cents)}</p>
-          <p>Created: {formatDateTimeMY(resolvedOrder.created_at)}</p>
+          <p>{t(lang, "common.created")}: {formatDateTimeMY(resolvedOrder.created_at)}</p>
         </div>
 
         <div className="mt-5">
           <OrderActions orderId={resolvedOrder.id} canMarkPaid={resolvedOrder.status !== "paid"} readOnly={readOnly} lang={lang} />
         </div>
 
-        {receipt && <p className="mt-4 text-sm text-emerald-400">Receipt: {receipt.receipt_no}</p>}
+        {receipt && <p className="mt-4 text-sm text-emerald-400">{t(lang, "orders.receipt")}: {receipt.receipt_no}</p>}
       </Card>
 
       <Card>
@@ -130,11 +131,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {(payments ?? []).map((p) => (
             <div key={p.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3">
               <p>{t(lang, "buyer.reference_text")}: {p.reference_text ?? "-"}</p>
-              <p>Submitted: {formatDateTimeMY(p.submitted_at)}</p>
-              <p>Confirmed: {p.confirmed_at ? formatDateTimeMY(p.confirmed_at) : "No"}</p>
+              <p>{t(lang, "common.submitted")}: {formatDateTimeMY(p.submitted_at)}</p>
+              <p>{t(lang, "common.confirmed")}: {p.confirmed_at ? formatDateTimeMY(p.confirmed_at) : t(lang, "common.none")}</p>
               {p.proof_image_url && (
                 <a href={p.proof_image_url} className="text-[#C9A227]" target="_blank" rel="noreferrer">
-                  Open proof image
+                  {t(lang, "orders.open_proof_image")}
                 </a>
               )}
             </div>
