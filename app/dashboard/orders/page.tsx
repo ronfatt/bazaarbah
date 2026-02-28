@@ -27,8 +27,9 @@ function statusClass(status: string) {
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const lang = await getLangFromCookie();
-  const { status } = await searchParams;
+  const { status, q, dateFrom, dateTo } = (await searchParams) as { status?: string; q?: string; dateFrom?: string; dateTo?: string };
   const selected = statuses.includes((status ?? "all") as (typeof statuses)[number]) ? (status ?? "all") : "all";
+  const query = (q ?? "").trim().toLowerCase();
 
   const { user } = await requireSeller();
   const admin = createAdminClient();
@@ -41,6 +42,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
   if (selected !== "all") {
     primaryQuery.eq("status", selected);
+  }
+  if (dateFrom) {
+    primaryQuery.gte("created_at", `${dateFrom}T00:00:00`);
+  }
+  if (dateTo) {
+    primaryQuery.lte("created_at", `${dateTo}T23:59:59`);
   }
 
   let orders: OrderListRow[] | null = null;
@@ -60,6 +67,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           .in("shop_id", shopIds)
           .order("created_at", { ascending: false });
         if (selected !== "all") fallbackQuery.eq("status", selected);
+        if (dateFrom) fallbackQuery.gte("created_at", `${dateFrom}T00:00:00`);
+        if (dateTo) fallbackQuery.lte("created_at", `${dateTo}T23:59:59`);
         const fallback = await fallbackQuery;
         if (fallback.error) {
           loadError = fallback.error.message;
@@ -74,15 +83,52 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     orders = (primary.data as unknown as OrderListRow[] | null) ?? [];
   }
 
+  const filteredOrders = (orders ?? []).filter((o) => {
+    if (!query) return true;
+    const haystack = `${o.order_code} ${o.buyer_name ?? ""} ${o.buyer_phone ?? ""} ${o.status}`.toLowerCase();
+    return haystack.includes(query);
+  });
+
   return (
     <section className="space-y-4">
       <Card>
         <h1 className="text-2xl font-bold text-[#F3F4F6]">{t(lang, "orders.title")}</h1>
+        <form className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_180px] xl:grid-cols-[1fr_180px_180px_auto]">
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search order code / buyer / phone"
+            className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-white placeholder:text-white/35"
+          />
+          <input
+            type="date"
+            name="dateFrom"
+            defaultValue={dateFrom ?? ""}
+            className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-white"
+          />
+          <input
+            type="date"
+            name="dateTo"
+            defaultValue={dateTo ?? ""}
+            className="h-10 rounded-xl border border-white/10 bg-[#163C33] px-3 text-sm text-white"
+          />
+          <button type="submit" className="h-10 rounded-xl bg-[#C9A227] px-4 text-sm font-semibold text-black">
+            Filter
+          </button>
+        </form>
         <div className="mt-3 flex flex-wrap gap-2">
           {statuses.map((s) => (
             <Link
               key={s}
-              href={s === "all" ? "/dashboard/orders" : `/dashboard/orders?status=${s}`}
+              href={
+                s === "all"
+                  ? `/dashboard/orders${q || dateFrom || dateTo ? `?${new URLSearchParams(
+                      Object.entries({ q: q ?? "", dateFrom: dateFrom ?? "", dateTo: dateTo ?? "" }).filter(([, value]) => value),
+                    ).toString()}` : ""}`
+                  : `/dashboard/orders?${new URLSearchParams(
+                      Object.entries({ status: s, q: q ?? "", dateFrom: dateFrom ?? "", dateTo: dateTo ?? "" }).filter(([, value]) => value),
+                    ).toString()}`
+              }
               className={`rounded-lg px-3 py-1 text-sm ${selected === s ? "bg-[#163C33] border border-[#C9A227] text-[#F3F4F6]" : "bg-[#163C33] text-[#9CA3AF] border border-white/10"}`}
             >
               {s}
@@ -103,7 +149,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             </tr>
           </thead>
           <tbody>
-            {(orders ?? []).map((o) => (
+            {filteredOrders.map((o) => (
               <tr key={o.id} className="border-t border-white/5 text-[#F3F4F6] hover:bg-[#163C33]">
                 <td className="px-4 py-3 font-mono text-xs">
                   <Link href={`/dashboard/orders/${o.id}`} className="text-[#C9A227]">
@@ -117,7 +163,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <td className="px-4 py-3">{currencyFromCents(o.subtotal_cents)}</td>
               </tr>
             ))}
-            {(orders?.length ?? 0) === 0 && (
+            {(filteredOrders.length ?? 0) === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-[#9CA3AF]">
                   {t(lang, "orders.no_orders")}
