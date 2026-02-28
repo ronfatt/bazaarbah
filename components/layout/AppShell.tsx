@@ -6,7 +6,8 @@ type Props = {
   children: React.ReactNode;
   email: string;
   credits: number;
-  pendingOrders?: number;
+  pendingPaymentOrders?: number;
+  proofSubmittedOrders?: number;
   planLabel: string;
   lang: Lang;
   initial: string;
@@ -15,7 +16,8 @@ type Props = {
   i18n: {
     welcome: string;
     aiCredits: string;
-    pendingOrders: string;
+    awaitingPayment: string;
+    proofSubmitted: string;
     langEn: string;
     langZh: string;
     langMs: string;
@@ -24,7 +26,19 @@ type Props = {
   };
 };
 
-export function AppShell({ children, email, credits, pendingOrders = 0, planLabel, lang, initial, signout, navItems, i18n }: Props) {
+export function AppShell({
+  children,
+  email,
+  credits,
+  pendingPaymentOrders = 0,
+  proofSubmittedOrders = 0,
+  planLabel,
+  lang,
+  initial,
+  signout,
+  navItems,
+  i18n,
+}: Props) {
   return (
     <div className="min-h-screen bg-bb-bg text-bb-text bg-[radial-gradient(circle_at_28%_20%,rgba(0,194,168,0.16),transparent_44%),radial-gradient(circle_at_80%_22%,rgba(201,162,39,0.14),transparent_40%),radial-gradient(circle_at_60%_75%,rgba(255,255,255,0.06),transparent_34%)]">
       <div className="grid grid-cols-[260px_1fr]">
@@ -33,7 +47,16 @@ export function AppShell({ children, email, credits, pendingOrders = 0, planLabe
         </aside>
 
         <main className="min-h-screen">
-          <Topbar email={email} credits={credits} pendingOrders={pendingOrders} initial={initial} signout={signout} lang={lang} i18n={i18n} />
+          <Topbar
+            email={email}
+            credits={credits}
+            pendingPaymentOrders={pendingPaymentOrders}
+            proofSubmittedOrders={proofSubmittedOrders}
+            initial={initial}
+            signout={signout}
+            lang={lang}
+            i18n={i18n}
+          />
           <div className="px-6 py-6">{children}</div>
         </main>
       </div>

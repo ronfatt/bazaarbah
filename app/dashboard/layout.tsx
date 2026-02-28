@@ -43,14 +43,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const planLabel = tier === "free" ? t(lang, "plan.free") : `${PLAN_LABEL[tier]} • ${t(lang, "plan.active")}`;
   const { data: shops } = await admin.from("shops").select("id").eq("owner_id", user.id);
   const shopIds = (shops ?? []).map((shop) => shop.id);
-  const pendingOrders = shopIds.length
+  const pendingPaymentOrders = shopIds.length
     ? Number(
         (
-          await admin
-            .from("orders")
-            .select("id", { count: "exact", head: true })
-            .in("status", ["pending_payment", "proof_submitted"])
-            .in("shop_id", shopIds)
+          await admin.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending_payment").in("shop_id", shopIds)
+        ).count ?? 0,
+      )
+    : 0;
+  const proofSubmittedOrders = shopIds.length
+    ? Number(
+        (
+          await admin.from("orders").select("id", { count: "exact", head: true }).eq("status", "proof_submitted").in("shop_id", shopIds)
         ).count ?? 0,
       )
     : 0;
@@ -59,7 +62,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <AppShell
       email={email}
       credits={credits}
-      pendingOrders={pendingOrders ?? 0}
+      pendingPaymentOrders={pendingPaymentOrders ?? 0}
+      proofSubmittedOrders={proofSubmittedOrders ?? 0}
       planLabel={planLabel}
       lang={lang}
       initial={initials(profile.display_name)}
@@ -68,7 +72,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       i18n={{
         welcome: t(lang, "topbar.welcome"),
         aiCredits: t(lang, "topbar.ai_credits"),
-        pendingOrders: t(lang, "orders.title"),
+        awaitingPayment: t(lang, "topbar.awaiting_payment"),
+        proofSubmitted: t(lang, "topbar.proof_submitted"),
         langEn: t(lang, "lang.en"),
         langZh: t(lang, "lang.zh"),
         langMs: t(lang, "lang.ms"),

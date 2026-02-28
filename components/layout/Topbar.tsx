@@ -9,18 +9,29 @@ type Props = {
   initial: string;
   signout: React.ReactNode;
   lang: Lang;
-  pendingOrders?: number;
+  pendingPaymentOrders?: number;
+  proofSubmittedOrders?: number;
   i18n: {
     welcome: string;
     aiCredits: string;
-    pendingOrders: string;
+    awaitingPayment: string;
+    proofSubmitted: string;
     langEn: string;
     langZh: string;
     langMs: string;
   };
 };
 
-export function Topbar({ email, credits, initial, signout, lang, pendingOrders = 0, i18n }: Props) {
+export function Topbar({
+  email,
+  credits,
+  initial,
+  signout,
+  lang,
+  pendingPaymentOrders = 0,
+  proofSubmittedOrders = 0,
+  i18n,
+}: Props) {
   return (
     <div className="sticky top-0 z-20 bg-bb-bg/70 backdrop-blur-xl border-b border-bb-border/5">
       <div className="h-16 px-6 flex items-center justify-between">
@@ -31,8 +42,13 @@ export function Topbar({ email, credits, initial, signout, lang, pendingOrders =
         <div className="flex items-center gap-3">
           <LanguageSwitcher current={lang} labels={{ en: i18n.langEn, zh: i18n.langZh, ms: i18n.langMs }} />
           <Link href="/dashboard/orders?status=pending_payment">
-            <Badge variant={pendingOrders > 0 ? "pending" : "neutral"}>
-              {i18n.pendingOrders} {pendingOrders}
+            <Badge variant={pendingPaymentOrders > 0 ? "pending" : "neutral"}>
+              {i18n.awaitingPayment} {pendingPaymentOrders}
+            </Badge>
+          </Link>
+          <Link href="/dashboard/orders?status=proof_submitted">
+            <Badge variant={proofSubmittedOrders > 0 ? "pending" : "neutral"}>
+              {i18n.proofSubmitted} {proofSubmittedOrders}
             </Badge>
           </Link>
           <Badge variant="ai">

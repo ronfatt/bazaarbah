@@ -245,6 +245,8 @@ const extra: Record<string, Record<Lang, string>> = {
   "orders.no_orders": { en: "No orders yet.", zh: "还没有订单。", ms: "Belum ada pesanan." },
   "settings.title": { en: "Settings", zh: "设置", ms: "Tetapan" },
   "settings.desc": { en: "Reserved for workspace and preference settings.", zh: "用于工作区与偏好设置。", ms: "Dikhaskan untuk tetapan ruang kerja dan pilihan." },
+  "topbar.awaiting_payment": { en: "Awaiting Payment", zh: "待付款", ms: "Menunggu Bayaran" },
+  "topbar.proof_submitted": { en: "Proof Submitted", zh: "已交凭证", ms: "Bukti Dihantar" },
   "ai.ops": { en: "AI Operations", zh: "AI 运营", ms: "Operasi AI" },
   "ai.bundle": { en: "AI Marketing Bundle", zh: "AI 营销套件", ms: "Bundle Pemasaran AI" },
   "ai.bundle_title": { en: "Product Photo + Poster + Copy", zh: "产品图 + 海报 + 文案", ms: "Foto Produk + Poster + Copy" },
