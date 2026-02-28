@@ -60,6 +60,9 @@ export default async function AffiliatePage() {
   const teamMap = new Map(teamRows.map((row) => [row.id, row]));
   const childCountMap = new Map<string, number>();
   const contributionMap = new Map<string, number>();
+  const lastContributionMap = new Map<string, string>();
+  const packageCountMap = new Map<string, number>();
+  const topupCountMap = new Map<string, number>();
   for (const row of teamRows) {
     if (row.referred_by) {
       childCountMap.set(row.referred_by, (childCountMap.get(row.referred_by) ?? 0) + 1);
@@ -67,6 +70,15 @@ export default async function AffiliatePage() {
   }
   for (const row of earnings) {
     contributionMap.set(row.buyer_id, (contributionMap.get(row.buyer_id) ?? 0) + Number(row.amount_cents ?? 0));
+    const currentLast = lastContributionMap.get(row.buyer_id);
+    if (!currentLast || new Date(row.created_at).getTime() > new Date(currentLast).getTime()) {
+      lastContributionMap.set(row.buyer_id, row.created_at);
+    }
+    if (eventMap.get(row.event_id) === "CREDIT_TOPUP") {
+      topupCountMap.set(row.buyer_id, (topupCountMap.get(row.buyer_id) ?? 0) + 1);
+    } else {
+      packageCountMap.set(row.buyer_id, (packageCountMap.get(row.buyer_id) ?? 0) + 1);
+    }
   }
   const level1: Array<{
     id: string;
@@ -78,6 +90,9 @@ export default async function AffiliatePage() {
     parent_name: string | null;
     children_count: number;
     contributed_cents: number;
+    last_contribution_at: string | null;
+    package_count: number;
+    topup_count: number;
   }> = [];
   const level2: typeof level1 = [];
   const level3: typeof level1 = [];
@@ -97,6 +112,9 @@ export default async function AffiliatePage() {
       parent_name: row.referred_by ? teamMap.get(row.referred_by)?.display_name ?? (row.referred_by === user.id ? profile.display_name ?? null : null) : null,
       children_count: childCountMap.get(row.id) ?? 0,
       contributed_cents: contributionMap.get(row.id) ?? 0,
+      last_contribution_at: lastContributionMap.get(row.id) ?? null,
+      package_count: packageCountMap.get(row.id) ?? 0,
+      topup_count: topupCountMap.get(row.id) ?? 0,
     };
     if (level === 1) level1.push(item);
     if (level === 2) level2.push(item);

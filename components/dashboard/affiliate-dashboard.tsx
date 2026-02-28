@@ -25,6 +25,9 @@ type TeamTreeRow = {
   parent_name: string | null;
   children_count: number;
   contributed_cents: number;
+  last_contribution_at: string | null;
+  package_count: number;
+  topup_count: number;
 };
 
 type EarningRow = {
@@ -111,6 +114,7 @@ export function AffiliateDashboard({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<EarningRow["status"] | "ALL">("ALL");
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const [activeOnly, setActiveOnly] = useState(false);
   const referralLink = useMemo(() => {
     if (!referralCode || typeof window === "undefined") return "";
     return `${window.location.origin}/?ref=${referralCode}`;
@@ -126,6 +130,7 @@ export function AffiliateDashboard({
     const q = search.trim().toLowerCase();
     const filterRows = (rows: TeamTreeRow[]) =>
       rows.filter((row) => {
+        if (activeOnly && !row.is_affiliate_enabled) return false;
         if (!q) return true;
         const haystack = `${row.display_name ?? ""} ${row.parent_name ?? ""} ${row.plan_tier}`.toLowerCase();
         return haystack.includes(q);
@@ -135,7 +140,7 @@ export function AffiliateDashboard({
       level2: filterRows(teamTree.level2),
       level3: filterRows(teamTree.level3),
     };
-  }, [teamTree, search]);
+  }, [teamTree, search, activeOnly]);
 
   const filteredEarnings = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -248,7 +253,7 @@ export function AffiliateDashboard({
       </AppCard>
 
       <AppCard className="p-5">
-        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -266,6 +271,10 @@ export function AffiliateDashboard({
             <option value="PAID">{t(lang, "affiliate.filter_paid")}</option>
             <option value="REVERSED">{t(lang, "affiliate.filter_reversed")}</option>
           </select>
+          <label className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white">
+            <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
+            <span>{t(lang, "affiliate.active_only")}</span>
+          </label>
         </div>
       </AppCard>
 
@@ -305,16 +314,22 @@ export function AffiliateDashboard({
                       <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.under")}: {row.parent_name || "-"}</p>
                       <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.children_count")}: {row.children_count}</p>
                       <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.contributed_commission")}: {currencyFromCents(row.contributed_cents)}</p>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.last_contribution")}: {row.last_contribution_at ? formatDateTimeMY(row.last_contribution_at) : "-"}</p>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.package_count")}: {row.package_count}</p>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.topup_count")}: {row.topup_count}</p>
                       <p className="mt-1 text-[11px] text-white/40">{t(lang, "affiliate.tap_children")}</p>
                       {expandedIds.includes(row.id) && (childrenByParent.get(row.id)?.length ?? 0) > 0 ? (
                         <div className="mt-3 grid gap-2 rounded-xl border border-white/8 bg-white/5 p-2">
-                          {(childrenByParent.get(row.id) ?? []).map((child) => (
+                          {(childrenByParent.get(row.id) ?? []).filter((child) => !activeOnly || child.is_affiliate_enabled).map((child) => (
                             <div key={child.id} className="rounded-lg border border-white/8 bg-[#12352E] p-2 text-xs text-white/75">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="font-semibold text-white">{child.display_name || t(lang, "affiliate.member")}</span>
                                 <span>{child.plan_tier === "free" ? t(lang, "plan.free") : child.plan_tier === "pro_88" ? "RM88" : "RM168"}</span>
                               </div>
                               <p className="mt-1">{t(lang, "affiliate.contributed_commission")}: {currencyFromCents(child.contributed_cents)}</p>
+                              <p className="mt-1">{t(lang, "affiliate.last_contribution")}: {child.last_contribution_at ? formatDateTimeMY(child.last_contribution_at) : "-"}</p>
+                              <p className="mt-1">{t(lang, "affiliate.package_count")}: {child.package_count}</p>
+                              <p className="mt-1">{t(lang, "affiliate.topup_count")}: {child.topup_count}</p>
                               <p className="mt-1">{t(lang, "affiliate.children_count")}: {child.children_count}</p>
                             </div>
                           ))}
