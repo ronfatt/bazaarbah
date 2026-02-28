@@ -60,6 +60,7 @@ Copy `.env.example` to `.env.local` and set:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
+- `NEXT_PUBLIC_APP_URL` (contoh: `https://bazaarbah.my`) untuk pastikan auth redirect guna domain production yang betul
 
 ## Run
 ```bash

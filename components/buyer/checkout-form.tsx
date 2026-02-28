@@ -12,6 +12,8 @@ type ProductLite = {
   price_cents: number;
   description?: string | null;
   image_url?: string | null;
+  track_stock?: boolean;
+  stock_qty?: number;
 };
 
 function parseCartParam(raw: string | undefined) {
@@ -148,6 +150,7 @@ export function CheckoutForm({
                   <p className="font-semibold text-neutral-900">{p.name}</p>
                   <p className="text-sm font-medium text-neutral-700">{currencyFromCents(p.price_cents)}</p>
                   {p.description ? <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{p.description}</p> : null}
+                  {p.track_stock ? <p className="mt-1 text-xs font-medium text-amber-700">Stock left: {p.stock_qty ?? 0}</p> : null}
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center rounded-lg border border-neutral-200 bg-neutral-50">

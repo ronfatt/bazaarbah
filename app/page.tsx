@@ -8,9 +8,25 @@ import { AppCard } from "@/components/ui/AppCard";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { AuthHashErrorHandler } from "@/components/auth/auth-hash-error-handler";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const lang = await getLangFromCookie();
+  const params = await searchParams;
+  const code = typeof params.code === "string" ? params.code : null;
+
+  if (code) {
+    const callbackUrl = new URL("/auth/callback", "http://localhost");
+    callbackUrl.searchParams.set("code", code);
+    callbackUrl.searchParams.set("next", "/auth/reset-password");
+
+    const type = typeof params.type === "string" ? params.type : null;
+    const tokenHash = typeof params.token_hash === "string" ? params.token_hash : null;
+    if (type) callbackUrl.searchParams.set("type", type);
+    if (tokenHash) callbackUrl.searchParams.set("token_hash", tokenHash);
+
+    redirect(`${callbackUrl.pathname}?${callbackUrl.searchParams.toString()}`);
+  }
   const isBm = lang === "ms";
   try {
     const supabase = await createClient();
@@ -27,6 +43,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_50%_40%,#123F33_0%,#0B1F1A_70%)] text-bb-text">
+      <AuthHashErrorHandler />
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] [background-image:radial-gradient(#fff_0.6px,transparent_0.6px)] [background-size:7px_7px]" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/55" />
 

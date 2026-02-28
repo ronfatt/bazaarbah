@@ -5,12 +5,16 @@ import Image from "next/image";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { AuthHashErrorHandler } from "@/components/auth/auth-hash-error-handler";
 
 export default async function AuthPage({ searchParams }: { searchParams: Promise<{ error?: string; ref?: string }> }) {
   const lang = await getLangFromCookie();
   const params = await searchParams;
+  const isResetLinkExpired = params.error === "reset_link_expired";
+  const isResetLinkInvalid = params.error === "reset_link_invalid";
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_25%_30%,rgba(0,194,168,0.10),transparent_42%),radial-gradient(circle_at_80%_22%,rgba(201,162,39,0.09),transparent_40%),radial-gradient(circle_at_52%_55%,rgba(255,255,255,0.06),transparent_45%),#071A16] text-bb-text">
+      <AuthHashErrorHandler />
       <div className="absolute inset-0 opacity-[0.04] [background-image:radial-gradient(rgba(255,255,255,0.8)_0.55px,transparent_0.55px)] [background-size:7px_7px]" />
 
       <div className="relative mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-10 px-8 py-10 lg:grid-cols-[0.42fr_0.58fr]">
@@ -66,6 +70,8 @@ export default async function AuthPage({ searchParams }: { searchParams: Promise
             <h2 className="mt-2 text-3xl font-bold">{t(lang, "auth.login_title")}</h2>
             <p className="mt-2 text-sm text-white/65">{t(lang, "auth.login_desc")}</p>
             {params.error === "banned" ? <p className="mt-2 text-sm text-rose-300">{t(lang, "auth.banned")}</p> : null}
+            {isResetLinkExpired ? <p className="mt-2 text-sm text-amber-200">Reset link expired. Please request a new reset email.</p> : null}
+            {isResetLinkInvalid ? <p className="mt-2 text-sm text-amber-200">Reset link is invalid. Please request a new reset email.</p> : null}
             <div className="mt-6">
               <LoginForm
                 defaultReferralCode={params.ref ?? ""}

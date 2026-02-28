@@ -32,6 +32,8 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("0.00");
+  const [trackStock, setTrackStock] = useState(false);
+  const [stockQty, setStockQty] = useState("0");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageOriginalUrl, setImageOriginalUrl] = useState("");
   const [imageEnhancedUrl, setImageEnhancedUrl] = useState("");
@@ -44,6 +46,9 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState("0.00");
+  const [editTrackStock, setEditTrackStock] = useState(false);
+  const [editStockQty, setEditStockQty] = useState("0");
+  const [editSoldOut, setEditSoldOut] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -94,6 +99,9 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
         imageOriginalUrl: finalOriginalUrl || undefined,
         imageEnhancedUrl: imageEnhancedUrl || undefined,
         imageSource,
+        trackStock,
+        stockQty: trackStock ? Math.max(0, Number(stockQty || 0)) : 0,
+        soldOut: trackStock ? Number(stockQty || 0) <= 0 : false,
       }),
     });
 
@@ -226,6 +234,9 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     setEditingId(product.id);
     setEditName(product.name);
     setEditPrice((product.price_cents / 100).toFixed(2));
+    setEditTrackStock(Boolean(product.track_stock));
+    setEditStockQty(String(product.stock_qty ?? 0));
+    setEditSoldOut(Boolean(product.sold_out));
     setStatus(null);
   }
 
@@ -233,18 +244,26 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
     setEditingId(null);
     setEditName("");
     setEditPrice("0.00");
+    setEditTrackStock(false);
+    setEditStockQty("0");
+    setEditSoldOut(false);
   }
 
   async function saveEdit(productId: string) {
     if (readOnly) return;
     const trimmedName = editName.trim();
     const parsedPrice = Number(editPrice);
+    const parsedStockQty = Number(editStockQty);
     if (trimmedName.length < 2) {
       setStatus("Product name must be at least 2 characters.");
       return;
     }
     if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
       setStatus("Price must be a valid number.");
+      return;
+    }
+    if (Number.isNaN(parsedStockQty) || parsedStockQty < 0) {
+      setStatus("Stock qty must be 0 or above.");
       return;
     }
 
@@ -256,6 +275,9 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
       body: JSON.stringify({
         name: trimmedName,
         priceCents: Math.round(parsedPrice * 100),
+        trackStock: editTrackStock,
+        stockQty: editTrackStock ? Math.round(parsedStockQty) : 0,
+        soldOut: editTrackStock ? editSoldOut || Math.round(parsedStockQty) <= 0 : false,
       }),
     });
     const json = await res.json();
@@ -327,6 +349,19 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
           required
           disabled={readOnly}
         />
+        <div className="rounded-xl border border-white/10 bg-[#163C33]/50 p-3">
+          <label className="flex items-center gap-2 text-sm text-white">
+            <input type="checkbox" checked={trackStock} onChange={(e) => setTrackStock(e.target.checked)} disabled={readOnly} />
+            Track stock
+          </label>
+          <Input
+            value={stockQty}
+            onChange={(e) => setStockQty(e.target.value.replace(/[^0-9]/g, ""))}
+            placeholder="0"
+            disabled={readOnly || !trackStock}
+            className="mt-2"
+          />
+        </div>
 
         {imageEnhancedUrl ? (
           <div className="rounded-xl border border-white/10 bg-[#163C33]/60 p-3">
@@ -351,6 +386,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
               <th className="px-4 py-3">Image</th>
               <th className="px-4 py-3">{t(lang, "products.title")}</th>
               <th className="px-4 py-3">{t(lang, "orders.subtotal")}</th>
+              <th className="px-4 py-3">Stock</th>
               <th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Available</th>
               <th className="px-4 py-3">Action</th>
@@ -384,6 +420,33 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
                     />
                   ) : (
                     currencyFromCents(p.price_cents)
+                  )}
+                </td>
+                <td className="px-4 py-3 text-xs text-white/70">
+                  {editingId === p.id ? (
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={editTrackStock} onChange={(e) => setEditTrackStock(e.target.checked)} />
+                        <span>Track</span>
+                      </label>
+                      <Input
+                        value={editStockQty}
+                        onChange={(e) => setEditStockQty(e.target.value.replace(/[^0-9]/g, ""))}
+                        className="h-9 w-24"
+                        disabled={!editTrackStock}
+                      />
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={editSoldOut} onChange={(e) => setEditSoldOut(e.target.checked)} disabled={!editTrackStock} />
+                        <span>Sold out</span>
+                      </label>
+                    </div>
+                  ) : p.track_stock ? (
+                    <>
+                      <p>Qty {p.stock_qty ?? 0}</p>
+                      <p>{p.sold_out ? "Sold out" : "In stock"}</p>
+                    </>
+                  ) : (
+                    <p>Not tracked</p>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -426,7 +489,7 @@ export function ProductManager({ shops, products, aiCredits: initialAiCredits, i
             ))}
             {grouped.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-[#9CA3AF]">
+                <td colSpan={7} className="px-4 py-8 text-center text-[#9CA3AF]">
                   {t(lang, "orders.no_orders")}
                 </td>
               </tr>

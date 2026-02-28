@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { applyStockDeltas, ensureCanPurchase, loadStockProducts, rollbackStockDeltas } from "@/lib/stock";
 
 const schema = z.object({
   shopSlug: z.string().min(2),
@@ -28,20 +29,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ or
     const { data: shop } = await admin.from("shops").select("id").eq("id", order.shop_id).eq("slug", body.shopSlug).maybeSingle();
     if (!shop) return NextResponse.json({ error: "Shop mismatch" }, { status: 400 });
 
-    const productIds = body.items.map((i) => i.productId);
-    const { data: products, error: productsErr } = await admin
-      .from("products")
-      .select("id,price_cents,is_available")
-      .eq("shop_id", order.shop_id)
-      .in("id", productIds);
-    if (productsErr || !products?.length) {
-      return NextResponse.json({ error: "Products not found" }, { status: 404 });
+    const { data: currentItems } = await admin.from("order_items").select("product_id,qty").eq("order_id", order.id);
+    const currentQtyByProduct = new Map<string, number>();
+    for (const item of currentItems ?? []) {
+      currentQtyByProduct.set(item.product_id, Number(item.qty ?? 0));
     }
 
-    const productMap = new Map(products.filter((p) => p.is_available).map((p) => [p.id, p]));
+    const productIds = [...new Set([...body.items.map((i) => i.productId), ...currentQtyByProduct.keys()])];
+    const products = await loadStockProducts(admin, order.shop_id, productIds);
+    if (!products.size) return NextResponse.json({ error: "Products not found" }, { status: 404 });
+
+    ensureCanPurchase(
+      products,
+      body.items.map((item) => {
+        const currentQty = currentQtyByProduct.get(item.productId) ?? 0;
+        return { productId: item.productId, qty: Math.max(0, item.qty - currentQty) };
+      }).filter((item) => item.qty > 0),
+    );
+
     let subtotal = 0;
     const nextItems = body.items.map((item) => {
-      const product = productMap.get(item.productId);
+      const product = products.get(item.productId);
       if (!product) {
         throw new Error("Invalid product in cart");
       }
@@ -56,10 +64,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ or
       };
     });
 
+    const nextQtyByProduct = new Map(body.items.map((item) => [item.productId, item.qty]));
+    const deltas = productIds.map((productId) => ({
+      productId,
+      delta: (currentQtyByProduct.get(productId) ?? 0) - (nextQtyByProduct.get(productId) ?? 0),
+    }));
+
+    const appliedStock = await applyStockDeltas(admin, products, deltas);
+
     const { error: deleteErr } = await admin.from("order_items").delete().eq("order_id", order.id);
-    if (deleteErr) return NextResponse.json({ error: deleteErr.message }, { status: 400 });
+    if (deleteErr) {
+      await rollbackStockDeltas(admin, products, appliedStock);
+      return NextResponse.json({ error: deleteErr.message }, { status: 400 });
+    }
     const { error: insertErr } = await admin.from("order_items").insert(nextItems);
-    if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 400 });
+    if (insertErr) {
+      await rollbackStockDeltas(admin, products, appliedStock);
+      return NextResponse.json({ error: insertErr.message }, { status: 400 });
+    }
 
     const { error: orderUpdateErr } = await admin
       .from("orders")
@@ -70,7 +92,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ or
         status: "pending_payment",
       })
       .eq("id", order.id);
-    if (orderUpdateErr) return NextResponse.json({ error: orderUpdateErr.message }, { status: 400 });
+    if (orderUpdateErr) {
+      await rollbackStockDeltas(admin, products, appliedStock);
+      return NextResponse.json({ error: orderUpdateErr.message }, { status: 400 });
+    }
 
     return NextResponse.json({ ok: true, orderCode });
   } catch (error) {

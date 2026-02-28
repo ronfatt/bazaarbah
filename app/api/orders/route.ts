@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateOrderCode } from "@/lib/utils";
+import { applyStockDeltas, ensureCanPurchase, loadStockProducts, rollbackStockDeltas } from "@/lib/stock";
 
 const orderSchema = z.object({
   shopId: z.string().uuid().optional(),
@@ -56,20 +57,14 @@ export async function POST(req: NextRequest) {
     }
 
     const productIds = payload.items.map((i) => i.productId);
-    const { data: products, error: productsErr } = await admin
-      .from("products")
-      .select("id,price_cents,shop_id,is_available")
-      .eq("shop_id", shopId)
-      .in("id", productIds);
-
-    if (productsErr || !products?.length) {
+    const products = await loadStockProducts(admin, shopId, productIds);
+    if (!products.size) {
       return NextResponse.json({ error: "Products not found" }, { status: 404 });
     }
-
-    const productMap = new Map(products.filter((p) => p.is_available).map((p) => [p.id, p]));
+    ensureCanPurchase(products, payload.items);
     let subtotal = 0;
     const orderItems = payload.items.map((item) => {
-      const product = productMap.get(item.productId);
+      const product = products.get(item.productId);
       if (!product) {
         throw new Error("Invalid product in cart");
       }
@@ -84,6 +79,12 @@ export async function POST(req: NextRequest) {
       };
     });
 
+    const appliedStock = await applyStockDeltas(
+      admin,
+      products,
+      payload.items.map((item) => ({ productId: item.productId, delta: -item.qty })),
+    );
+
     const { data: order, error: orderErr } = await insertOrderWithRetry(admin, {
       shopId,
       buyerName: payload.buyerName,
@@ -92,6 +93,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (orderErr || !order) {
+      await rollbackStockDeltas(admin, products, appliedStock);
       return NextResponse.json({ error: orderErr?.message ?? "Order failed" }, { status: 400 });
     }
 
@@ -99,6 +101,7 @@ export async function POST(req: NextRequest) {
     const { error: itemsErr } = await admin.from("order_items").insert(itemsPayload);
 
     if (itemsErr) {
+      await rollbackStockDeltas(admin, products, appliedStock);
       await admin.from("orders").delete().eq("id", order.id);
       return NextResponse.json({ error: itemsErr.message }, { status: 400 });
     }

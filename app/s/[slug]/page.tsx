@@ -73,7 +73,7 @@ export default async function StorePage({
 
   const { data: products } = await admin
     .from("products")
-    .select("id,name,description,price_cents,image_url,image_original_url,image_enhanced_url,image_source")
+    .select("id,name,description,price_cents,image_url,image_original_url,image_enhanced_url,image_source,track_stock,stock_qty,sold_out")
     .eq("shop_id", shop.id)
     .eq("is_available", true)
     .order("created_at", { ascending: false });
@@ -104,11 +104,15 @@ export default async function StorePage({
       <div className="mx-auto max-w-6xl px-6 py-6">
         <CheckoutForm
           shopSlug={shop.slug}
-          products={(products ?? []).map((p) => ({
+          products={(products ?? [])
+            .filter((p) => !p.sold_out && (!p.track_stock || Number(p.stock_qty ?? 0) > 0))
+            .map((p) => ({
             id: p.id,
             name: p.name,
             price_cents: p.price_cents,
             description: p.description,
+            track_stock: Boolean(p.track_stock),
+            stock_qty: Number(p.stock_qty ?? 0),
             image_url:
               p.image_source === "enhanced"
                 ? p.image_enhanced_url ?? p.image_original_url ?? p.image_url

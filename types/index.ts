@@ -46,6 +46,9 @@ export type Product = {
   enhanced_at?: string | null;
   enhanced_meta?: Record<string, unknown> | null;
   is_available: boolean;
+  track_stock?: boolean;
+  stock_qty?: number;
+  sold_out?: boolean;
   created_at: string;
 };
 

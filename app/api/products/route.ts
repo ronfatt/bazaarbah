@@ -15,6 +15,9 @@ const bodySchema = z.object({
   imageSource: z.enum(["original", "enhanced"]).optional(),
   enhancedMeta: z.record(z.string(), z.unknown()).optional(),
   isAvailable: z.boolean().optional(),
+  trackStock: z.boolean().optional(),
+  stockQty: z.number().int().min(0).optional(),
+  soldOut: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -59,6 +62,9 @@ export async function POST(req: NextRequest) {
         enhanced_at: imageEnhancedUrl ? new Date().toISOString() : null,
         enhanced_meta: body.enhancedMeta ?? null,
         is_available: body.isAvailable ?? true,
+        track_stock: body.trackStock ?? false,
+        stock_qty: body.stockQty ?? 0,
+        sold_out: body.soldOut ?? ((body.trackStock ?? false) ? Number(body.stockQty ?? 0) <= 0 : false),
       })
       .select("*")
       .single();

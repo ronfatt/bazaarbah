@@ -26,6 +26,7 @@ export function LoginForm({
     emailRequired: string;
   };
 }) {
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState(defaultReferralCode);
@@ -99,8 +100,9 @@ export function LoginForm({
     setStatus(null);
     try {
       const supabase = createClient();
+      const redirectBase = appUrl || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+        redirectTo: `${redirectBase}/auth/callback?next=/auth/reset-password`,
       });
       if (error) throw error;
       setStatus(texts.resetSent);

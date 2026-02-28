@@ -14,6 +14,9 @@ const patchSchema = z.object({
   imageSource: z.enum(["original", "enhanced"]).optional(),
   enhancedMeta: z.record(z.string(), z.unknown()).nullable().optional(),
   isAvailable: z.boolean().optional(),
+  trackStock: z.boolean().optional(),
+  stockQty: z.number().int().min(0).optional(),
+  soldOut: z.boolean().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -37,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const { data: current } = await admin
       .from("products")
-      .select("id,image_url,image_original_url,image_enhanced_url,image_source")
+      .select("id,image_url,image_original_url,image_enhanced_url,image_source,track_stock,stock_qty,sold_out")
       .eq("id", id)
       .in("shop_id", ownShopIds)
       .maybeSingle();
@@ -56,6 +59,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.imageSource !== undefined) patch.image_source = body.imageSource;
     if (body.enhancedMeta !== undefined) patch.enhanced_meta = body.enhancedMeta;
     if (body.isAvailable !== undefined) patch.is_available = body.isAvailable;
+    if (body.trackStock !== undefined) patch.track_stock = body.trackStock;
+    if (body.stockQty !== undefined) patch.stock_qty = body.stockQty;
+    if (body.soldOut !== undefined) patch.sold_out = body.soldOut;
 
     const nextOriginal = body.imageOriginalUrl !== undefined ? body.imageOriginalUrl : current.image_original_url ?? current.image_url;
     const nextEnhanced = body.imageEnhancedUrl !== undefined ? body.imageEnhancedUrl : current.image_enhanced_url;
@@ -68,6 +74,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           : nextOriginal ?? nextEnhanced ?? null;
 
     patch.image_url = nextImageUrl;
+    if (body.trackStock !== undefined || body.stockQty !== undefined || body.soldOut !== undefined) {
+      const nextTrackStock = body.trackStock ?? current.track_stock ?? false;
+      const nextStockQty = body.stockQty ?? current.stock_qty ?? 0;
+      patch.sold_out = body.soldOut ?? (nextTrackStock ? nextStockQty <= 0 : false);
+    }
     if (body.imageEnhancedUrl !== undefined && body.imageEnhancedUrl) {
       patch.enhanced_at = new Date().toISOString();
     }

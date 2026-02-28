@@ -15,9 +15,12 @@ export function ResetPasswordForm() {
   useEffect(() => {
     const supabase = createClient();
     const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
+    const hashParams = new URLSearchParams(hash);
+    const queryParams = new URLSearchParams(window.location.search);
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+    const tokenHash = queryParams.get("token_hash");
+    const type = queryParams.get("type");
 
     const setup = async () => {
       if (accessToken && refreshToken) {
@@ -27,7 +30,19 @@ export function ResetPasswordForm() {
           setReady(false);
           return;
         }
+        setReady(true);
+        return;
       }
+
+      if (tokenHash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash });
+        if (error) {
+          setStatus(error.message);
+          setReady(false);
+          return;
+        }
+      }
+
       setReady(true);
     };
 
