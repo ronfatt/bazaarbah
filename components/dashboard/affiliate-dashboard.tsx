@@ -20,15 +20,18 @@ type TeamTreeRow = {
   display_name: string | null;
   plan_tier: "free" | "pro_88" | "pro_128";
   created_at: string;
+  parent_id: string | null;
   is_affiliate_enabled: boolean;
   parent_name: string | null;
   children_count: number;
+  contributed_cents: number;
 };
 
 type EarningRow = {
   id: string;
   created_at: string;
   level: number;
+  buyer_id: string;
   amount_cents: number;
   status: "PENDING" | "APPROVED" | "PAID" | "REVERSED";
   event_type: "PACKAGE_PURCHASE" | "CREDIT_TOPUP";
@@ -107,6 +110,7 @@ export function AffiliateDashboard({
   const [payoutNote, setPayoutNote] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<EarningRow["status"] | "ALL">("ALL");
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const referralLink = useMemo(() => {
     if (!referralCode || typeof window === "undefined") return "";
     return `${window.location.origin}/?ref=${referralCode}`;
@@ -143,6 +147,22 @@ export function AffiliateDashboard({
       return haystack.includes(q);
     });
   }, [earnings, search, statusFilter]);
+
+  const allTreeNodes = useMemo(() => [...teamTree.level1, ...teamTree.level2, ...teamTree.level3], [teamTree]);
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, TeamTreeRow[]>();
+    for (const row of allTreeNodes) {
+      if (!row.parent_id) continue;
+      const list = map.get(row.parent_id) ?? [];
+      list.push(row);
+      map.set(row.parent_id, list);
+    }
+    return map;
+  }, [allTreeNodes]);
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  }
 
   async function copyLink() {
     if (!referralLink) return;
@@ -258,15 +278,22 @@ export function AffiliateDashboard({
             ["level3", t(lang, "affiliate.level_3")],
           ] as const).map(([key, label]) => {
             const rows = filteredTeamTree[key];
+            const levelContribution = rows.reduce((sum, row) => sum + row.contributed_cents, 0);
             return (
               <div key={key} className="rounded-2xl border border-white/10 bg-[#163C33] p-4">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-base font-semibold text-white">{label}</h3>
                   <Badge variant="neutral">{rows.length}</Badge>
                 </div>
+                <p className="mt-2 text-xs text-white/55">{t(lang, "affiliate.total_contribution")}: {currencyFromCents(levelContribution)}</p>
                 <div className="mt-3 space-y-3">
                   {rows.map((row) => (
-                    <div key={row.id} className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => toggleExpanded(row.id)}
+                      className="w-full rounded-xl border border-white/10 bg-[#0B241F] p-3 text-left text-sm text-white/80"
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="font-semibold text-white">{row.display_name || t(lang, "affiliate.member")}</p>
                         <Badge variant={row.is_affiliate_enabled ? "ai" : "neutral"}>
@@ -277,7 +304,23 @@ export function AffiliateDashboard({
                       <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.joined_at")}: {formatDateMY(row.created_at)}</p>
                       <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.under")}: {row.parent_name || "-"}</p>
                       <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.children_count")}: {row.children_count}</p>
-                    </div>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.contributed_commission")}: {currencyFromCents(row.contributed_cents)}</p>
+                      <p className="mt-1 text-[11px] text-white/40">{t(lang, "affiliate.tap_children")}</p>
+                      {expandedIds.includes(row.id) && (childrenByParent.get(row.id)?.length ?? 0) > 0 ? (
+                        <div className="mt-3 grid gap-2 rounded-xl border border-white/8 bg-white/5 p-2">
+                          {(childrenByParent.get(row.id) ?? []).map((child) => (
+                            <div key={child.id} className="rounded-lg border border-white/8 bg-[#12352E] p-2 text-xs text-white/75">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold text-white">{child.display_name || t(lang, "affiliate.member")}</span>
+                                <span>{child.plan_tier === "free" ? t(lang, "plan.free") : child.plan_tier === "pro_88" ? "RM88" : "RM168"}</span>
+                              </div>
+                              <p className="mt-1">{t(lang, "affiliate.contributed_commission")}: {currencyFromCents(child.contributed_cents)}</p>
+                              <p className="mt-1">{t(lang, "affiliate.children_count")}: {child.children_count}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </button>
                   ))}
                   {rows.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.team_empty")}</p> : null}
                 </div>

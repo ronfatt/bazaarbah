@@ -59,19 +59,25 @@ export default async function AffiliatePage() {
   }>;
   const teamMap = new Map(teamRows.map((row) => [row.id, row]));
   const childCountMap = new Map<string, number>();
+  const contributionMap = new Map<string, number>();
   for (const row of teamRows) {
     if (row.referred_by) {
       childCountMap.set(row.referred_by, (childCountMap.get(row.referred_by) ?? 0) + 1);
     }
+  }
+  for (const row of earnings) {
+    contributionMap.set(row.buyer_id, (contributionMap.get(row.buyer_id) ?? 0) + Number(row.amount_cents ?? 0));
   }
   const level1: Array<{
     id: string;
     display_name: string | null;
     plan_tier: "free" | "pro_88" | "pro_128";
     created_at: string;
+    parent_id: string | null;
     is_affiliate_enabled: boolean;
     parent_name: string | null;
     children_count: number;
+    contributed_cents: number;
   }> = [];
   const level2: typeof level1 = [];
   const level3: typeof level1 = [];
@@ -86,9 +92,11 @@ export default async function AffiliatePage() {
       display_name: row.display_name,
       plan_tier: row.plan_tier,
       created_at: row.created_at,
+      parent_id: row.referred_by,
       is_affiliate_enabled: Boolean(row.is_affiliate_enabled),
       parent_name: row.referred_by ? teamMap.get(row.referred_by)?.display_name ?? (row.referred_by === user.id ? profile.display_name ?? null : null) : null,
       children_count: childCountMap.get(row.id) ?? 0,
+      contributed_cents: contributionMap.get(row.id) ?? 0,
     };
     if (level === 1) level1.push(item);
     if (level === 2) level2.push(item);
@@ -115,6 +123,7 @@ export default async function AffiliatePage() {
         level: Number(row.level ?? 1),
         amount_cents: Number(row.amount_cents ?? 0),
         status: row.status,
+        buyer_id: row.buyer_id,
         event_type: eventMap.get(row.event_id) === "CREDIT_TOPUP" ? "CREDIT_TOPUP" : "PACKAGE_PURCHASE",
         buyer_name: buyerMap.get(row.buyer_id) ?? null,
       }))}
