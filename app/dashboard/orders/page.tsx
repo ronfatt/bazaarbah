@@ -18,6 +18,12 @@ type OrderListRow = {
   created_at: string;
 };
 
+type OrderItemSummaryRow = {
+  order_id: string;
+  qty: number;
+  products: { name: string } | { name: string }[] | null;
+};
+
 function statusClass(status: string) {
   if (status === "paid") return "bg-green-500/10 text-green-400";
   if (status === "cancelled") return "bg-red-500/10 text-red-400";
@@ -89,6 +95,20 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     return haystack.includes(query);
   });
 
+  const orderIds = filteredOrders.map((o) => o.id);
+  const { data: itemRows } = orderIds.length
+    ? await admin.from("order_items").select("order_id,qty,products(name)").in("order_id", orderIds)
+    : { data: [] };
+
+  const itemSummaryByOrder = new Map<string, string>();
+  for (const row of (itemRows ?? []) as OrderItemSummaryRow[]) {
+    const productName = Array.isArray(row.products) ? row.products[0]?.name : row.products?.name;
+    if (!productName) continue;
+    const label = `${productName} x${row.qty}`;
+    const current = itemSummaryByOrder.get(row.order_id);
+    itemSummaryByOrder.set(row.order_id, current ? `${current}, ${label}` : label);
+  }
+
   return (
     <section className="space-y-4">
       <Card>
@@ -144,6 +164,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             <tr>
               <th className="px-4 py-3">{t(lang, "orders.order_code")}</th>
               <th className="px-4 py-3">{t(lang, "dashboard.buyer")}</th>
+              <th className="px-4 py-3">Items</th>
               <th className="px-4 py-3">{t(lang, "dashboard.status")}</th>
               <th className="px-4 py-3">{t(lang, "orders.subtotal")}</th>
             </tr>
@@ -157,6 +178,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   </Link>
                 </td>
                 <td className="px-4 py-3">{o.buyer_name ?? t(lang, "common.guest")}</td>
+                <td className="px-4 py-3 text-xs text-white/70">{itemSummaryByOrder.get(o.id) ?? "-"}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusClass(o.status)}`}>{o.status}</span>
                 </td>
@@ -165,7 +187,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             ))}
             {(filteredOrders.length ?? 0) === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-[#9CA3AF]">
+                <td colSpan={5} className="px-4 py-8 text-center text-[#9CA3AF]">
                   {t(lang, "orders.no_orders")}
                 </td>
               </tr>
