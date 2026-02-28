@@ -4,19 +4,27 @@ import { AdminSignoutButton } from "@/components/admin/admin-signout-button";
 import { AppCard } from "@/components/ui/AppCard";
 import { Badge } from "@/components/ui/Badge";
 import { requireAdminPortalUser } from "@/lib/auth";
+import { getAffiliateTeamTree } from "@/lib/affiliate";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { currencyFromCents } from "@/lib/utils";
+import { currencyFromCents, formatDateMY, formatDateTimeMY } from "@/lib/utils";
 
 function startOfMonthIso() {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0)).toISOString();
 }
 
-export default async function AdminAffiliatePage() {
+export default async function AdminAffiliatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; userId?: string }>;
+}) {
   const lang = await getLangFromCookie();
   await requireAdminPortalUser();
+  const params = await searchParams;
+  const q = (params.q ?? "").trim().toLowerCase();
+  const selectedUserId = (params.userId ?? "").trim();
   const admin = createAdminClient();
   const monthIso = startOfMonthIso();
 
@@ -52,6 +60,22 @@ export default async function AdminAffiliatePage() {
     .slice(0, 8);
 
   const payoutToday = payouts.filter((row) => row.created_at >= monthIso).length;
+
+  const profilesSearchRes = await admin
+    .from("profiles")
+    .select("id,display_name,plan_tier,is_affiliate_enabled,created_at")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  const searchRows = (profilesSearchRes.data ?? []).filter((row) => {
+    if (!q) return false;
+    const haystack = `${row.id} ${row.display_name ?? ""}`.toLowerCase();
+    return haystack.includes(q);
+  }).slice(0, 20);
+  const selectedProfile = selectedUserId
+    ? (profilesSearchRes.data ?? []).find((row) => row.id === selectedUserId) ??
+      (await admin.from("profiles").select("id,display_name,plan_tier,is_affiliate_enabled,created_at").eq("id", selectedUserId).maybeSingle()).data
+    : null;
+  const selectedTeamTree = selectedProfile ? await getAffiliateTeamTree(admin, selectedProfile.id, selectedProfile.display_name ?? null) : null;
 
   return (
     <main className="min-h-screen bg-bb-bg px-6 py-6 text-bb-text">
@@ -107,6 +131,89 @@ export default async function AdminAffiliatePage() {
             {topAffiliates.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.none")}</p> : null}
           </div>
         </AppCard>
+
+        <AppCard className="p-5">
+          <form className="grid gap-3 md:grid-cols-[1fr_auto]">
+            <input
+              name="q"
+              defaultValue={params.q ?? ""}
+              placeholder={t(lang, "affiliate.search_user_placeholder")}
+              className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30"
+            />
+            <button type="submit" className="h-10 rounded-xl bg-gradient-to-r from-[#C9A227] to-[#E2C044] px-4 text-sm font-semibold text-black hover:brightness-110">
+              {t(lang, "common.apply")}
+            </button>
+          </form>
+
+          {q ? (
+            <div className="mt-4 space-y-2">
+              {searchRows.map((row) => (
+                <Link
+                  key={row.id}
+                  href={`/admin/affiliate?${new URLSearchParams({ q: params.q ?? "", userId: row.id }).toString()}`}
+                  className={`block rounded-xl border px-3 py-3 text-sm ${selectedUserId === row.id ? "border-bb-ai/40 bg-bb-ai/12 text-white" : "border-white/10 bg-[#163C33] text-white/80"}`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">{row.display_name || row.id.slice(0, 8)}</span>
+                    <Badge variant={row.is_affiliate_enabled ? "ai" : "neutral"}>{row.is_affiliate_enabled ? t(lang, "affiliate.enabled_badge") : t(lang, "affiliate.locked_badge")}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-white/55">{row.id}</p>
+                </Link>
+              ))}
+              {searchRows.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.none")}</p> : null}
+            </div>
+          ) : null}
+        </AppCard>
+
+        {selectedProfile && selectedTeamTree ? (
+          <AppCard className="p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.view_tree_for")} {selectedProfile.display_name || selectedProfile.id.slice(0, 8)}</h2>
+                <p className="mt-1 text-xs text-white/55">{selectedProfile.id}</p>
+              </div>
+              <Badge variant={selectedProfile.is_affiliate_enabled ? "ai" : "neutral"}>{selectedProfile.is_affiliate_enabled ? t(lang, "affiliate.enabled_badge") : t(lang, "affiliate.locked_badge")}</Badge>
+            </div>
+            <div className="mt-4 grid gap-4 xl:grid-cols-3">
+              {([
+                ["level1", t(lang, "affiliate.level_1")],
+                ["level2", t(lang, "affiliate.level_2")],
+                ["level3", t(lang, "affiliate.level_3")],
+              ] as const).map(([key, label]) => {
+                const rows = selectedTeamTree[key];
+                const totalContribution = rows.reduce((sum, row) => sum + row.contributed_cents, 0);
+                return (
+                  <div key={key} className="rounded-2xl border border-white/10 bg-[#163C33] p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-base font-semibold text-white">{label}</h3>
+                      <Badge variant="neutral">{rows.length}</Badge>
+                    </div>
+                    <p className="mt-2 text-xs text-white/55">{t(lang, "affiliate.total_contribution")}: {currencyFromCents(totalContribution)}</p>
+                    <div className="mt-3 space-y-3">
+                      {rows.map((row) => (
+                        <div key={row.id} className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-semibold text-white">{row.display_name || row.id.slice(0, 8)}</p>
+                            <Badge variant={row.is_affiliate_enabled ? "ai" : "neutral"}>{row.is_affiliate_enabled ? t(lang, "affiliate.enabled_badge") : t(lang, "affiliate.locked_badge")}</Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.current_plan")}: {row.plan_tier === "free" ? t(lang, "plan.free") : row.plan_tier === "pro_88" ? "RM88" : "RM168"}</p>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.joined_at")}: {formatDateMY(row.created_at)}</p>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.under")}: {row.parent_name || "-"}</p>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.children_count")}: {row.children_count}</p>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.contributed_commission")}: {currencyFromCents(row.contributed_cents)}</p>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.last_contribution")}: {row.last_contribution_at ? formatDateTimeMY(row.last_contribution_at) : "-"}</p>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.package_count")}: {row.package_count}</p>
+                          <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.topup_count")}: {row.topup_count}</p>
+                        </div>
+                      ))}
+                      {rows.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.team_empty")}</p> : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </AppCard>
+        ) : null}
 
         <AffiliateAdminPanel
           lang={lang}
