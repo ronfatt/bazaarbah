@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { bindReferralIfEligible } from "@/lib/affiliate";
 
 const schema = z.object({
   code: z.string().trim().min(4).max(20),
@@ -27,13 +28,8 @@ export async function POST(req: NextRequest) {
   if (me.referred_by) return NextResponse.json({ ok: true });
 
   const normalized = payload.code.toUpperCase();
-  const { data: referrer } = await admin.from("profiles").select("id").eq("referral_code", normalized).maybeSingle();
-  if (!referrer) return NextResponse.json({ error: "Invalid referral code" }, { status: 400 });
-  if (referrer.id === user.id) return NextResponse.json({ error: "Cannot refer yourself" }, { status: 400 });
-
-  const { error } = await admin.from("profiles").update({ referred_by: referrer.id }).eq("id", user.id).is("referred_by", null);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  const attached = await bindReferralIfEligible(admin, user.id, normalized);
+  if (!attached) return NextResponse.json({ error: "Invalid referral code" }, { status: 400 });
 
   return NextResponse.json({ ok: true });
 }
-

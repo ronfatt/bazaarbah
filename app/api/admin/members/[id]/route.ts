@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdminByUserId } from "@/lib/auth";
+import { ensureAffiliateEnabled } from "@/lib/affiliate";
 import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS } from "@/lib/plan";
 
 const schema = z.discriminatedUnion("action", [
@@ -11,6 +12,7 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("ban"), reason: z.string().max(200).optional() }),
   z.object({ action: z.literal("unban") }),
   z.object({ action: z.literal("warn"), title: z.string().min(2).max(100), body: z.string().min(4).max(500) }),
+  z.object({ action: z.literal("enable_affiliate") }),
 ]);
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -37,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const admin = createAdminClient();
-  const { data: member } = await admin.from("profiles").select("id,plan_tier,is_banned,ai_credits").eq("id", id).maybeSingle();
+  const { data: member } = await admin.from("profiles").select("id,plan_tier,is_banned,ai_credits,is_affiliate_enabled").eq("id", id).maybeSingle();
   if (!member) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 });
   }
@@ -152,6 +154,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
 
     return NextResponse.json({ ok: true });
+  }
+
+  if (payload.action === "enable_affiliate") {
+    if (member.is_affiliate_enabled) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const updated = await ensureAffiliateEnabled(admin, id);
+    await admin.from("admin_audit_logs").insert({
+      action: "affiliate_enabled",
+      actor_id: user.id,
+      target_user_id: id,
+      target_plan: null,
+      note: updated.referral_code,
+      meta: { referral_code: updated.referral_code },
+    });
+
+    return NextResponse.json({ ok: true, referral_code: updated.referral_code });
   }
 
   return NextResponse.json({ error: "Unsupported action" }, { status: 400 });

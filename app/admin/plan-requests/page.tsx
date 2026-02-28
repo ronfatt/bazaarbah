@@ -15,7 +15,7 @@ import { getLangFromCookie } from "@/lib/i18n-server";
 type RequestRow = {
   id: string;
   user_id: string;
-  target_plan: "pro_88" | "pro_128" | "credit_100";
+  target_plan: "pro_88" | "pro_128" | "credit_50";
   amount_cents: number;
   status: "pending_review" | "approved" | "rejected";
   proof_image_url: string | null;
@@ -113,6 +113,9 @@ export default async function AdminPlanRequestsPortalPage({
               </Link>
               <Link href="/admin/ai-impact" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 AI Impact
+              </Link>
+              <Link href="/admin/affiliate" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                {t(lang, "affiliate.title")}
               </Link>
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 {t(lang, "admin.pricing")}

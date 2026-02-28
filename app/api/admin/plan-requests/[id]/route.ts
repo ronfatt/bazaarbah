@@ -3,7 +3,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertAdminByUserId } from "@/lib/auth";
-import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS, REFERRAL_BONUS } from "@/lib/plan";
+import { createAffiliateEventAndLedger, ensureAffiliateEnabled } from "@/lib/affiliate";
+import { PLAN_AI_CREDITS, PLAN_AI_TOTAL_CREDITS } from "@/lib/plan";
 
 const bodySchema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -36,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: request, error: requestError } = await admin
     .from("plan_requests")
-    .select("id,user_id,target_plan,status")
+    .select("id,user_id,target_plan,amount_cents,status")
     .eq("id", id)
     .maybeSingle();
 
@@ -49,13 +50,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (payload.action === "approve") {
-    if (request.target_plan === "credit_100") {
+    if (request.target_plan === "credit_50") {
       const { data: topup } = await admin
         .from("credit_topup_configs")
         .select("credits")
-        .eq("target_plan", "credit_100")
+        .eq("target_plan", "credit_50")
         .maybeSingle();
-      const topupCredits = Math.max(1, Number(topup?.credits ?? 100));
+      const topupCredits = Math.max(1, Number(topup?.credits ?? 50));
       const { data: owner } = await admin.from("profiles").select("id,ai_credits").eq("id", request.user_id).maybeSingle();
       if (!owner) {
         return NextResponse.json({ error: "Profile not found" }, { status: 404 });
@@ -67,6 +68,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (topupErr) {
         return NextResponse.json({ error: topupErr.message }, { status: 400 });
       }
+      await createAffiliateEventAndLedger(admin, {
+        buyerId: request.user_id,
+        eventType: "CREDIT_TOPUP",
+        amountCents: Number(request.amount_cents ?? 5000),
+        topupCode: "T50",
+        externalRef: `plan_request:${request.id}:credit_50`,
+      });
     } else {
       const target = request.target_plan as "pro_88" | "pro_128";
       const credits = PLAN_AI_CREDITS[target];
@@ -87,61 +95,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (profileErr) {
         return NextResponse.json({ error: profileErr.message }, { status: 400 });
       }
-
-      const { data: upgradedUser } = await admin
-        .from("profiles")
-        .select("id,referred_by,referral_rewarded_at")
-        .eq("id", request.user_id)
-        .maybeSingle();
-
-      if (upgradedUser?.referred_by && !upgradedUser.referral_rewarded_at) {
-        const bonus = REFERRAL_BONUS[target];
-        const { data: referrer } = await admin
-          .from("profiles")
-          .select("id,ai_credits,copy_credits,image_credits,poster_credits,referral_bonus_total")
-          .eq("id", upgradedUser.referred_by)
-          .maybeSingle();
-
-        if (referrer) {
-          const bonusTotal = bonus.copy + bonus.image + bonus.poster;
-          await admin
-            .from("profiles")
-            .update({
-              ai_credits: Number(referrer.ai_credits ?? 0) + bonusTotal,
-              copy_credits: Number(referrer.copy_credits ?? 0) + bonus.copy,
-              image_credits: Number(referrer.image_credits ?? 0) + bonus.image,
-              poster_credits: Number(referrer.poster_credits ?? 0) + bonus.poster,
-              referral_bonus_total: Number(referrer.referral_bonus_total ?? 0) + bonusTotal,
-            })
-            .eq("id", referrer.id);
-
-          await admin.from("profiles").update({ referral_rewarded_at: new Date().toISOString() }).eq("id", upgradedUser.id);
-
-          await admin.from("referral_rewards").insert({
-            referrer_id: referrer.id,
-            referred_user_id: upgradedUser.id,
-            plan_tier: target,
-            copy_bonus: bonus.copy,
-            image_bonus: bonus.image,
-            poster_bonus: bonus.poster,
-          });
-
-          await admin.from("admin_audit_logs").insert({
-            action: "referral_reward_issued",
-            actor_id: user.id,
-            target_user_id: referrer.id,
-            plan_request_id: request.id,
-            target_plan: target,
-            note: `Referral bonus for ${upgradedUser.id}`,
-            meta: {
-              referred_user_id: upgradedUser.id,
-              copy_bonus: bonus.copy,
-              image_bonus: bonus.image,
-              poster_bonus: bonus.poster,
-            },
-          });
-        }
-      }
+      const affiliateProfile = await ensureAffiliateEnabled(admin, request.user_id);
+      await admin.from("admin_audit_logs").insert({
+        action: "affiliate_enabled",
+        actor_id: user.id,
+        target_user_id: request.user_id,
+        plan_request_id: request.id,
+        target_plan: target,
+        note: affiliateProfile.referral_code,
+        meta: { referral_code: affiliateProfile.referral_code },
+      });
+      await createAffiliateEventAndLedger(admin, {
+        buyerId: request.user_id,
+        eventType: "PACKAGE_PURCHASE",
+        amountCents: Number(request.target_plan === "pro_88" ? 8800 : 16800),
+        packageCode: request.target_plan === "pro_88" ? "P88" : "P168",
+        externalRef: `plan_request:${request.id}:${request.target_plan}`,
+      });
     }
   }
 
@@ -165,7 +135,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     actor_id: user.id,
     target_user_id: request.user_id,
     plan_request_id: request.id,
-    target_plan: request.target_plan === "credit_100" ? null : request.target_plan,
+    target_plan: request.target_plan === "credit_50" ? null : request.target_plan,
     from_status: request.status,
     to_status: toStatus,
     note: payload.note ?? null,

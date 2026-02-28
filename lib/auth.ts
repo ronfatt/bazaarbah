@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { createHash } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { bindReferralIfEligible } from "@/lib/affiliate";
 import { hasUnlockedFeatures, normalizePlanTier } from "@/lib/plan";
 
 type ProfileAccess = {
@@ -30,21 +30,17 @@ export async function requireSeller(options?: { loginPath?: string }) {
       id: user.id,
       display_name: user.email ?? "Seller",
       plan: "basic",
+      plan_tier: "free",
       ai_credits: 10,
       copy_credits: 0,
       image_credits: 0,
       poster_credits: 0,
+      is_affiliate_enabled: false,
     };
 
     const firstTry = await admin
       .from("profiles")
-      .upsert(
-        {
-          ...seed,
-          plan_tier: "free",
-        },
-        { onConflict: "id" },
-      )
+      .upsert(seed, { onConflict: "id" })
       .select("*")
       .single();
 
@@ -62,17 +58,11 @@ export async function requireSeller(options?: { loginPath?: string }) {
     if (data) profile = data;
   }
 
-  if (!profile.referral_code) {
-    const referralCode = createHash("sha1").update(user.id).digest("hex").slice(0, 10).toUpperCase();
-    const { data } = await admin.from("profiles").update({ referral_code: referralCode }).eq("id", user.id).select("*").single();
-    if (data) profile = data;
-  }
-
   const referralInput = (user.user_metadata?.referral_code as string | undefined)?.trim().toUpperCase();
   if (!profile.referred_by && referralInput) {
-    const { data: referrer } = await admin.from("profiles").select("id").eq("referral_code", referralInput).maybeSingle();
-    if (referrer?.id && referrer.id !== user.id) {
-      const { data } = await admin.from("profiles").update({ referred_by: referrer.id }).eq("id", user.id).is("referred_by", null).select("*").single();
+    const bound = await bindReferralIfEligible(admin, user.id, referralInput);
+    if (bound) {
+      const { data } = await admin.from("profiles").select("*").eq("id", user.id).maybeSingle();
       if (data) profile = data;
     }
   }

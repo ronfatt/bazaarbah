@@ -13,6 +13,7 @@ function links(lang: Awaited<ReturnType<typeof getLangFromCookie>>) {
     { href: "/dashboard/products", label: t(lang, "nav.products") },
     { href: "/dashboard/orders", label: t(lang, "nav.orders") },
     { href: "/dashboard/ai", label: t(lang, "nav.ai") },
+    { href: "/dashboard/affiliate", label: t(lang, "nav.affiliate") },
     { href: "/dashboard/billing", label: t(lang, "nav.billing") },
     { href: "/dashboard/settings", label: t(lang, "nav.settings") },
   ];

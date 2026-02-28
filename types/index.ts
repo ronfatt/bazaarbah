@@ -10,8 +10,9 @@ export type Profile = {
   copy_credits: number;
   referral_code: string | null;
   referred_by: string | null;
-  referral_rewarded_at: string | null;
-  referral_bonus_total: number;
+  referral_path: string | null;
+  is_affiliate_enabled: boolean;
+  affiliate_enabled_at: string | null;
   is_banned: boolean;
   banned_at: string | null;
   ban_reason: string | null;

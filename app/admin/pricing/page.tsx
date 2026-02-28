@@ -29,7 +29,7 @@ export default async function AdminPricingPage() {
   const { data: topup } = await admin
     .from("credit_topup_configs")
     .select("target_plan,label,credits,price_cents,is_active")
-    .eq("target_plan", "credit_100")
+    .eq("target_plan", "credit_50")
     .maybeSingle();
 
   const pricesMap = new Map((data ?? []).map((row) => [row.plan_tier, row]));
@@ -70,6 +70,9 @@ export default async function AdminPricingPage() {
               <Link href="/admin/ai-impact" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 AI Impact
               </Link>
+              <Link href="/admin/affiliate" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                {t(lang, "affiliate.title")}
+              </Link>
               <Badge variant="ai">{t(lang, "admin.pricing")}</Badge>
               <AdminSignoutButton lang={lang} />
             </div>
@@ -80,8 +83,8 @@ export default async function AdminPricingPage() {
           initialPrices={mergedPrices as (PlanPriceRow & { ai_total_credits: number })[]}
           initialTopup={{
             label: topup?.label ?? "Credit Top-up",
-            credits: Number(topup?.credits ?? 100),
-            price_cents: Number(topup?.price_cents ?? 9800),
+            credits: Number(topup?.credits ?? 50),
+            price_cents: Number(topup?.price_cents ?? 5000),
             is_active: Boolean(topup?.is_active ?? true),
           }}
           initialCosts={{

@@ -6,10 +6,14 @@ import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { AuthHashErrorHandler } from "@/components/auth/auth-hash-error-handler";
+import { cookies } from "next/headers";
+import { AFFILIATE_REF_COOKIE } from "@/lib/affiliate";
 
 export default async function AuthPage({ searchParams }: { searchParams: Promise<{ error?: string; ref?: string }> }) {
   const lang = await getLangFromCookie();
   const params = await searchParams;
+  const cookieStore = await cookies();
+  const defaultReferralCode = params.ref?.trim().toUpperCase() || cookieStore.get(AFFILIATE_REF_COOKIE)?.value || "";
   const isResetLinkExpired = params.error === "reset_link_expired";
   const isResetLinkInvalid = params.error === "reset_link_invalid";
   return (
@@ -74,7 +78,7 @@ export default async function AuthPage({ searchParams }: { searchParams: Promise
             {isResetLinkInvalid ? <p className="mt-2 text-sm text-amber-200">Reset link is invalid. Please request a new reset email.</p> : null}
             <div className="mt-6">
               <LoginForm
-                defaultReferralCode={params.ref ?? ""}
+                defaultReferralCode={defaultReferralCode}
                 i18n={{
                   emailPlaceholder: t(lang, "form.email"),
                   passwordPlaceholder: t(lang, "form.password"),

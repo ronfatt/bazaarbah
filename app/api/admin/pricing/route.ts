@@ -70,7 +70,7 @@ export async function GET() {
   const [{ data: prices, error: priceErr }, { data: costs, error: costErr }, { data: topups, error: topupErr }] = await Promise.all([
     admin.from("plan_prices").select("*").order("plan_tier", { ascending: true }),
     admin.from("ai_credit_costs").select("ai_type,cost"),
-    admin.from("credit_topup_configs").select("target_plan,label,credits,price_cents,is_active").eq("target_plan", "credit_100").maybeSingle(),
+    admin.from("credit_topup_configs").select("target_plan,label,credits,price_cents,is_active").eq("target_plan", "credit_50").maybeSingle(),
   ]);
   if (priceErr) return NextResponse.json({ error: priceErr.message }, { status: 400 });
   if (topupErr && (topupErr as { code?: string }).code !== "42P01") {
@@ -185,7 +185,7 @@ export async function PATCH(req: NextRequest) {
   } else {
     const now = new Date().toISOString();
     const { error } = await admin.from("credit_topup_configs").upsert({
-      target_plan: "credit_100",
+      target_plan: "credit_50",
       label: payload.label,
       credits: payload.credits,
       price_cents: payload.priceCents,
@@ -204,7 +204,7 @@ export async function PATCH(req: NextRequest) {
       action: "plan_price_updated",
       actor_id: user.id,
       target_user_id: user.id,
-      note: "credit_100",
+      note: "credit_50",
       meta: {
         label: payload.label,
         credits: payload.credits,

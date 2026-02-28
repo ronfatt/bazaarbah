@@ -14,23 +14,19 @@ export default async function BillingPage() {
   const effectiveAiCredits = Number(profile.ai_credits ?? 0);
   const admin = createAdminClient();
 
-  const [reqRes, priceRes, referralRes, costRes] = await Promise.all([
+  const [reqRes, priceRes, costRes] = await Promise.all([
     admin
       .from("plan_requests")
       .select("id,target_plan,amount_cents,status,proof_image_url,reference_text,note,submitted_at,reviewed_at")
       .eq("user_id", user.id)
       .order("submitted_at", { ascending: false }),
-    admin
-      .from("plan_prices")
-      .select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at,ai_total_credits")
-      .in("plan_tier", ["pro_88", "pro_128"]),
-    admin.from("profiles").select("referral_code,referral_bonus_total").eq("id", user.id).maybeSingle(),
+    admin.from("plan_prices").select("plan_tier,list_price_cents,promo_price_cents,promo_active,promo_start_at,promo_end_at,ai_total_credits").in("plan_tier", ["pro_88", "pro_128"]),
     admin.from("ai_credit_costs").select("ai_type,cost"),
   ]);
   const { data: topup } = await admin
     .from("credit_topup_configs")
     .select("target_plan,label,credits,price_cents,is_active")
-    .eq("target_plan", "credit_100")
+    .eq("target_plan", "credit_50")
     .maybeSingle();
 
   const prices = (priceRes.data ?? []).reduce<Partial<Record<"pro_88" | "pro_128", PlanPriceRow>>>((acc, row) => {
@@ -47,8 +43,6 @@ export default async function BillingPage() {
   };
   const imageCost = Number(costRes.data?.find((c) => c.ai_type === "product_image")?.cost ?? 1);
   const posterCost = Number(costRes.data?.find((c) => c.ai_type === "poster")?.cost ?? 1);
-
-  const { count: referredCount } = await admin.from("referral_rewards").select("id", { count: "exact", head: true }).eq("referrer_id", user.id);
 
   return (
     <section className="space-y-5">
@@ -69,25 +63,6 @@ export default async function BillingPage() {
         </div>
       </AppCard>
 
-      <AppCard className="p-6">
-        <h2 className="text-lg font-semibold">{t(lang, "billing.referral_title")}</h2>
-        <p className="mt-2 text-sm text-white/65">{t(lang, "billing.referral_desc")}</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm">
-            <p className="text-white/65">{t(lang, "billing.your_code")}</p>
-            <p className="mt-1 font-mono text-lg text-white">{referralRes.data?.referral_code ?? "-"}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm">
-            <p className="text-white/65">{t(lang, "billing.referred_upgrades")}</p>
-            <p className="mt-1 text-lg font-semibold text-white">{referredCount ?? 0}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-sm">
-            <p className="text-white/65">{t(lang, "billing.total_bonus")}</p>
-            <p className="mt-1 text-lg font-semibold text-white">{referralRes.data?.referral_bonus_total ?? 0}</p>
-          </div>
-        </div>
-      </AppCard>
-
       <PlanUpgradePanel
         currentTier={tier}
         aiCredits={effectiveAiCredits}
@@ -95,8 +70,8 @@ export default async function BillingPage() {
         planTotals={aiTotals}
         topupConfig={{
           label: topup?.label ?? "Credit Top-up",
-          credits: Number(topup?.credits ?? 100),
-          priceCents: Number(topup?.price_cents ?? 9800),
+          credits: Number(topup?.credits ?? 50),
+          priceCents: Number(topup?.price_cents ?? 5000),
           isActive: Boolean(topup?.is_active ?? true),
         }}
         usageGuide={{ imageCost, posterCost }}

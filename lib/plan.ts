@@ -6,11 +6,6 @@ export const PLAN_PRICE_CENTS: Record<PlanTier, number> = {
   pro_128: 16800,
 };
 
-export const REFERRAL_BONUS: Record<Exclude<PlanTier, "free">, { copy: number; image: number; poster: number }> = {
-  pro_88: { copy: 10, image: 2, poster: 1 },
-  pro_128: { copy: 20, image: 4, poster: 2 },
-};
-
 export type PlanPriceRow = {
   plan_tier: "pro_88" | "pro_128";
   list_price_cents: number;

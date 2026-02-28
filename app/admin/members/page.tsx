@@ -21,6 +21,8 @@ type MemberRow = {
   copy_credits: number;
   image_credits: number;
   poster_credits: number;
+  referral_code: string | null;
+  is_affiliate_enabled: boolean;
   is_banned: boolean;
   banned_at: string | null;
   ban_reason: string | null;
@@ -43,7 +45,7 @@ export default async function AdminMembersPage({
   const [{ data }, { data: shops }] = await Promise.all([
     admin
       .from("profiles")
-      .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
+      .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,referral_code,is_affiliate_enabled,is_banned,banned_at,ban_reason,created_at")
       .order("created_at", { ascending: false }),
     admin.from("shops").select("owner_id,phone_whatsapp,created_at").order("created_at", { ascending: true }),
   ]);
@@ -107,6 +109,9 @@ export default async function AdminMembersPage({
               </Link>
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 {t(lang, "admin.pricing")}
+              </Link>
+              <Link href="/admin/affiliate" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
+                {t(lang, "affiliate.title")}
               </Link>
               <Badge variant="ai">Members {rows.length}</Badge>
               <Badge variant={bannedCount > 0 ? "cancelled" : "paid"}>Banned {bannedCount}</Badge>

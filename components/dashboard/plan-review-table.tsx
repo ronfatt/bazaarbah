@@ -10,7 +10,7 @@ import { t, type Lang } from "@/lib/i18n";
 type ReviewRow = {
   id: string;
   user_id: string;
-  target_plan: "pro_88" | "pro_128" | "credit_100";
+  target_plan: "pro_88" | "pro_128" | "credit_50";
   amount_cents: number;
   status: "pending_review" | "approved" | "rejected";
   proof_image_url: string | null;
@@ -22,7 +22,7 @@ type ReviewRow = {
 };
 
 function targetLabel(target: ReviewRow["target_plan"]) {
-  if (target === "credit_100") return "Top-up 100 Credits";
+  if (target === "credit_50") return "Top-up RM50";
   return PLAN_LABEL[target];
 }
 

@@ -17,6 +17,8 @@ type MemberRow = {
   copy_credits: number;
   image_credits: number;
   poster_credits: number;
+  referral_code: string | null;
+  is_affiliate_enabled: boolean;
   is_banned: boolean;
   banned_at: string | null;
   ban_reason: string | null;
@@ -69,6 +71,7 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                   <p className="font-semibold text-white">{row.display_name ?? t(lang, "admin.members")}</p>
                   <p className="mt-0.5 text-[11px] text-white/60">{row.email ?? t(lang, "admin.no_email")}</p>
                   <p className="mt-0.5 text-[11px] text-white/45">{t(lang, "admin.whatsapp")}: {row.phone_whatsapp ?? "-"}</p>
+                  <p className="mt-0.5 text-[11px] text-white/45">Affiliate: {row.is_affiliate_enabled ? row.referral_code ?? "-" : t(lang, "affiliate.none")}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.id.slice(0, 10)}...</p>
                   <p className="mt-0.5 text-[11px] text-white/45">{t(lang, "admin.joined")} {formatDateMY(row.created_at)}</p>
                 </td>
@@ -82,7 +85,7 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                       RM88
                     </AppButton>
                     <AppButton className="h-7 px-2 text-[11px]" variant="secondary" onClick={() => run(row.id, { action: "set_plan", targetPlan: "pro_128" })} disabled={busy === row.id}>
-                      RM128
+                      RM168
                     </AppButton>
                   </div>
                 </td>
@@ -121,6 +124,11 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                 </td>
                 <td className="px-4 py-3">
                   <div className="space-y-2">
+                    {!row.is_affiliate_enabled ? (
+                      <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => run(row.id, { action: "enable_affiliate" })} disabled={busy === row.id}>
+                        {t(lang, "affiliate.enable")}
+                      </AppButton>
+                    ) : null}
                     {row.is_banned ? (
                       <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => run(row.id, { action: "unban" })} disabled={busy === row.id}>
                         {t(lang, "admin.unban")}

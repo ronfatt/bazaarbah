@@ -7,7 +7,7 @@ import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 import { PLAN_AI_TOTAL_CREDITS, PLAN_LABEL, PLAN_PRICE_CENTS, resolveEffectivePrice, type PlanPriceRow, type PlanTier } from "@/lib/plan";
 import { t, type Lang } from "@/lib/i18n";
 
-type UpgradeTarget = "pro_88" | "pro_128" | "credit_100";
+type UpgradeTarget = "pro_88" | "pro_128" | "credit_50";
 
 type PlanRequest = {
   id: string;
@@ -35,7 +35,7 @@ const PLAN_BENEFITS: Record<PlanTier, string[]> = {
 const TARGET_LABEL_BASE: Record<UpgradeTarget, string> = {
   pro_88: PLAN_LABEL.pro_88,
   pro_128: PLAN_LABEL.pro_128,
-  credit_100: "Credit Top-up",
+  credit_50: "Credit Top-up",
 };
 
 export function PlanUpgradePanel({
@@ -57,7 +57,7 @@ export function PlanUpgradePanel({
   requests: PlanRequest[];
   lang?: Lang;
 }) {
-  const defaultTarget: UpgradeTarget = currentTier === "free" ? "pro_88" : currentTier === "pro_88" ? "pro_128" : "credit_100";
+  const defaultTarget: UpgradeTarget = currentTier === "free" ? "pro_88" : currentTier === "pro_88" ? "pro_128" : "credit_50";
   const [targetPlan, setTargetPlan] = useState<UpgradeTarget>(defaultTarget);
   const [referenceText, setReferenceText] = useState("");
   const [slipUrl, setSlipUrl] = useState("");
@@ -68,12 +68,12 @@ export function PlanUpgradePanel({
   const pendingExists = requests.some((r) => r.status === "pending_review");
   const plans: PlanTier[] = ["free", "pro_88", "pro_128"];
   const topup = {
-    label: topupConfig?.label || TARGET_LABEL_BASE.credit_100,
-    credits: Math.max(1, Number(topupConfig?.credits ?? 100)),
-    priceCents: Math.max(1, Number(topupConfig?.priceCents ?? 9800)),
+    label: topupConfig?.label || TARGET_LABEL_BASE.credit_50,
+    credits: Math.max(1, Number(topupConfig?.credits ?? 50)),
+    priceCents: Math.max(1, Number(topupConfig?.priceCents ?? 5000)),
     isActive: Boolean(topupConfig?.isActive ?? true),
   };
-  const targetLabel: Record<UpgradeTarget, string> = { ...TARGET_LABEL_BASE, credit_100: topup.label };
+  const targetLabel: Record<UpgradeTarget, string> = { ...TARGET_LABEL_BASE, credit_50: topup.label };
   const totals = {
     free: Number(planTotals?.free ?? 0),
     pro_88: Number(planTotals?.pro_88 ?? PLAN_AI_TOTAL_CREDITS.pro_88),
@@ -84,21 +84,21 @@ export function PlanUpgradePanel({
   const selectableTargets: UpgradeTarget[] =
     currentTier === "free"
       ? topup.isActive
-        ? ["pro_88", "pro_128", "credit_100"]
+        ? ["pro_88", "pro_128", "credit_50"]
         : ["pro_88", "pro_128"]
       : currentTier === "pro_88"
         ? topup.isActive
-          ? ["pro_128", "credit_100"]
+          ? ["pro_128", "credit_50"]
           : ["pro_128"]
         : topup.isActive
-          ? ["credit_100"]
+          ? ["credit_50"]
           : [];
   const safeTargetPlan = selectableTargets.includes(targetPlan) ? targetPlan : selectableTargets[0] ?? "pro_128";
   const currentAmount =
-    safeTargetPlan === "credit_100"
+    safeTargetPlan === "credit_50"
       ? topup.priceCents
       : resolveEffectivePrice(prices[safeTargetPlan] ?? null) ?? PLAN_PRICE_CENTS[safeTargetPlan];
-  const targetCredits = safeTargetPlan === "credit_100" ? topup.credits : totals[safeTargetPlan];
+  const targetCredits = safeTargetPlan === "credit_50" ? topup.credits : totals[safeTargetPlan];
 
   async function submitUpgrade() {
     setLoading(true);
@@ -259,7 +259,7 @@ export function PlanUpgradePanel({
             <div key={req.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-white/80">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold text-white">
-                  {(req.target_plan === "credit_100" ? targetLabel.credit_100 : PLAN_LABEL[req.target_plan])} • {currencyFromCents(req.amount_cents)}
+                  {(req.target_plan === "credit_50" ? targetLabel.credit_50 : PLAN_LABEL[req.target_plan])} • {currencyFromCents(req.amount_cents)}
                 </p>
                 {statusBadge(req.status)}
               </div>
