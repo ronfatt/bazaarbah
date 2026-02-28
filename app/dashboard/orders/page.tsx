@@ -5,24 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { currencyFromCents } from "@/lib/utils";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
-
-const statuses = ["all", "pending_payment", "proof_submitted", "paid", "cancelled"] as const;
-
-type OrderListRow = {
-  id: string;
-  order_code: string;
-  buyer_name: string | null;
-  buyer_phone: string | null;
-  status: string;
-  subtotal_cents: number;
-  created_at: string;
-};
-
-type OrderItemSummaryRow = {
-  order_id: string;
-  qty: number;
-  products: { name: string } | { name: string }[] | null;
-};
+import { filterOrdersByQuery, loadOrderItemSummaries, loadSellerOrders, ORDER_STATUSES, type OrderStatusFilter } from "@/lib/orders";
 
 function statusClass(status: string) {
   if (status === "paid") return "bg-green-500/10 text-green-400";
@@ -31,88 +14,67 @@ function statusClass(status: string) {
   return "bg-white/10 text-[#9CA3AF]";
 }
 
+function toYmd(date: Date) {
+  const shifted = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  return shifted.toISOString().slice(0, 10);
+}
+
+function startOfWeek(date: Date) {
+  const result = new Date(date);
+  const day = result.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  result.setUTCDate(result.getUTCDate() + diff);
+  result.setUTCHours(0, 0, 0, 0);
+  return result;
+}
+
+function buildOrderQuery(params: Record<string, string | undefined>) {
+  const cleanParams: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value) cleanParams[key] = value;
+  }
+  const search = new URLSearchParams(cleanParams);
+  const query = search.toString();
+  return query ? `/dashboard/orders?${query}` : "/dashboard/orders";
+}
+
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const lang = await getLangFromCookie();
   const { status, q, dateFrom, dateTo } = (await searchParams) as { status?: string; q?: string; dateFrom?: string; dateTo?: string };
-  const selected = statuses.includes((status ?? "all") as (typeof statuses)[number]) ? (status ?? "all") : "all";
-  const query = (q ?? "").trim().toLowerCase();
+  const selected: OrderStatusFilter = ORDER_STATUSES.includes((status ?? "all") as OrderStatusFilter) ? ((status ?? "all") as OrderStatusFilter) : "all";
 
   const { user } = await requireSeller();
   const admin = createAdminClient();
-
-  const primaryQuery = admin
-    .from("orders")
-    .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at,shops!inner(owner_id)")
-    .eq("shops.owner_id", user.id)
-    .order("created_at", { ascending: false });
-
-  if (selected !== "all") {
-    primaryQuery.eq("status", selected);
-  }
-  if (dateFrom) {
-    primaryQuery.gte("created_at", `${dateFrom}T00:00:00`);
-  }
-  if (dateTo) {
-    primaryQuery.lte("created_at", `${dateTo}T23:59:59`);
-  }
-
-  let orders: OrderListRow[] | null = null;
-  let loadError: string | null = null;
-
-  const primary = await primaryQuery;
-  if (primary.error) {
-    const shopsRes = await admin.from("shops").select("id").eq("owner_id", user.id);
-    if (shopsRes.error) {
-      loadError = shopsRes.error.message;
-    } else {
-      const shopIds = (shopsRes.data ?? []).map((s) => s.id);
-      if (shopIds.length) {
-        const fallbackQuery = admin
-          .from("orders")
-          .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at")
-          .in("shop_id", shopIds)
-          .order("created_at", { ascending: false });
-        if (selected !== "all") fallbackQuery.eq("status", selected);
-        if (dateFrom) fallbackQuery.gte("created_at", `${dateFrom}T00:00:00`);
-        if (dateTo) fallbackQuery.lte("created_at", `${dateTo}T23:59:59`);
-        const fallback = await fallbackQuery;
-        if (fallback.error) {
-          loadError = fallback.error.message;
-        } else {
-          orders = (fallback.data as OrderListRow[] | null) ?? [];
-        }
-      } else {
-        orders = [];
-      }
-    }
-  } else {
-    orders = (primary.data as unknown as OrderListRow[] | null) ?? [];
-  }
-
-  const filteredOrders = (orders ?? []).filter((o) => {
-    if (!query) return true;
-    const haystack = `${o.order_code} ${o.buyer_name ?? ""} ${o.buyer_phone ?? ""} ${o.status}`.toLowerCase();
-    return haystack.includes(query);
-  });
+  const { orders, loadError } = await loadSellerOrders(admin, user.id, { status: selected, dateFrom, dateTo });
+  const filteredOrders = filterOrdersByQuery(orders, q);
 
   const orderIds = filteredOrders.map((o) => o.id);
-  const { data: itemRows } = orderIds.length
-    ? await admin.from("order_items").select("order_id,qty,products(name)").in("order_id", orderIds)
-    : { data: [] };
-
-  const itemSummaryByOrder = new Map<string, string>();
-  for (const row of (itemRows ?? []) as OrderItemSummaryRow[]) {
-    const productName = Array.isArray(row.products) ? row.products[0]?.name : row.products?.name;
-    if (!productName) continue;
-    const label = `${productName} x${row.qty}`;
-    const current = itemSummaryByOrder.get(row.order_id);
-    itemSummaryByOrder.set(row.order_id, current ? `${current}, ${label}` : label);
-  }
+  const itemSummaryByOrder = await loadOrderItemSummaries(admin, orderIds);
+  const now = new Date();
+  const todayRange = { dateFrom: toYmd(now), dateTo: toYmd(now) };
+  const weekRange = { dateFrom: toYmd(startOfWeek(now)), dateTo: toYmd(now) };
+  const monthRange = { dateFrom: todayRange.dateFrom.slice(0, 8) + "01", dateTo: toYmd(now) };
+  const activeQuickRange =
+    dateFrom === todayRange.dateFrom && dateTo === todayRange.dateTo
+      ? "today"
+      : dateFrom === weekRange.dateFrom && dateTo === weekRange.dateTo
+        ? "week"
+        : dateFrom === monthRange.dateFrom && dateTo === monthRange.dateTo
+          ? "month"
+          : "";
+  const exportHref = `/api/orders/export?${new URLSearchParams(
+    Object.entries({ status: selected === "all" ? "" : selected, q: q ?? "", dateFrom: dateFrom ?? "", dateTo: dateTo ?? "" }).filter(([, value]) => value),
+  ).toString()}`;
 
   return (
     <section className="space-y-4">
       <Card>
-        <h1 className="text-2xl font-bold text-[#F3F4F6]">{t(lang, "orders.title")}</h1>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <h1 className="text-2xl font-bold text-[#F3F4F6]">{t(lang, "orders.title")}</h1>
+          <a href={exportHref} className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-[#163C33] px-4 text-sm font-semibold text-[#F3F4F6] hover:border-[#C9A227]/40">
+            Export CSV
+          </a>
+        </div>
         <form className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_180px] xl:grid-cols-[1fr_180px_180px_auto]">
           <input
             name="q"
@@ -137,18 +99,31 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           </button>
         </form>
         <div className="mt-3 flex flex-wrap gap-2">
-          {statuses.map((s) => (
+          {[
+            { key: "today", label: "Today", ...todayRange },
+            { key: "week", label: "This Week", ...weekRange },
+            { key: "month", label: "This Month", ...monthRange },
+          ].map((range) => (
+            <Link
+              key={range.key}
+              href={buildOrderQuery({ status: selected === "all" ? "" : selected, q: q ?? "", dateFrom: range.dateFrom, dateTo: range.dateTo })}
+              className={`rounded-lg px-3 py-1 text-sm ${activeQuickRange === range.key ? "bg-[#163C33] border border-[#C9A227] text-[#F3F4F6]" : "bg-[#163C33] text-[#9CA3AF] border border-white/10"}`}
+            >
+              {range.label}
+            </Link>
+          ))}
+          <Link
+            href={buildOrderQuery({ status: selected === "all" ? "" : selected, q: q ?? "" })}
+            className={`rounded-lg px-3 py-1 text-sm ${!dateFrom && !dateTo ? "bg-[#163C33] border border-[#C9A227] text-[#F3F4F6]" : "bg-[#163C33] text-[#9CA3AF] border border-white/10"}`}
+          >
+            All Time
+          </Link>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {ORDER_STATUSES.map((s) => (
             <Link
               key={s}
-              href={
-                s === "all"
-                  ? `/dashboard/orders${q || dateFrom || dateTo ? `?${new URLSearchParams(
-                      Object.entries({ q: q ?? "", dateFrom: dateFrom ?? "", dateTo: dateTo ?? "" }).filter(([, value]) => value),
-                    ).toString()}` : ""}`
-                  : `/dashboard/orders?${new URLSearchParams(
-                      Object.entries({ status: s, q: q ?? "", dateFrom: dateFrom ?? "", dateTo: dateTo ?? "" }).filter(([, value]) => value),
-                    ).toString()}`
-              }
+              href={buildOrderQuery({ status: s === "all" ? "" : s, q: q ?? "", dateFrom: dateFrom ?? "", dateTo: dateTo ?? "" })}
               className={`rounded-lg px-3 py-1 text-sm ${selected === s ? "bg-[#163C33] border border-[#C9A227] text-[#F3F4F6]" : "bg-[#163C33] text-[#9CA3AF] border border-white/10"}`}
             >
               {s}
