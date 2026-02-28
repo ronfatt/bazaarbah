@@ -25,6 +25,13 @@ type EarningRow = {
   buyer_name: string | null;
 };
 
+type PayoutBankInfo = {
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  note?: string;
+};
+
 type PayoutRow = {
   id: string;
   created_at: string;
@@ -47,6 +54,15 @@ function payoutBadge(status: PayoutRow["status"]) {
   if (status === "APPROVED") return <Badge variant="ai">APPROVED</Badge>;
   if (status === "REJECTED") return <Badge variant="cancelled">REJECTED</Badge>;
   return <Badge variant="pending">REQUESTED</Badge>;
+}
+
+function parseBankInfo(raw: string | null): PayoutBankInfo {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as PayoutBankInfo;
+  } catch {
+    return { note: raw };
+  }
 }
 
 export function AffiliateDashboard({
@@ -73,11 +89,33 @@ export function AffiliateDashboard({
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [amount, setAmount] = useState(availableToRequestCents > 0 ? String((availableToRequestCents / 100).toFixed(2)) : "");
-  const [bankInfo, setBankInfo] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [payoutNote, setPayoutNote] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<EarningRow["status"] | "ALL">("ALL");
   const referralLink = useMemo(() => {
     if (!referralCode || typeof window === "undefined") return "";
     return `${window.location.origin}/?ref=${referralCode}`;
   }, [referralCode]);
+
+  const filteredReferrals = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return referrals;
+    return referrals.filter((row) => `${row.display_name ?? ""} ${row.plan_tier}`.toLowerCase().includes(q));
+  }, [referrals, search]);
+
+  const filteredEarnings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return earnings.filter((row) => {
+      const matchStatus = statusFilter === "ALL" ? true : row.status === statusFilter;
+      if (!matchStatus) return false;
+      if (!q) return true;
+      const haystack = `${row.buyer_name ?? ""} ${row.event_type} ${row.status} L${row.level}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [earnings, search, statusFilter]);
 
   async function copyLink() {
     if (!referralLink) return;
@@ -96,7 +134,10 @@ export function AffiliateDashboard({
     const res = await fetch("/api/affiliate/payout-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountCents, bankInfo }),
+      body: JSON.stringify({
+        amountCents,
+        bankInfo: { bankName, accountName, accountNumber, note: payoutNote },
+      }),
     });
     const json = await res.json();
     setBusy(false);
@@ -159,11 +200,33 @@ export function AffiliateDashboard({
         <p className="mt-3 text-sm text-white/60">{t(lang, "affiliate.reward_note")}</p>
       </AppCard>
 
+      <AppCard className="p-5">
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t(lang, "affiliate.search_placeholder")}
+            className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as EarningRow["status"] | "ALL")}
+            className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+          >
+            <option value="ALL">{t(lang, "affiliate.filter_all")}</option>
+            <option value="PENDING">{t(lang, "affiliate.filter_pending")}</option>
+            <option value="APPROVED">{t(lang, "affiliate.filter_approved")}</option>
+            <option value="PAID">{t(lang, "affiliate.filter_paid")}</option>
+            <option value="REVERSED">{t(lang, "affiliate.filter_reversed")}</option>
+          </select>
+        </div>
+      </AppCard>
+
       <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr]">
         <AppCard className="p-5">
           <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.referrals_tab")}</h2>
           <div className="mt-4 space-y-3 text-sm">
-            {referrals.map((row) => (
+            {filteredReferrals.map((row) => (
               <div key={row.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-white/80">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold text-white">{row.display_name || t(lang, "affiliate.member")}</p>
@@ -172,7 +235,7 @@ export function AffiliateDashboard({
                 <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.joined_at")}: {formatDateMY(row.created_at)}</p>
               </div>
             ))}
-            {referrals.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.no_referrals")}</p> : null}
+            {filteredReferrals.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.no_referrals")}</p> : null}
           </div>
         </AppCard>
 
@@ -195,25 +258,46 @@ export function AffiliateDashboard({
               <input value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white" inputMode="decimal" />
             </label>
             <label className="text-sm text-white/70">
-              {t(lang, "affiliate.bank_info")}
-              <textarea value={bankInfo} onChange={(e) => setBankInfo(e.target.value)} className="mt-1 min-h-[92px] w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 py-2 text-sm text-white" />
+              {t(lang, "affiliate.bank_name")}
+              <input value={bankName} onChange={(e) => setBankName(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white" />
+            </label>
+            <label className="text-sm text-white/70">
+              {t(lang, "affiliate.account_name")}
+              <input value={accountName} onChange={(e) => setAccountName(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white" />
+            </label>
+            <label className="text-sm text-white/70">
+              {t(lang, "affiliate.account_number")}
+              <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white" />
             </label>
           </div>
+          <label className="mt-3 block text-sm text-white/70">
+            {t(lang, "affiliate.payout_note")}
+            <textarea value={payoutNote} onChange={(e) => setPayoutNote(e.target.value)} className="mt-1 min-h-[92px] w-full rounded-xl border border-white/10 bg-[#0B241F] px-3 py-2 text-sm text-white" />
+          </label>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <AppButton onClick={submitPayout} disabled={busy || availableToRequestCents < minPayoutCents}>{busy ? "..." : t(lang, "affiliate.submit_request")}</AppButton>
             {status ? <p className="text-sm text-white/75">{status}</p> : null}
           </div>
 
           <div className="mt-5 space-y-3 text-sm">
-            {payouts.map((row) => (
-              <div key={row.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-white/80">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold text-white">{currencyFromCents(row.amount_cents)}</p>
-                  {payoutBadge(row.status)}
+            {payouts.map((row) => {
+              const bank = parseBankInfo(row.bank_info_json);
+              return (
+                <div key={row.id} className="rounded-xl border border-white/10 bg-[#163C33] p-3 text-white/80">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-white">{currencyFromCents(row.amount_cents)}</p>
+                    {payoutBadge(row.status)}
+                  </div>
+                  <p className="mt-1 text-xs text-white/55">{formatDateTimeMY(row.created_at)}</p>
+                  <div className="mt-2 text-xs text-white/60">
+                    <p>{t(lang, "affiliate.bank_name")}: {bank.bankName || "-"}</p>
+                    <p>{t(lang, "affiliate.account_name")}: {bank.accountName || "-"}</p>
+                    <p>{t(lang, "affiliate.account_number")}: {bank.accountNumber || "-"}</p>
+                    {bank.note ? <p>{t(lang, "affiliate.payout_note")}: {bank.note}</p> : null}
+                  </div>
                 </div>
-                <p className="mt-1 text-xs text-white/55">{formatDateTimeMY(row.created_at)}</p>
-              </div>
-            ))}
+              );
+            })}
             {payouts.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.no_payouts")}</p> : null}
           </div>
         </AppCard>
@@ -239,7 +323,7 @@ export function AffiliateDashboard({
               </tr>
             </thead>
             <tbody>
-              {earnings.map((row) => (
+              {filteredEarnings.map((row) => (
                 <tr key={row.id} className="border-t border-white/8">
                   <td className="px-3 py-3">{formatDateTimeMY(row.created_at)}</td>
                   <td className="px-3 py-3">{row.event_type === "PACKAGE_PURCHASE" ? t(lang, "affiliate.event_package") : t(lang, "affiliate.event_topup")}</td>
@@ -251,7 +335,7 @@ export function AffiliateDashboard({
               ))}
             </tbody>
           </table>
-          {earnings.length === 0 ? <p className="mt-3 text-sm text-white/45">{t(lang, "affiliate.no_earnings")}</p> : null}
+          {filteredEarnings.length === 0 ? <p className="mt-3 text-sm text-white/45">{t(lang, "affiliate.no_earnings")}</p> : null}
         </div>
       </AppCard>
     </div>

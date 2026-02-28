@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { Badge } from "@/components/ui/Badge";
@@ -27,6 +27,13 @@ type PayoutRow = {
   bank_info_json: string | null;
 };
 
+type PayoutBankInfo = {
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  note?: string;
+};
+
 function ledgerBadge(status: LedgerRow["status"]) {
   if (status === "PAID") return <Badge variant="paid">PAID</Badge>;
   if (status === "APPROVED") return <Badge variant="ai">APPROVED</Badge>;
@@ -41,6 +48,15 @@ function payoutBadge(status: PayoutRow["status"]) {
   return <Badge variant="pending">REQUESTED</Badge>;
 }
 
+function parseBankInfo(raw: string | null): PayoutBankInfo {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as PayoutBankInfo;
+  } catch {
+    return { note: raw };
+  }
+}
+
 export function AffiliateAdminPanel({
   lang = "en",
   ledger,
@@ -52,14 +68,44 @@ export function AffiliateAdminPanel({
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<LedgerRow["status"] | "ALL">("ALL");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  async function runLedger(id: string, action: "approve" | "mark_paid" | "reverse") {
-    setBusy(`ledger:${id}:${action}`);
+  const filteredLedger = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return ledger.filter((row) => {
+      const matchStatus = statusFilter === "ALL" ? true : row.status === statusFilter;
+      if (!matchStatus) return false;
+      if (!q) return true;
+      const haystack = `${row.earner_name ?? ""} ${row.buyer_name ?? ""} ${row.event_type} ${row.status}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [ledger, search, statusFilter]);
+
+  const allVisibleSelected = filteredLedger.length > 0 && filteredLedger.every((row) => selectedIds.includes(row.id));
+
+  function toggleLedger(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  }
+
+  function toggleAllVisible() {
+    setSelectedIds((prev) => {
+      if (allVisibleSelected) {
+        return prev.filter((id) => !filteredLedger.some((row) => row.id === id));
+      }
+      return Array.from(new Set([...prev, ...filteredLedger.map((row) => row.id)]));
+    });
+  }
+
+  async function runLedger(ids: string[], action: "approve" | "mark_paid" | "reverse") {
+    if (!ids.length) return;
+    setBusy(`ledger:${action}`);
     setStatus(null);
     const res = await fetch("/api/admin/affiliate/ledger", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [id], action }),
+      body: JSON.stringify({ ids, action }),
     });
     const json = await res.json();
     setBusy(null);
@@ -92,11 +138,52 @@ export function AffiliateAdminPanel({
   return (
     <div className="space-y-6">
       <AppCard className="p-5">
-        <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.ledger")}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.ledger")}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t(lang, "affiliate.search_placeholder")}
+              className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as LedgerRow["status"] | "ALL")}
+              className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+            >
+              <option value="ALL">{t(lang, "affiliate.filter_all")}</option>
+              <option value="PENDING">{t(lang, "affiliate.filter_pending")}</option>
+              <option value="APPROVED">{t(lang, "affiliate.filter_approved")}</option>
+              <option value="PAID">{t(lang, "affiliate.filter_paid")}</option>
+              <option value="REVERSED">{t(lang, "affiliate.filter_reversed")}</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={toggleAllVisible} disabled={!filteredLedger.length || Boolean(busy)}>
+            {allVisibleSelected ? t(lang, "affiliate.clear_selection") : t(lang, "affiliate.select_all")}
+          </AppButton>
+          <span className="text-xs text-white/55">{selectedIds.length} {t(lang, "affiliate.selected_count")}</span>
+          <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => runLedger(selectedIds, "approve")} disabled={!selectedIds.length || Boolean(busy)}>
+            {t(lang, "affiliate.approve")}
+          </AppButton>
+          <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => runLedger(selectedIds, "mark_paid")} disabled={!selectedIds.length || Boolean(busy)}>
+            {t(lang, "affiliate.mark_paid")}
+          </AppButton>
+          <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={() => runLedger(selectedIds, "reverse")} disabled={!selectedIds.length || Boolean(busy)}>
+            {t(lang, "affiliate.reverse")}
+          </AppButton>
+        </div>
+
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm text-white/80">
             <thead className="text-white/55">
               <tr>
+                <th className="px-3 py-2">
+                  <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} />
+                </th>
                 <th className="px-3 py-2">{t(lang, "affiliate.date")}</th>
                 <th className="px-3 py-2">{t(lang, "affiliate.earner")}</th>
                 <th className="px-3 py-2">{t(lang, "affiliate.buyer")}</th>
@@ -108,8 +195,11 @@ export function AffiliateAdminPanel({
               </tr>
             </thead>
             <tbody>
-              {ledger.map((row) => (
+              {filteredLedger.map((row) => (
                 <tr key={row.id} className="border-t border-white/8">
+                  <td className="px-3 py-3">
+                    <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleLedger(row.id)} />
+                  </td>
                   <td className="px-3 py-3">{formatDateTimeMY(row.created_at)}</td>
                   <td className="px-3 py-3">{row.earner_name || "-"}</td>
                   <td className="px-3 py-3">{row.buyer_name || "-"}</td>
@@ -120,17 +210,17 @@ export function AffiliateAdminPanel({
                   <td className="px-3 py-3">
                     <div className="flex flex-wrap gap-2">
                       {row.status === "PENDING" ? (
-                        <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => runLedger(row.id, "approve")} disabled={Boolean(busy)}>
+                        <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => runLedger([row.id], "approve")} disabled={Boolean(busy)}>
                           {t(lang, "affiliate.approve")}
                         </AppButton>
                       ) : null}
                       {row.status === "APPROVED" ? (
-                        <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => runLedger(row.id, "mark_paid")} disabled={Boolean(busy)}>
+                        <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => runLedger([row.id], "mark_paid")} disabled={Boolean(busy)}>
                           {t(lang, "affiliate.mark_paid")}
                         </AppButton>
                       ) : null}
                       {row.status !== "REVERSED" ? (
-                        <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={() => runLedger(row.id, "reverse")} disabled={Boolean(busy)}>
+                        <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={() => runLedger([row.id], "reverse")} disabled={Boolean(busy)}>
                           {t(lang, "affiliate.reverse")}
                         </AppButton>
                       ) : null}
@@ -140,7 +230,7 @@ export function AffiliateAdminPanel({
               ))}
             </tbody>
           </table>
-          {ledger.length === 0 ? <p className="mt-3 text-sm text-white/45">{t(lang, "affiliate.none")}</p> : null}
+          {filteredLedger.length === 0 ? <p className="mt-3 text-sm text-white/45">{t(lang, "affiliate.none")}</p> : null}
         </div>
       </AppCard>
 
@@ -159,34 +249,42 @@ export function AffiliateAdminPanel({
               </tr>
             </thead>
             <tbody>
-              {payouts.map((row) => (
-                <tr key={row.id} className="border-t border-white/8">
-                  <td className="px-3 py-3">{formatDateTimeMY(row.created_at)}</td>
-                  <td className="px-3 py-3">{row.user_name || "-"}</td>
-                  <td className="px-3 py-3 font-semibold text-white">{currencyFromCents(row.amount_cents)}</td>
-                  <td className="px-3 py-3">{payoutBadge(row.status)}</td>
-                  <td className="px-3 py-3 text-xs text-white/60">{row.bank_info_json || "-"}</td>
-                  <td className="px-3 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      {row.status === "REQUESTED" ? (
-                        <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => runPayout(row.id, "approve")} disabled={Boolean(busy)}>
-                          {t(lang, "affiliate.approve")}
-                        </AppButton>
-                      ) : null}
-                      {row.status === "APPROVED" ? (
-                        <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => runPayout(row.id, "mark_paid")} disabled={Boolean(busy)}>
-                          {t(lang, "affiliate.mark_paid")}
-                        </AppButton>
-                      ) : null}
-                      {row.status === "REQUESTED" || row.status === "APPROVED" ? (
-                        <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={() => runPayout(row.id, "reject")} disabled={Boolean(busy)}>
-                          {t(lang, "affiliate.reject")}
-                        </AppButton>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {payouts.map((row) => {
+                const bank = parseBankInfo(row.bank_info_json);
+                return (
+                  <tr key={row.id} className="border-t border-white/8 align-top">
+                    <td className="px-3 py-3">{formatDateTimeMY(row.created_at)}</td>
+                    <td className="px-3 py-3">{row.user_name || "-"}</td>
+                    <td className="px-3 py-3 font-semibold text-white">{currencyFromCents(row.amount_cents)}</td>
+                    <td className="px-3 py-3">{payoutBadge(row.status)}</td>
+                    <td className="px-3 py-3 text-xs text-white/60">
+                      <p>{t(lang, "affiliate.bank_name")}: {bank.bankName || "-"}</p>
+                      <p>{t(lang, "affiliate.account_name")}: {bank.accountName || "-"}</p>
+                      <p>{t(lang, "affiliate.account_number")}: {bank.accountNumber || "-"}</p>
+                      {bank.note ? <p>{t(lang, "affiliate.payout_note")}: {bank.note}</p> : null}
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        {row.status === "REQUESTED" ? (
+                          <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => runPayout(row.id, "approve")} disabled={Boolean(busy)}>
+                            {t(lang, "affiliate.approve")}
+                          </AppButton>
+                        ) : null}
+                        {row.status === "APPROVED" ? (
+                          <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => runPayout(row.id, "mark_paid")} disabled={Boolean(busy)}>
+                            {t(lang, "affiliate.mark_paid")}
+                          </AppButton>
+                        ) : null}
+                        {row.status === "REQUESTED" || row.status === "APPROVED" ? (
+                          <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={() => runPayout(row.id, "reject")} disabled={Boolean(busy)}>
+                            {t(lang, "affiliate.reject")}
+                          </AppButton>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {payouts.length === 0 ? <p className="mt-3 text-sm text-white/45">{t(lang, "affiliate.no_payouts")}</p> : null}

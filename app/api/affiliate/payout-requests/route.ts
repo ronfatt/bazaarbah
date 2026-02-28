@@ -6,7 +6,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const bodySchema = z.object({
   amountCents: z.number().int().positive(),
-  bankInfo: z.string().trim().min(4).max(2000),
+  bankInfo: z.object({
+    bankName: z.string().trim().min(2).max(100),
+    accountName: z.string().trim().min(2).max(120),
+    accountNumber: z.string().trim().min(4).max(40),
+    note: z.string().trim().max(1000).optional().default(""),
+  }),
 });
 
 export async function POST(req: NextRequest) {
@@ -36,7 +41,7 @@ export async function POST(req: NextRequest) {
     .insert({
       user_id: user.id,
       amount_cents: body.amountCents,
-      bank_info_json: body.bankInfo,
+      bank_info_json: JSON.stringify(body.bankInfo),
     })
     .select("*")
     .single();
