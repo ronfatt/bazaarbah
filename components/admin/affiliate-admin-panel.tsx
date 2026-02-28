@@ -68,22 +68,44 @@ export function AffiliateAdminPanel({
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<LedgerRow["status"] | "ALL">("ALL");
+  const [ledgerSearch, setLedgerSearch] = useState("");
+  const [ledgerStatusFilter, setLedgerStatusFilter] = useState<LedgerRow["status"] | "ALL">("ALL");
+  const [payoutSearch, setPayoutSearch] = useState("");
+  const [payoutStatusFilter, setPayoutStatusFilter] = useState<PayoutRow["status"] | "ALL">("ALL");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filteredLedger = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = ledgerSearch.trim().toLowerCase();
     return ledger.filter((row) => {
-      const matchStatus = statusFilter === "ALL" ? true : row.status === statusFilter;
+      const matchStatus = ledgerStatusFilter === "ALL" ? true : row.status === ledgerStatusFilter;
       if (!matchStatus) return false;
       if (!q) return true;
       const haystack = `${row.earner_name ?? ""} ${row.buyer_name ?? ""} ${row.event_type} ${row.status}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [ledger, search, statusFilter]);
+  }, [ledger, ledgerSearch, ledgerStatusFilter]);
+
+  const filteredPayouts = useMemo(() => {
+    const q = payoutSearch.trim().toLowerCase();
+    return payouts.filter((row) => {
+      const bank = parseBankInfo(row.bank_info_json);
+      const matchStatus = payoutStatusFilter === "ALL" ? true : row.status === payoutStatusFilter;
+      if (!matchStatus) return false;
+      if (!q) return true;
+      const haystack = `${row.user_name ?? ""} ${bank.bankName ?? ""} ${bank.accountName ?? ""} ${bank.accountNumber ?? ""} ${bank.note ?? ""}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [payouts, payoutSearch, payoutStatusFilter]);
 
   const allVisibleSelected = filteredLedger.length > 0 && filteredLedger.every((row) => selectedIds.includes(row.id));
+  const selectedRows = ledger.filter((row) => selectedIds.includes(row.id));
+  const selectedStatusSet = Array.from(new Set(selectedRows.map((row) => row.status)));
+  const selectedStatus = selectedStatusSet.length === 1 ? selectedStatusSet[0] : null;
+  const batchStatusError = selectedIds.length > 0 && selectedStatusSet.length > 1 ? t(lang, "affiliate.batch_same_status_only") : null;
+  const canBatchApprove = selectedIds.length > 0 && selectedStatus === "PENDING";
+  const canBatchMarkPaid = selectedIds.length > 0 && selectedStatus === "APPROVED";
+  const canBatchReverse = selectedIds.length > 0 && selectedStatus !== null && selectedStatus !== "REVERSED";
+  const payoutExportHref = `/api/admin/affiliate/payout-requests/export?${new URLSearchParams({ q: payoutSearch, status: payoutStatusFilter }).toString()}`;
 
   function toggleLedger(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -142,14 +164,14 @@ export function AffiliateAdminPanel({
           <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.ledger")}</h2>
           <div className="flex flex-wrap items-center gap-2">
             <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={ledgerSearch}
+              onChange={(e) => setLedgerSearch(e.target.value)}
               placeholder={t(lang, "affiliate.search_placeholder")}
               className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30"
             />
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as LedgerRow["status"] | "ALL")}
+              value={ledgerStatusFilter}
+              onChange={(e) => setLedgerStatusFilter(e.target.value as LedgerRow["status"] | "ALL")}
               className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
             >
               <option value="ALL">{t(lang, "affiliate.filter_all")}</option>
@@ -166,16 +188,17 @@ export function AffiliateAdminPanel({
             {allVisibleSelected ? t(lang, "affiliate.clear_selection") : t(lang, "affiliate.select_all")}
           </AppButton>
           <span className="text-xs text-white/55">{selectedIds.length} {t(lang, "affiliate.selected_count")}</span>
-          <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => runLedger(selectedIds, "approve")} disabled={!selectedIds.length || Boolean(busy)}>
+          <AppButton className="h-8 px-3 text-xs" variant="ai" onClick={() => runLedger(selectedIds, "approve")} disabled={!canBatchApprove || Boolean(busy)}>
             {t(lang, "affiliate.approve")}
           </AppButton>
-          <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => runLedger(selectedIds, "mark_paid")} disabled={!selectedIds.length || Boolean(busy)}>
+          <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => runLedger(selectedIds, "mark_paid")} disabled={!canBatchMarkPaid || Boolean(busy)}>
             {t(lang, "affiliate.mark_paid")}
           </AppButton>
-          <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={() => runLedger(selectedIds, "reverse")} disabled={!selectedIds.length || Boolean(busy)}>
+          <AppButton className="h-8 px-3 text-xs" variant="ghost" onClick={() => runLedger(selectedIds, "reverse")} disabled={!canBatchReverse || Boolean(busy)}>
             {t(lang, "affiliate.reverse")}
           </AppButton>
         </div>
+        {batchStatusError ? <p className="mt-2 text-sm text-rose-300">{batchStatusError}</p> : null}
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm text-white/80">
@@ -235,7 +258,32 @@ export function AffiliateAdminPanel({
       </AppCard>
 
       <AppCard className="p-5">
-        <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.payout_requests")}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.payout_requests")}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={payoutSearch}
+              onChange={(e) => setPayoutSearch(e.target.value)}
+              placeholder={t(lang, "affiliate.payout_search_placeholder")}
+              className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white placeholder:text-white/30"
+            />
+            <select
+              value={payoutStatusFilter}
+              onChange={(e) => setPayoutStatusFilter(e.target.value as PayoutRow["status"] | "ALL")}
+              className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white"
+            >
+              <option value="ALL">{t(lang, "affiliate.filter_all")}</option>
+              <option value="REQUESTED">{t(lang, "affiliate.filter_requested")}</option>
+              <option value="APPROVED">{t(lang, "affiliate.filter_approved")}</option>
+              <option value="PAID">{t(lang, "affiliate.filter_paid")}</option>
+              <option value="REJECTED">{t(lang, "affiliate.filter_rejected")}</option>
+            </select>
+            <a href={payoutExportHref}>
+              <AppButton className="h-10 px-4 text-sm" variant="ghost">{t(lang, "affiliate.export_csv")}</AppButton>
+            </a>
+          </div>
+        </div>
+
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm text-white/80">
             <thead className="text-white/55">
@@ -249,7 +297,7 @@ export function AffiliateAdminPanel({
               </tr>
             </thead>
             <tbody>
-              {payouts.map((row) => {
+              {filteredPayouts.map((row) => {
                 const bank = parseBankInfo(row.bank_info_json);
                 return (
                   <tr key={row.id} className="border-t border-white/8 align-top">
@@ -287,7 +335,7 @@ export function AffiliateAdminPanel({
               })}
             </tbody>
           </table>
-          {payouts.length === 0 ? <p className="mt-3 text-sm text-white/45">{t(lang, "affiliate.no_payouts")}</p> : null}
+          {filteredPayouts.length === 0 ? <p className="mt-3 text-sm text-white/45">{t(lang, "affiliate.no_payouts")}</p> : null}
         </div>
       </AppCard>
 

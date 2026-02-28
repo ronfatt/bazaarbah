@@ -30,6 +30,27 @@ export async function PATCH(req: NextRequest) {
   }
 
   const admin = createAdminClient();
+  const { data: rows, error: loadError } = await admin.from("commission_ledger").select("id,status").in("id", body.ids);
+  if (loadError) return NextResponse.json({ error: loadError.message }, { status: 400 });
+  if (!rows || rows.length !== body.ids.length) {
+    return NextResponse.json({ error: "Some ledger rows were not found." }, { status: 404 });
+  }
+
+  const uniqueStatuses = Array.from(new Set(rows.map((row) => row.status)));
+  if (uniqueStatuses.length !== 1) {
+    return NextResponse.json({ error: "Batch actions only work when all selected rows share the same status." }, { status: 400 });
+  }
+
+  const currentStatus = uniqueStatuses[0];
+  const validAction =
+    (body.action === "approve" && currentStatus === "PENDING") ||
+    (body.action === "mark_paid" && currentStatus === "APPROVED") ||
+    (body.action === "reverse" && currentStatus !== "REVERSED");
+
+  if (!validAction) {
+    return NextResponse.json({ error: "Selected rows do not match this action." }, { status: 400 });
+  }
+
   const now = new Date().toISOString();
   const patch =
     body.action === "approve"
