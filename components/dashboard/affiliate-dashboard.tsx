@@ -15,6 +15,16 @@ type ReferralRow = {
   created_at: string;
 };
 
+type TeamTreeRow = {
+  id: string;
+  display_name: string | null;
+  plan_tier: "free" | "pro_88" | "pro_128";
+  created_at: string;
+  is_affiliate_enabled: boolean;
+  parent_name: string | null;
+  children_count: number;
+};
+
 type EarningRow = {
   id: string;
   created_at: string;
@@ -73,6 +83,7 @@ export function AffiliateDashboard({
   availableToRequestCents,
   minPayoutCents,
   referrals,
+  teamTree,
   earnings,
   payouts,
 }: {
@@ -83,6 +94,7 @@ export function AffiliateDashboard({
   availableToRequestCents: number;
   minPayoutCents: number;
   referrals: ReferralRow[];
+  teamTree: { level1: TeamTreeRow[]; level2: TeamTreeRow[]; level3: TeamTreeRow[] };
   earnings: EarningRow[];
   payouts: PayoutRow[];
 }) {
@@ -105,6 +117,21 @@ export function AffiliateDashboard({
     if (!q) return referrals;
     return referrals.filter((row) => `${row.display_name ?? ""} ${row.plan_tier}`.toLowerCase().includes(q));
   }, [referrals, search]);
+
+  const filteredTeamTree = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filterRows = (rows: TeamTreeRow[]) =>
+      rows.filter((row) => {
+        if (!q) return true;
+        const haystack = `${row.display_name ?? ""} ${row.parent_name ?? ""} ${row.plan_tier}`.toLowerCase();
+        return haystack.includes(q);
+      });
+    return {
+      level1: filterRows(teamTree.level1),
+      level2: filterRows(teamTree.level2),
+      level3: filterRows(teamTree.level3),
+    };
+  }, [teamTree, search]);
 
   const filteredEarnings = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -219,6 +246,44 @@ export function AffiliateDashboard({
             <option value="PAID">{t(lang, "affiliate.filter_paid")}</option>
             <option value="REVERSED">{t(lang, "affiliate.filter_reversed")}</option>
           </select>
+        </div>
+      </AppCard>
+
+      <AppCard className="p-5">
+        <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.team_tree")}</h2>
+        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+          {([
+            ["level1", t(lang, "affiliate.level_1")],
+            ["level2", t(lang, "affiliate.level_2")],
+            ["level3", t(lang, "affiliate.level_3")],
+          ] as const).map(([key, label]) => {
+            const rows = filteredTeamTree[key];
+            return (
+              <div key={key} className="rounded-2xl border border-white/10 bg-[#163C33] p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-semibold text-white">{label}</h3>
+                  <Badge variant="neutral">{rows.length}</Badge>
+                </div>
+                <div className="mt-3 space-y-3">
+                  {rows.map((row) => (
+                    <div key={row.id} className="rounded-xl border border-white/10 bg-[#0B241F] p-3 text-sm text-white/80">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-semibold text-white">{row.display_name || t(lang, "affiliate.member")}</p>
+                        <Badge variant={row.is_affiliate_enabled ? "ai" : "neutral"}>
+                          {row.is_affiliate_enabled ? t(lang, "affiliate.enabled_badge") : t(lang, "affiliate.locked_badge")}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.current_plan")}: {row.plan_tier === "free" ? t(lang, "plan.free") : row.plan_tier === "pro_88" ? "RM88" : "RM168"}</p>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.joined_at")}: {formatDateMY(row.created_at)}</p>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.under")}: {row.parent_name || "-"}</p>
+                      <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.children_count")}: {row.children_count}</p>
+                    </div>
+                  ))}
+                  {rows.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.team_empty")}</p> : null}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </AppCard>
 
