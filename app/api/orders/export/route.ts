@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/auth";
 import type { OrderStatusFilter } from "@/lib/orders";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { filterOrdersByQuery, loadOrderItemSummaries, loadSellerOrders, ORDER_STATUSES } from "@/lib/orders";
+import { filterOrdersByQuery, loadOrderItemSummaries, loadSellerOrders, orderPaymentStatusLabel, ORDER_STATUSES } from "@/lib/orders";
 import { currencyFromCents, formatDateTimeMY } from "@/lib/utils";
 
 function csvEscape(value: string | null | undefined) {
@@ -32,16 +32,19 @@ export async function GET(req: Request) {
     filteredOrders.map((order) => order.id),
   );
 
-  const header = ["Order Code", "Buyer", "Phone", "Items", "Status", "Subtotal", "Created At"];
+  const header = ["Order Code", "Shop Name", "Buyer", "Phone", "Items", "Payment Status", "Status Code", "Subtotal", "Created At", "Paid At"];
   const rows = filteredOrders.map((order) =>
     [
       order.order_code,
+      order.shop_name ?? "",
       order.buyer_name ?? "Guest",
       order.buyer_phone ?? "",
       itemSummaryByOrder.get(order.id) ?? "",
+      orderPaymentStatusLabel(order.status),
       order.status,
       currencyFromCents(order.subtotal_cents),
       formatDateTimeMY(order.created_at),
+      order.paid_at ? formatDateTimeMY(order.paid_at) : "",
     ]
       .map(csvEscape)
       .join(","),

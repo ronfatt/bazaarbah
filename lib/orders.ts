@@ -12,6 +12,8 @@ export type OrderListRow = {
   status: string;
   subtotal_cents: number;
   created_at: string;
+  paid_at: string | null;
+  shop_name: string | null;
 };
 
 type OrderItemSummaryRow = {
@@ -33,7 +35,7 @@ export async function loadSellerOrders(admin: AdminClient, ownerId: string, filt
 
   const primaryQuery = admin
     .from("orders")
-    .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at,shops!inner(owner_id)")
+    .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at,paid_at,shops!inner(owner_id,shop_name)")
     .eq("shops.owner_id", ownerId)
     .order("created_at", { ascending: false });
 
@@ -49,7 +51,12 @@ export async function loadSellerOrders(admin: AdminClient, ownerId: string, filt
 
   const primary = await primaryQuery;
   if (!primary.error) {
-    return { orders: ((primary.data as unknown as OrderListRow[] | null) ?? []), loadError: null };
+    const orders = ((primary.data as unknown as Array<OrderListRow & { shops?: { shop_name?: string | null } | { shop_name?: string | null }[] | null }> | null) ?? []).map((row) => {
+      const shopRaw = row.shops;
+      const shop = Array.isArray(shopRaw) ? shopRaw[0] : shopRaw;
+      return { ...row, shop_name: shop?.shop_name ?? null };
+    });
+    return { orders, loadError: null };
   }
 
   const shopsRes = await admin.from("shops").select("id").eq("owner_id", ownerId);
@@ -64,7 +71,7 @@ export async function loadSellerOrders(admin: AdminClient, ownerId: string, filt
 
   const fallbackQuery = admin
     .from("orders")
-    .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at")
+    .select("id,order_code,buyer_name,buyer_phone,status,subtotal_cents,created_at,paid_at,shops(shop_name)")
     .in("shop_id", shopIds)
     .order("created_at", { ascending: false });
 
@@ -83,7 +90,13 @@ export async function loadSellerOrders(admin: AdminClient, ownerId: string, filt
     return { orders: [] as OrderListRow[], loadError: fallback.error.message };
   }
 
-  return { orders: ((fallback.data as OrderListRow[] | null) ?? []), loadError: null };
+  const orders = ((fallback.data as Array<OrderListRow & { shops?: { shop_name?: string | null } | { shop_name?: string | null }[] | null }> | null) ?? []).map((row) => {
+    const shopRaw = row.shops;
+    const shop = Array.isArray(shopRaw) ? shopRaw[0] : shopRaw;
+    return { ...row, shop_name: shop?.shop_name ?? null };
+  });
+
+  return { orders, loadError: null };
 }
 
 export function filterOrdersByQuery(orders: OrderListRow[], rawQuery?: string) {
@@ -114,4 +127,12 @@ export async function loadOrderItemSummaries(admin: AdminClient, orderIds: strin
   }
 
   return itemSummaryByOrder;
+}
+
+export function orderPaymentStatusLabel(status: string) {
+  if (status === "pending_payment") return "Awaiting Payment";
+  if (status === "proof_submitted") return "Proof Submitted";
+  if (status === "paid") return "Paid";
+  if (status === "cancelled") return "Cancelled";
+  return status;
 }
