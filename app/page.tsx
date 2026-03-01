@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
+import { PlatformPulse } from "@/components/ui/platform-pulse";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
@@ -85,6 +86,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                 <span>{t(lang, "home.b3")}</span>
               </li>
             </ul>
+            <PlatformPulse lang={lang} totalMerchants={142} totalUsers={230} activeBase={100} />
             <p className="mt-4 text-xs text-white/50">{t(lang, "home.footnote")}</p>
           </div>
 
