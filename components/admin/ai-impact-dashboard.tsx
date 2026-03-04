@@ -29,6 +29,8 @@ export function AIImpactDashboard({
   comparison,
   sellers,
   featureEffects,
+  hasData = true,
+  emptyMessage = "No data.",
 }: {
   kpi: {
     aiActiveSellers7d: number;
@@ -41,6 +43,8 @@ export function AIImpactDashboard({
   comparison: ComparisonRow[];
   sellers: SellerRow[];
   featureEffects: FeatureEffect[];
+  hasData?: boolean;
+  emptyMessage?: string;
 }) {
   function scoreTone(score: number) {
     if (score >= 75) return "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
@@ -50,6 +54,11 @@ export function AIImpactDashboard({
 
   return (
     <div className="space-y-6">
+      {!hasData ? (
+        <AppCard className="p-6">
+          <p className="text-sm text-white/60">{emptyMessage}</p>
+        </AppCard>
+      ) : null}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <AppCard className="p-4">
           <div className="flex items-center justify-between">
@@ -202,4 +211,3 @@ export function AIImpactDashboard({
     </div>
   );
 }
-

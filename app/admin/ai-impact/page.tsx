@@ -6,6 +6,7 @@ import { AIImpactDashboard } from "@/components/admin/ai-impact-dashboard";
 import { requireAdminPortalUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PLAN_LABEL } from "@/lib/plan";
+import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
 type ProfileRow = {
@@ -28,20 +29,36 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
 
-export default async function AdminAIImpactPage() {
+export default async function AdminAIImpactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
   const lang = await getLangFromCookie();
+  const params = await searchParams;
   await requireAdminPortalUser();
   const admin = createAdminClient();
 
-  const now = Date.parse(new Date().toUTCString());
-  const sevenDaysAgoIso = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const fourteenDaysAgoIso = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const selectedRange = ["7d", "30d", "90d", "all"].includes(params.range ?? "") ? (params.range as "7d" | "30d" | "90d" | "all") : "30d";
+  const now = Date.now();
+  const currentDays = selectedRange === "7d" ? 7 : selectedRange === "90d" ? 90 : selectedRange === "all" ? null : 30;
+  const compareDays = currentDays ? currentDays * 2 : null;
+  const currentStartIso = currentDays ? new Date(now - currentDays * 24 * 60 * 60 * 1000).toISOString() : null;
+  const compareStartIso = compareDays ? new Date(now - compareDays * 24 * 60 * 60 * 1000).toISOString() : null;
 
   const [profilesRes, shopsRes, ordersRes, aiJobsRes] = await Promise.all([
     admin.from("profiles").select("id,display_name,role,plan_tier"),
     admin.from("shops").select("id,owner_id"),
-    admin.from("orders").select("shop_id,status,subtotal_cents,created_at").gte("created_at", fourteenDaysAgoIso),
-    admin.from("ai_jobs").select("owner_id,type,created_at").gte("created_at", fourteenDaysAgoIso),
+    (() => {
+      let query = admin.from("orders").select("shop_id,status,subtotal_cents,created_at");
+      if (compareStartIso) query = query.gte("created_at", compareStartIso);
+      return query;
+    })(),
+    (() => {
+      let query = admin.from("ai_jobs").select("owner_id,type,created_at");
+      if (compareStartIso) query = query.gte("created_at", compareStartIso);
+      return query;
+    })(),
   ]);
 
   const sellers = ((profilesRes.data ?? []) as ProfileRow[]).filter((p) => p.role === "seller");
@@ -54,15 +71,15 @@ export default async function AdminAIImpactPage() {
     const sellerOrders = orders.filter((o) => shopOwner.get(o.shop_id) === seller.id);
     const sellerAi = aiJobs.filter((j) => j.owner_id === seller.id);
 
-    const curOrders = sellerOrders.filter((o) => o.created_at >= sevenDaysAgoIso && o.status !== "cancelled");
-    const prevOrders = sellerOrders.filter((o) => o.created_at < sevenDaysAgoIso && o.status !== "cancelled");
+    const curOrders = sellerOrders.filter((o) => (!currentStartIso || o.created_at >= currentStartIso) && o.status !== "cancelled");
+    const prevOrders = sellerOrders.filter((o) => (currentStartIso ? o.created_at < currentStartIso : false) && o.status !== "cancelled");
     const curPaid = curOrders.filter((o) => o.status === "paid");
     const prevPaid = prevOrders.filter((o) => o.status === "paid");
 
     const curSales = curPaid.reduce((sum, o) => sum + Number(o.subtotal_cents ?? 0), 0);
     const prevSales = prevPaid.reduce((sum, o) => sum + Number(o.subtotal_cents ?? 0), 0);
-    const curAi = sellerAi.filter((j) => j.created_at >= sevenDaysAgoIso);
-    const prevAi = sellerAi.filter((j) => j.created_at < sevenDaysAgoIso);
+    const curAi = sellerAi.filter((j) => !currentStartIso || j.created_at >= currentStartIso);
+    const prevAi = sellerAi.filter((j) => (currentStartIso ? j.created_at < currentStartIso : false));
 
     const copyCount = curAi.filter((j) => j.type === "copy").length;
     const enhanceCount = curAi.filter((j) => j.type === "product_image").length;
@@ -147,6 +164,15 @@ export default async function AdminAIImpactPage() {
       avgSalesGrowthPct: avg(sellerStats.filter((s) => s.copyCount > 0).map((s) => s.salesGrowthPct)),
     },
   ];
+  const hasData = orders.length > 0 || aiJobs.length > 0;
+  const rangeLabel =
+    selectedRange === "7d"
+      ? t(lang, "admin.range_7d")
+      : selectedRange === "90d"
+        ? t(lang, "admin.range_90d")
+        : selectedRange === "all"
+          ? t(lang, "admin.range_all")
+          : t(lang, "admin.range_30d");
 
   return (
     <main className="min-h-screen bg-bb-bg px-6 py-6 text-bb-text">
@@ -154,8 +180,8 @@ export default async function AdminAIImpactPage() {
         <AppCard className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold">AI Impact</h1>
-              <p className="mt-2 text-sm text-white/65">Seller AI adoption, usage, and sales impact (last 7 days).</p>
+              <h1 className="text-2xl font-bold">{t(lang, "admin.ai_impact_title")}</h1>
+              <p className="mt-2 text-sm text-white/65">{t(lang, "admin.ai_impact_desc")} {rangeLabel}</p>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/admin/plan-requests" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
@@ -170,10 +196,33 @@ export default async function AdminAIImpactPage() {
               <Link href="/admin/pricing" className="rounded-xl border border-white/10 bg-[#163C33] px-3 py-2 text-xs text-white/80 hover:bg-[#1b4a40]">
                 Pricing
               </Link>
-              <Badge variant="ai">AI Impact</Badge>
+              <Badge variant="ai">{t(lang, "admin.ai_impact_title")}</Badge>
               <AdminSignoutButton lang={lang} />
             </div>
           </div>
+        </AppCard>
+
+        <AppCard className="p-5">
+          <form className="flex flex-wrap gap-2">
+            {[
+              { key: "7d", label: t(lang, "admin.range_7d") },
+              { key: "30d", label: t(lang, "admin.range_30d") },
+              { key: "90d", label: t(lang, "admin.range_90d") },
+              { key: "all", label: t(lang, "admin.range_all") },
+            ].map((item) => (
+              <button
+                key={item.key}
+                type="submit"
+                name="range"
+                value={item.key}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                  selectedRange === item.key ? "bg-bb-ai/20 text-bb-ai border border-bb-ai/30" : "border border-white/10 bg-[#163C33] text-white/80"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </form>
         </AppCard>
 
         <AIImpactDashboard
@@ -188,6 +237,8 @@ export default async function AdminAIImpactPage() {
           comparison={comparison}
           sellers={sellerStats.sort((a, b) => b.efficiencyScore - a.efficiencyScore)}
           featureEffects={featureEffects}
+          hasData={hasData}
+          emptyMessage={t(lang, "admin.ai_no_data")}
         />
       </div>
     </main>
