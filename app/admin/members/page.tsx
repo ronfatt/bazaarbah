@@ -33,13 +33,14 @@ type MemberRow = {
 export default async function AdminMembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; staffRole?: string }>;
 }) {
   const lang = await getLangFromCookie();
   await requireAdminPortalUser("super_admin");
   const params = await searchParams;
   const q = (params.q ?? "").trim().toLowerCase();
   const status = params.status ?? "all";
+  const staffRole = params.staffRole ?? "all";
 
   const admin = createAdminClient();
   await syncProfilesFromAuthUsers(admin);
@@ -82,6 +83,10 @@ export default async function AdminMembersPage({
     .filter((row) => {
     if (status === "banned" && !row.is_banned) return false;
     if (status === "active" && row.is_banned) return false;
+    if (staffRole === "seller" && row.role !== "seller") return false;
+    if (staffRole === "super_admin" && !(row.role === "admin" && row.admin_role === "super_admin")) return false;
+    if (staffRole === "finance" && !(row.role === "admin" && row.admin_role === "finance")) return false;
+    if (staffRole === "marketing" && !(row.role === "admin" && row.admin_role === "marketing")) return false;
     if (!q) return true;
     const haystack = `${row.display_name ?? ""} ${row.email ?? ""} ${row.phone_whatsapp ?? ""} ${row.id} ${row.plan_tier}`.toLowerCase();
     return haystack.includes(q);
@@ -122,7 +127,7 @@ export default async function AdminMembersPage({
         </AppCard>
 
         <AppCard className="p-5">
-          <form className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto]">
+          <form className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_auto_auto]">
             <label className="relative">
               <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-white/35" />
               <input
@@ -140,6 +145,17 @@ export default async function AdminMembersPage({
               <option value="all">{t(lang, "admin.all_members")}</option>
               <option value="active">{t(lang, "admin.active_only")}</option>
               <option value="banned">{t(lang, "admin.banned_only")}</option>
+            </select>
+            <select
+              name="staffRole"
+              defaultValue={staffRole}
+              className="h-10 rounded-xl border border-white/10 bg-[#0B241F] px-3 text-sm text-white focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
+            >
+              <option value="all">{t(lang, "admin.all_staff_roles")}</option>
+              <option value="seller">{t(lang, "admin.role_seller")}</option>
+              <option value="super_admin">{t(lang, "admin.role_super_admin")}</option>
+              <option value="finance">{t(lang, "admin.role_finance")}</option>
+              <option value="marketing">{t(lang, "admin.role_marketing")}</option>
             </select>
             <button type="submit" className="h-10 rounded-xl bg-gradient-to-r from-[#C9A227] to-[#E2C044] px-4 text-sm font-semibold text-black hover:brightness-110">
               {t(lang, "common.apply")}

@@ -94,6 +94,7 @@ export default async function AdminAffiliatePage({
 
   const directCountMap = new Map<string, number>();
   const teamCountMap = new Map<string, number>();
+  const monthSignupMap = new Map<string, number>();
   for (const profile of allProfiles) {
     if (profile.referred_by) {
       directCountMap.set(profile.referred_by, (directCountMap.get(profile.referred_by) ?? 0) + 1);
@@ -105,6 +106,9 @@ export default async function AdminAffiliatePage({
       .slice(0, 3);
     for (const affiliateId of path) {
       teamCountMap.set(affiliateId, (teamCountMap.get(affiliateId) ?? 0) + 1);
+      if (profile.created_at >= monthIso) {
+        monthSignupMap.set(affiliateId, (monthSignupMap.get(affiliateId) ?? 0) + 1);
+      }
     }
   }
 
@@ -121,11 +125,13 @@ export default async function AdminAffiliatePage({
     joinedAt: string;
     directCount: number;
     teamCount: number;
+    signupCount: number;
     packageCount: number;
     topupCount: number;
     approvedCents: number;
     paidCents: number;
     reversedCount: number;
+    paidConversionCount: number;
   }>();
 
   for (const profile of allProfiles) {
@@ -137,11 +143,13 @@ export default async function AdminAffiliatePage({
       joinedAt: profile.created_at,
       directCount: directCountMap.get(profile.id) ?? 0,
       teamCount: teamCountMap.get(profile.id) ?? 0,
+      signupCount: monthSignupMap.get(profile.id) ?? 0,
       packageCount: 0,
       topupCount: 0,
       approvedCents: 0,
       paidCents: 0,
       reversedCount: 0,
+      paidConversionCount: 0,
     });
   }
 
@@ -158,6 +166,7 @@ export default async function AdminAffiliatePage({
     const eventType = allEventTypeMap.get(row.event_id);
     if (eventType === "PACKAGE_PURCHASE") item.packageCount += 1;
     if (eventType === "CREDIT_TOPUP") item.topupCount += 1;
+    if (row.status === "APPROVED" || row.status === "PAID") item.paidConversionCount += 1;
     if (row.status === "APPROVED") item.approvedCents += Number(row.amount_cents ?? 0);
     if (row.status === "PAID") item.paidCents += Number(row.amount_cents ?? 0);
     if (row.status === "REVERSED") item.reversedCount += 1;
@@ -167,6 +176,14 @@ export default async function AdminAffiliatePage({
     .filter((row) => row.isAffiliateEnabled || row.directCount > 0 || row.teamCount > 0 || row.packageCount > 0 || row.topupCount > 0 || row.approvedCents > 0 || row.paidCents > 0)
     .sort((a, b) => (b.approvedCents + b.paidCents) - (a.approvedCents + a.paidCents) || b.teamCount - a.teamCount)
     .slice(0, 30);
+
+  const topPaidConversions = [...conversionRows]
+    .sort((a, b) => b.paidConversionCount - a.paidConversionCount || (b.paidCents + b.approvedCents) - (a.paidCents + a.approvedCents))
+    .slice(0, 8);
+
+  const topTeamGrowth = [...conversionRows]
+    .sort((a, b) => b.signupCount - a.signupCount || b.teamCount - a.teamCount)
+    .slice(0, 8);
 
   const payoutRejectMap = new Map<string, number>();
   for (const row of payouts) {
@@ -290,6 +307,42 @@ export default async function AdminAffiliatePage({
           </div>
         </AppCard>
 
+        <div className="grid gap-4 xl:grid-cols-2">
+          <AppCard className="p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.top_paid_conversions")}</h2>
+              <Badge variant="neutral">{topPaidConversions.length}</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {topPaidConversions.map((row) => (
+                <div key={row.id} className="rounded-xl border border-white/10 bg-[#163C33] p-4">
+                  <p className="font-semibold text-white">{row.name || row.id.slice(0, 8)}</p>
+                  <p className="mt-2 text-lg text-white">{row.paidConversionCount}</p>
+                  <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.paid_conversion_count")}</p>
+                </div>
+              ))}
+              {topPaidConversions.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.none")}</p> : null}
+            </div>
+          </AppCard>
+
+          <AppCard className="p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-white">{t(lang, "affiliate.top_team_growth")}</h2>
+              <Badge variant="neutral">{topTeamGrowth.length}</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {topTeamGrowth.map((row) => (
+                <div key={row.id} className="rounded-xl border border-white/10 bg-[#163C33] p-4">
+                  <p className="font-semibold text-white">{row.name || row.id.slice(0, 8)}</p>
+                  <p className="mt-2 text-lg text-white">{row.signupCount}</p>
+                  <p className="mt-1 text-xs text-white/55">{t(lang, "affiliate.month_signups")}</p>
+                </div>
+              ))}
+              {topTeamGrowth.length === 0 ? <p className="text-sm text-white/45">{t(lang, "affiliate.none")}</p> : null}
+            </div>
+          </AppCard>
+        </div>
+
         <AppCard className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -306,6 +359,7 @@ export default async function AdminAffiliatePage({
                   <th className="px-3 py-2">{t(lang, "affiliate.current_plan")}</th>
                   <th className="px-3 py-2">{t(lang, "affiliate.direct_referrals")}</th>
                   <th className="px-3 py-2">{t(lang, "affiliate.team_size")}</th>
+                  <th className="px-3 py-2">{t(lang, "affiliate.signups")}</th>
                   <th className="px-3 py-2">{t(lang, "affiliate.package_count")}</th>
                   <th className="px-3 py-2">{t(lang, "affiliate.topup_count")}</th>
                   <th className="px-3 py-2">{t(lang, "affiliate.approved")}</th>
@@ -331,6 +385,7 @@ export default async function AdminAffiliatePage({
                     </td>
                     <td className="px-3 py-3">{row.directCount}</td>
                     <td className="px-3 py-3">{row.teamCount}</td>
+                    <td className="px-3 py-3">{row.signupCount}</td>
                     <td className="px-3 py-3">{row.packageCount}</td>
                     <td className="px-3 py-3">{row.topupCount}</td>
                     <td className="px-3 py-3 font-semibold text-white">{currencyFromCents(row.approvedCents)}</td>
