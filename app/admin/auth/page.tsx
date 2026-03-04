@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
 import { AppButton } from "@/components/ui/AppButton";
+import { getAdminHomePath } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { getLangFromCookie } from "@/lib/i18n-server";
 
@@ -20,9 +21,9 @@ export default async function AdminAuthPage({ searchParams }: { searchParams: Pr
 
     if (user) {
       const admin = createAdminClient();
-      const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      const { data: profile } = await admin.from("profiles").select("role,admin_role").eq("id", user.id).maybeSingle();
       if (profile?.role === "admin") {
-        redirect("/admin/plan-requests");
+        redirect(getAdminHomePath(profile));
       }
     }
   } catch {

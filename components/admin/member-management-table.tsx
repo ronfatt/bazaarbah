@@ -12,6 +12,7 @@ type MemberRow = {
   email: string | null;
   phone_whatsapp: string | null;
   role: "seller" | "admin";
+  admin_role: "super_admin" | "finance" | "marketing" | null;
   plan_tier: "free" | "pro_88" | "pro_128";
   ai_credits: number;
   copy_credits: number;
@@ -32,6 +33,14 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
   const [warningBody, setWarningBody] = useState<Record<string, string>>({});
   const [banReason, setBanReason] = useState<Record<string, string>>({});
   const [creditDelta, setCreditDelta] = useState<Record<string, string>>({});
+  const [adminRoleDraft, setAdminRoleDraft] = useState<Record<string, string>>({});
+
+  function getAdminRoleLabel(row: MemberRow) {
+    if (row.role !== "admin" || !row.admin_role) return t(lang, "admin.role_seller");
+    if (row.admin_role === "super_admin") return t(lang, "admin.role_super_admin");
+    if (row.admin_role === "finance") return t(lang, "admin.role_finance");
+    return t(lang, "admin.role_marketing");
+  }
 
   async function run(memberId: string, payload: Record<string, unknown>) {
     setBusy(memberId);
@@ -71,6 +80,7 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                   <p className="font-semibold text-white">{row.display_name ?? t(lang, "admin.members")}</p>
                   <p className="mt-0.5 text-[11px] text-white/60">{row.email ?? t(lang, "admin.no_email")}</p>
                   <p className="mt-0.5 text-[11px] text-white/45">{t(lang, "admin.whatsapp")}: {row.phone_whatsapp ?? "-"}</p>
+                  <p className="mt-0.5 text-[11px] text-white/45">{t(lang, "admin.staff_role")}: {getAdminRoleLabel(row)}</p>
                   <p className="mt-0.5 text-[11px] text-white/45">Affiliate: {row.is_affiliate_enabled ? row.referral_code ?? "-" : t(lang, "affiliate.none")}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-white/45">{row.id.slice(0, 10)}...</p>
                   <p className="mt-0.5 text-[11px] text-white/45">{t(lang, "admin.joined")} {formatDateMY(row.created_at)}</p>
@@ -129,6 +139,26 @@ export function MemberManagementTable({ rows, lang = "en" }: { rows: MemberRow[]
                         {t(lang, "affiliate.enable")}
                       </AppButton>
                     ) : null}
+                    <div className="space-y-1">
+                      <select
+                        value={adminRoleDraft[row.id] ?? (row.role === "admin" ? row.admin_role ?? "super_admin" : "seller")}
+                        onChange={(e) => setAdminRoleDraft((prev) => ({ ...prev, [row.id]: e.target.value }))}
+                        className="h-8 w-48 rounded-lg border border-white/10 bg-[#0B241F] px-2 text-xs text-white focus:border-bb-ai/45 focus:ring-2 focus:ring-bb-ai/20"
+                      >
+                        <option value="seller">{t(lang, "admin.role_seller")}</option>
+                        <option value="super_admin">{t(lang, "admin.role_super_admin")}</option>
+                        <option value="finance">{t(lang, "admin.role_finance")}</option>
+                        <option value="marketing">{t(lang, "admin.role_marketing")}</option>
+                      </select>
+                      <AppButton
+                        className="h-8 px-3 text-xs"
+                        variant="secondary"
+                        onClick={() => run(row.id, { action: "set_admin_role", targetAdminRole: adminRoleDraft[row.id] ?? (row.role === "admin" ? row.admin_role ?? "super_admin" : "seller") })}
+                        disabled={busy === row.id}
+                      >
+                        {t(lang, "admin.update_role")}
+                      </AppButton>
+                    </div>
                     {row.is_banned ? (
                       <AppButton className="h-8 px-3 text-xs" variant="secondary" onClick={() => run(row.id, { action: "unban" })} disabled={busy === row.id}>
                         {t(lang, "admin.unban")}

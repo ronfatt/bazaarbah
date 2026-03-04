@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "super_admin");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const [{ data, error }, { data: shops }] = await Promise.all([
     admin
       .from("profiles")
-      .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
+      .select("id,display_name,role,admin_role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,is_banned,banned_at,ban_reason,created_at")
       .order("created_at", { ascending: false }),
     admin.from("shops").select("owner_id,phone_whatsapp,created_at").order("created_at", { ascending: true }),
   ]);

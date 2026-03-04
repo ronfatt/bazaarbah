@@ -27,7 +27,7 @@ export default async function AdminAffiliatePage({
   searchParams: Promise<{ q?: string; userId?: string }>;
 }) {
   const lang = await getLangFromCookie();
-  await requireAdminPortalUser();
+  await requireAdminPortalUser("finance");
   const params = await searchParams;
   const q = (params.q ?? "").trim().toLowerCase();
   const selectedUserId = (params.userId ?? "").trim();

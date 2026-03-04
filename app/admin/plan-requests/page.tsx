@@ -55,7 +55,7 @@ export default async function AdminPlanRequestsPortalPage({
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const lang = await getLangFromCookie();
-  await requireAdminPortalUser();
+  await requireAdminPortalUser("finance");
   const params = await searchParams;
   const statusFilter = params.status ?? "all";
   const query = (params.q ?? "").trim().toLowerCase();

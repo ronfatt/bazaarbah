@@ -16,6 +16,7 @@ type MemberRow = {
   email: string | null;
   phone_whatsapp: string | null;
   role: "seller" | "admin";
+  admin_role: "super_admin" | "finance" | "marketing" | null;
   plan_tier: "free" | "pro_88" | "pro_128";
   ai_credits: number;
   copy_credits: number;
@@ -35,7 +36,7 @@ export default async function AdminMembersPage({
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const lang = await getLangFromCookie();
-  await requireAdminPortalUser();
+  await requireAdminPortalUser("super_admin");
   const params = await searchParams;
   const q = (params.q ?? "").trim().toLowerCase();
   const status = params.status ?? "all";
@@ -45,7 +46,7 @@ export default async function AdminMembersPage({
   const [{ data }, { data: shops }] = await Promise.all([
     admin
       .from("profiles")
-      .select("id,display_name,role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,referral_code,is_affiliate_enabled,is_banned,banned_at,ban_reason,created_at")
+      .select("id,display_name,role,admin_role,plan_tier,ai_credits,copy_credits,image_credits,poster_credits,referral_code,is_affiliate_enabled,is_banned,banned_at,ban_reason,created_at")
       .order("created_at", { ascending: false }),
     admin.from("shops").select("owner_id,phone_whatsapp,created_at").order("created_at", { ascending: true }),
   ]);

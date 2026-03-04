@@ -30,7 +30,7 @@ function parseBankInfo(raw: string | null): BankInfo {
 
 export async function GET(req: Request) {
   const lang = await getLangFromCookie();
-  await requireAdminPortalUser();
+  await requireAdminPortalUser("finance");
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
   const rawStatus = (url.searchParams.get("status") ?? "ALL") as PayoutStatusFilter;

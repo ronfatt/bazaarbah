@@ -18,7 +18,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "marketing");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "marketing");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }
@@ -77,4 +77,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
-

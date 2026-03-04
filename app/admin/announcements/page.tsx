@@ -19,7 +19,7 @@ type Announcement = {
 
 export default async function AdminAnnouncementsPage() {
   const lang = await getLangFromCookie();
-  await requireAdminPortalUser();
+  await requireAdminPortalUser("marketing");
   const admin = createAdminClient();
   const { data } = await admin
     .from("member_notices")

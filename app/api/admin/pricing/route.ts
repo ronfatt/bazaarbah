@@ -61,7 +61,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "finance");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }
@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "finance");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }

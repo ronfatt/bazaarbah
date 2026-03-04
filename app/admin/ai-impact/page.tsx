@@ -36,7 +36,7 @@ export default async function AdminAIImpactPage({
 }) {
   const lang = await getLangFromCookie();
   const params = await searchParams;
-  await requireAdminPortalUser();
+  await requireAdminPortalUser("marketing");
   const admin = createAdminClient();
 
   const selectedRange = ["7d", "30d", "90d", "all"].includes(params.range ?? "") ? (params.range as "7d" | "30d" | "90d" | "all") : "30d";

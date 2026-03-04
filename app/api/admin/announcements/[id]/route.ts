@@ -13,7 +13,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "marketing");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }

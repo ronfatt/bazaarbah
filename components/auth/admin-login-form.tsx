@@ -25,7 +25,7 @@ export function AdminLoginForm({ lang = "en" }: { lang?: Lang }) {
       const userId = auth.user?.id;
       if (!userId) throw new Error(t(lang, "form.failed_login"));
 
-      const { data: profile, error: roleErr } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+      const { data: profile, error: roleErr } = await supabase.from("profiles").select("role,admin_role").eq("id", userId).maybeSingle();
       if (roleErr) throw roleErr;
 
       if (profile?.role !== "admin") {
@@ -33,7 +33,8 @@ export function AdminLoginForm({ lang = "en" }: { lang?: Lang }) {
         throw new Error(t(lang, "admin.not_admin"));
       }
 
-      window.location.href = "/admin/plan-requests";
+      const nextPath = profile.admin_role === "marketing" ? "/admin/announcements" : profile.admin_role === "finance" ? "/admin/plan-requests" : "/admin/members";
+      window.location.href = nextPath;
     } catch (error) {
       setStatus(error instanceof Error ? error.message : t(lang, "form.failed_login"));
     } finally {

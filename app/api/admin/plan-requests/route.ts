@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "finance");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }
@@ -30,4 +30,3 @@ export async function GET() {
 
   return NextResponse.json({ requests: data ?? [] });
 }
-

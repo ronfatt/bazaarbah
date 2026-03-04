@@ -11,7 +11,7 @@ import { getLangFromCookie } from "@/lib/i18n-server";
 
 export default async function AdminPricingPage() {
   const lang = await getLangFromCookie();
-  await requireAdminPortalUser();
+  await requireAdminPortalUser("finance");
   const admin = createAdminClient();
   await admin.from("plan_prices").upsert(
     [

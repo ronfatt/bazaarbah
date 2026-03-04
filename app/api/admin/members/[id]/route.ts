@@ -13,6 +13,7 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("unban") }),
   z.object({ action: z.literal("warn"), title: z.string().min(2).max(100), body: z.string().min(4).max(500) }),
   z.object({ action: z.literal("enable_affiliate") }),
+  z.object({ action: z.literal("set_admin_role"), targetAdminRole: z.enum(["seller", "super_admin", "finance", "marketing"]) }),
 ]);
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   try {
-    await assertAdminByUserId(user.id);
+    await assertAdminByUserId(user.id, "super_admin");
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Forbidden" }, { status: 403 });
   }
@@ -39,9 +40,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const admin = createAdminClient();
-  const { data: member } = await admin.from("profiles").select("id,plan_tier,is_banned,ai_credits,is_affiliate_enabled").eq("id", id).maybeSingle();
+  const { data: member } = await admin.from("profiles").select("id,role,admin_role,plan_tier,is_banned,ai_credits,is_affiliate_enabled").eq("id", id).maybeSingle();
   if (!member) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 });
+  }
+
+  if (payload.action === "set_admin_role") {
+    if (id === user.id) {
+      return NextResponse.json({ error: "You cannot change your own admin role here." }, { status: 400 });
+    }
+
+    const update =
+      payload.targetAdminRole === "seller"
+        ? { role: "seller", admin_role: null }
+        : { role: "admin", admin_role: payload.targetAdminRole };
+
+    const { error } = await admin.from("profiles").update(update).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    await admin.from("admin_audit_logs").insert({
+      action: "member_role_changed",
+      actor_id: user.id,
+      target_user_id: id,
+      target_plan: null,
+      note: payload.targetAdminRole,
+      meta: { from_role: member.role, from_admin_role: member.admin_role, to_role: update.role, to_admin_role: update.admin_role },
+    });
+
+    return NextResponse.json({ ok: true });
   }
 
   if (payload.action === "set_plan") {

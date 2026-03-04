@@ -9,8 +9,32 @@ type ProfileAccess = {
   plan: string | null;
   plan_tier: string | null;
   role: string | null;
+  admin_role: string | null;
   is_banned: boolean | null;
 };
+
+export type AdminRole = "super_admin" | "finance" | "marketing";
+export type AdminPermission = "super_admin" | "finance" | "marketing";
+
+function normalizeAdminRole(role: string | null | undefined): AdminRole | null {
+  if (role === "super_admin" || role === "finance" || role === "marketing") return role;
+  return null;
+}
+
+function hasAdminPermission(profile: { role?: string | null; admin_role?: string | null }, permission?: AdminPermission) {
+  if (profile.role !== "admin") return false;
+  const adminRole = normalizeAdminRole(profile.admin_role);
+  if (!permission) return true;
+  if (adminRole === "super_admin") return true;
+  return adminRole === permission;
+}
+
+export function getAdminHomePath(profile: { role?: string | null; admin_role?: string | null }) {
+  const adminRole = normalizeAdminRole(profile.admin_role);
+  if (adminRole === "marketing") return "/admin/announcements";
+  if (adminRole === "finance") return "/admin/plan-requests";
+  return "/admin/members";
+}
 
 export async function requireSeller(options?: { loginPath?: string }) {
   const supabase = await createClient();
@@ -85,7 +109,7 @@ export function assertUnlocked(profile: { plan_tier?: string | null; plan?: stri
 
 async function getProfileAccessByUserId(userId: string): Promise<ProfileAccess> {
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id,plan,plan_tier,role,is_banned").eq("id", userId).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("id,plan,plan_tier,role,admin_role,is_banned").eq("id", userId).maybeSingle();
   if (!profile) {
     throw new Error("Profile not found");
   }
@@ -107,11 +131,11 @@ export async function assertUnlockedByUserId(userId: string) {
   assertUnlocked(profile);
 }
 
-export async function assertAdminByUserId(userId: string) {
+export async function assertAdminByUserId(userId: string, permission?: AdminPermission) {
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("id,role").eq("id", userId).maybeSingle();
-  if (!profile || profile.role !== "admin") {
-    throw new Error("Admin access required");
+  const { data: profile } = await admin.from("profiles").select("id,role,admin_role").eq("id", userId).maybeSingle();
+  if (!profile || !hasAdminPermission(profile, permission)) {
+    throw new Error(permission ? "Admin permission required" : "Admin access required");
   }
 }
 
@@ -125,16 +149,19 @@ export async function requireUnlockedSeller() {
 
 export async function requireAdminUser() {
   const { user, profile } = await requireSeller();
-  if (profile.role !== "admin") {
+  if (!hasAdminPermission(profile)) {
     redirect("/dashboard");
   }
   return { user, profile };
 }
 
-export async function requireAdminPortalUser() {
+export async function requireAdminPortalUser(permission?: AdminPermission) {
   const { user, profile } = await requireSeller({ loginPath: "/admin/auth" });
   if (profile.role !== "admin") {
     redirect("/admin/auth?error=not_admin");
+  }
+  if (!hasAdminPermission(profile, permission)) {
+    redirect(getAdminHomePath(profile));
   }
   return { user, profile };
 }
